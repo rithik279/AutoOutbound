@@ -1,0 +1,228 @@
+🔥 Deep Research Prompt — 50 Toronto Boutique Investment & Quant Firms (Strict No-Duplicate Version)
+You are compiling an internship outreach target list.
+Goal: Identify 50 Toronto or GTA–based boutique investment firms, buy-side research firms, quant shops, small hedge funds, or proprietary trading firms that are NOT in the exclusion list below.
+Return ONLY the following columns:
+Company Name
+ Official Website URL (verified, must load)
+ LinkedIn Company Page URL (verified)
+ Firm Type (1–3 words max, e.g. Hedge Fund, Quant Fund, Prop Trading, Asset Management, Systematic Macro, Equity L/S, Credit Fund, Family Office, Research Firm)
+Constraints:
+• Must be headquartered in Toronto or GTA
+ • Prefer firms under ~100 employees
+ • Prefer independent firms (not Big 5 bank divisions)
+ • Actively operating in 2024–2026
+ • Avoid large institutional asset managers (CPP, OMERS, Teachers, etc.)
+ • Avoid Big 5 bank asset management arms
+ • Avoid pure advisory / wealth advisory firms unless they run internal investment research
+ • Do NOT guess URLs. If unverified, exclude the firm
+ • Avoid venture capital unless the firm runs public markets or systematic strategies
+ • Avoid private equity megafunds
+Target Profiles to Prioritize:
+• Systematic or quant-driven firms
+ • Derivatives / volatility specialists
+ • Multi-strategy hedge funds
+ • Small asset managers running concentrated books
+ • CTA / macro / commodities firms
+ • Proprietary trading firms
+ • Alternative credit / structured products shops
+ • Data-driven equity research firms
+Sources to Prioritize:
+• Canadian Hedge Fund directories
+ • LinkedIn company search
+ • Toronto CFA society lists
+ • Prop trading firm directories
+ • Regulatory filings
+ • Industry conference speaker lists
+ • Toronto-based trading competitions sponsors
+Output format:
+First: a clean table
+Then: a CSV block formatted exactly as:
+Company Name,Website URL,LinkedIn Company URL,Firm Type
+Return exactly 50 firms. No commentary.
+ Exclude any firms already in my outreach database.
+
+
+
+Duplicate Elimination Rules (Strict):
+Cross-check every candidate against the exclusion list below using fuzzy matching.
+
+
+Treat minor naming variations as duplicates. Examples:
+
+
+Float vs Float Financial
+
+
+Q4 vs Q4 Inc.
+
+
+nanopay vs NanoPay
+
+
+My Beacon vs MyBeacon
+
+
+If any company appears in any form in the exclusion list, exclude it entirely.
+
+
+If fewer than 50 unique companies remain after filtering, continue searching until 50 unique companies are found.
+
+
+Do not return partial results. Return exactly 50 unique companies not present below.
+
+
+
+Exclusion List (Do NOT include any of these):
+Chexy
+ Altrio
+ TransCrypts
+ GoldSky
+ Ubineer Corp
+ Allegory Capital
+ Gray Wolf Analytics
+ Smart Bonds
+ Merkle Science
+ Alkemi Network
+ Woveo
+ Nsawo Finance Inc
+ Toropal
+ AptPay
+ Apaylo
+ Ashta.ai
+ AXEPAY Inc
+ BuyProperly
+ Chimoney
+ Clik2pay
+ Cybrid
+ Dream Payments
+ Equivesto
+ Hutsy
+ Kavodax
+ Loans Canada
+ Loop Financial
+ Minerva
+ My Beacon
+ Nōwn
+ The Nmbr Company
+ Notch
+ Paybilt
+ Payment Source
+ Payments International Inc
+ Pesa
+ Pllenty
+ ProofOfID
+ Quarters
+ Rail
+ Riskfuel
+ Savi Finance
+ SideDrawer Inc
+ Smooth Commerce
+ SnapPay
+ Tuhk Inc
+ Uplinq Financial Technologies
+ Venn
+ ZeonAI
+ nanopay
+ Stablecorp
+ Vezgo
+ goPeer
+ Ourboro
+ Perch
+ Justwealth
+ FutureVault
+ DataPassports
+ TRIYO
+ Berkeley Payments
+ PayFrame
+ RapidCents
+ GreenPay
+ Taliup
+ LoanCirrus
+ Syngrafii
+ Robbie Insurtech
+ Terminal
+ Securefact
+ HONK
+ Interchange Financial Corporation
+ SmartQue
+ Plooto
+ Borrowell
+ ReBlink
+ Quidax
+ TODAQ Micro
+ Float Financial
+ Una Software
+ Karoo
+ Hudson Labs
+ Armilla AI
+ Renda Banking
+ MyChoice Insurance
+ Bree
+ Senso
+ GovernGPT
+ Relay
+ obsiido
+ Benji
+ Valsys
+ Q4
+ tiptap
+ InclusifAI
+ Figment
+ Fiscal AI
+
+Supernova Technology
+d1g1t
+Peggy
+Paytrie
+Cyder
+Kodif
+QuadFi
+Walnut
+Baseline Financial
+Zown
+Lendified
+Ledn
+Micruity
+Bluefin Labs
+LemFi
+Buckzy Payments
+AllScale
+Tab Commerce
+Composer Technologies
+Delphia
+Zpayd (Flugator)
+Agnic.AI
+RiskMind AI
+Eigen FinTech
+CloudTax
+LifeAtKey
+Billsy
+Street Context
+Cleva Technologies
+TransferzPay
+Paidiem
+Nekso
+Kobopay
+Keep
+QuantSpark
+Numeric
+Honeypot Finance
+PolicyMe
+NetNow
+Incenter
+
+
+
+Sources to Prioritize:
+• Creative Destruction Lab Fintech alumni
+ • MaRS portfolio companies
+ • Toronto VC portfolios (Portage, Golden Ventures, Real Ventures, Version One, OMERS, Relay Ventures)
+ • BetaKit funding coverage 2022–2026
+ • LinkedIn Toronto fintech search
+
+Output Format:
+First: a clean table
+Then: a CSV block formatted exactly as:
+Company Name,Website URL,LinkedIn Company URL,Vertical
+Return exactly 50 companies. No commentary. No explanation.
+

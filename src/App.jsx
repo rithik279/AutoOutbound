@@ -828,12 +828,69 @@ export default function App() {
   // RENDER
   // ════════════════════════════════════════════════════════════════════════
 
+  // ── LOGIN SCREEN ─────────────────────────────────────────────────────────
+  if (!currentUser) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f7f5' }}>
+      <div style={{ width: '100%', maxWidth: 380, background: '#fff', borderRadius: 16, padding: '40px 32px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e5e0' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📧</div>
+          <h1 style={{ ...c.h1, marginBottom: 6, fontSize: 24 }}>Campaign Pipeline</h1>
+          <p style={{ ...c.muted, fontSize: 13 }}>Sign in to access your campaigns</p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={c.label}>Email</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={loginEmail || ''}
+              onChange={e => setLoginEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={c.label}>Password</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={loginPass || ''}
+              onChange={e => setLoginPass(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+            />
+          </div>
+          {loginError && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{loginError}</div>
+          )}
+          <button
+            onClick={() => handleLogin(loginEmail, loginPass)}
+            disabled={loginLoading}
+            style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
+          >
+            {loginLoading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPass, setLoginPass] = useState('')
+
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
   if (phase === 'entry') return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={c.h1}>Campaign pipeline</h1>
-        <p style={{ ...c.muted, marginTop: 6 }}>Where are you starting from?</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+        <div>
+          <h1 style={c.h1}>Campaign pipeline</h1>
+          <p style={{ ...c.muted, marginTop: 6 }}>Where are you starting from?</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setSettingsOpen(true)} style={c.ghostBtn}>⚙️ Settings</button>
+          <button onClick={handleLogout} style={{ ...c.ghostBtn, color: '#dc2626' }}>Logout</button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>

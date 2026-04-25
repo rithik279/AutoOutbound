@@ -783,7 +783,6 @@ export default function App() {
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
             <h1 style={c.h1}>Settings</h1>
             <p style={{ ...c.muted, marginTop: 4 }}>Configure your sender details and campaign type</p>

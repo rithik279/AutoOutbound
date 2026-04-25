@@ -280,8 +280,9 @@ export default function App() {
 
   // Auth & job status
   const [authStatus, setAuthStatus] = useState(null) // null=loading, {ok, status, minutesLeft}
-  const [scheduleStatus, setScheduleStatus] = useState(null) // {total, sent, pending}
+  const [scheduleStatus, setScheduleStatus] = useState(null) // {total, sent, pending, failed}
   const [reAuthLoading, setReAuthLoading] = useState(false)
+  const [retryLoading, setRetryLoading] = useState(false)
 
   // Poll auth & schedule status
   useEffect(() => {

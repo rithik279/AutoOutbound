@@ -356,10 +356,15 @@ app.post('/api/schedule-retry', async (req, res) => {
   const failed = queue.filter(e => e.failed)
   if (!failed.length) return res.json({ ok: true, count: 0 })
 
-  // Reset failed flag and reschedule
+  // Reset failed flag and reschedule — stagger 2 minutes apart
   failed.forEach(e => { e.failed = false })
   saveQueue(queue)
-  failed.forEach(scheduleEmail)
+  failed.forEach((email, i) => {
+    const offsetMs = i * 2 * 60 * 1000
+    const originalSendAt = email.sendAt ? new Date(email.sendAt).getTime() : Date.now()
+    email.sendAt = new Date(originalSendAt + offsetMs).toISOString()
+    scheduleEmail(email)
+  })
 
   console.log(`[campaign] retrying ${failed.length} failed emails`)
   res.json({ ok: true, count: failed.length })

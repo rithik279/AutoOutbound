@@ -5,7 +5,6 @@ import { dirname, join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import fetch from 'node-fetch'
 import mammoth from 'mammoth'
-import { PublicClientApplication } from '@azure/msal-node'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()

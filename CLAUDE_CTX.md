@@ -29,12 +29,12 @@ Cold email outreach automation app for Manmit Singh (Senior ETL Consultant). Sen
 - `markFailed()` helper — marks emails as failed in queue
 - `scheduleEmail()` — calls `markFailed()` on error
 
-**In progress in App.jsx:**
+**Completed in App.jsx:**
 - Added `useEffect` that polls `/api/token-health` and `/api/schedule-status` every 30s
 - Added `authStatus`, `scheduleStatus`, `reAuthLoading`, `retryLoading` state
 - Added `runReAuth()` and `runRetryFailed()` functions
 - Created `statusBar` helper component with all 3 elements
-- **NEED TO ADD** `{statusBar()}` to each phase's return statement
+- Added `{statusBar()}` to all phases: settings, discover, companies, csv, contacts_input, drafting, review, schedule, sent
 
 **Status bar appearance:**
 ```

@@ -52,6 +52,7 @@ function scheduleEmail({ id, to, subject, body, sendAt }) {
       markSent(id)
       console.log(`[campaign] sent to ${to}`)
     } catch (e) {
+      markFailed(id, e.message)
       console.error(`[campaign] failed to ${to}: ${e.message}`)
     }
   }, delay)

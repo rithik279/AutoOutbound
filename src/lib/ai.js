@@ -120,14 +120,64 @@ WRITING RULES — follow without exception:
 // ── Build email drafting system prompt ─────────────────────────────────────
 function buildEmailSystem(campaignMode, resumeText) {
   const isStartup = campaignMode === 'startup'
+  const isRecruiting = campaignMode === 'recruiting'
 
-  const modeContext = isStartup
-    ? `CAMPAIGN TYPE: AI/tech startup.
+  let modeContext
+  if (isRecruiting) {
+    modeContext = `CAMPAIGN TYPE: Recruiting firm outreach.
+You are reaching out to a recruiting firm — NOT to get hired directly. You want them to place Manmit at one of their clients. The goal is to make the recruiter believe Manmit is a high-value, easy-to-place senior candidate who will help them close a role quickly and earn them a placement fee.
+Frame Manmit as: senior, experienced, easy to place, reduces their search time, helps them fill a high-value role. He is not job hunting — he is selectively engaging with partners who have the right client fit.
+Tone: confident, direct, peer-to-peer. Not desperate. Not apologetic. Not mass outreach.`
+  } else if (isStartup) {
+    modeContext = `CAMPAIGN TYPE: AI/tech startup.
 The recipient's company has built fast and now has a production data problem. They moved from prototype to real customers and the data stack didn't keep up. Manmit's 24 years of enterprise ETL discipline is exactly what they're missing — they probably don't have a Head of Data yet.
 Angle: fragile pipelines under load, ad hoc scripts that don't scale, compliance/data quality catching up with them. Position Manmit as someone who has seen this exact transition before and knows what breaks.`
-    : `CAMPAIGN TYPE: Financial institution.
+  } else {
+    modeContext = `CAMPAIGN TYPE: Financial institution.
 The recipient is at a bank, asset manager, insurer, or financial infrastructure company. These organisations run complex, regulation-heavy data pipelines under constant pressure — regulatory deadlines, cloud migrations, data quality problems.
 Angle: reliability, regulatory delivery, Informatica expertise, financial services track record. Manmit's Scotiabank/TD/Finastra background is directly relevant.`
+  }
+
+  let structure
+  if (isRecruiting) {
+    structure = `STRUCTURE — follow exactly, no labels:
+1. Subject: max 7 words. Direct value prop for the recruiter — not a question. Examples: "Senior ETL contractor — easy placement", "Data engineering contract, available now"
+2. Greeting: "Hi [first name]," on its own line.
+3. Acknowledge paragraph: Acknowledge what they recruit for or the type of clients they serve. Frame it as alignment — not flattery. 1-2 sentences. Blank line before this paragraph.
+4. Introduce paragraph: Introduce Manmit clearly and directly — 24+ years data engineering, Informatica ETL + Python, enterprise environments, looking for remote USD contract roles. Blank line before this paragraph.
+5. Credibility paragraph: Use specifics — Scotiabank, TD, Rogers, Informatica ETL, enterprise data systems, financial/regulatory environments. Make it feel like: "this is a strong, placeable senior candidate". Blank line before this paragraph.
+6. Intent paragraph: State intent clearly. Example: "I typically work through recruiting partners for client placements. Open to a quick 15-minute call to explore alignment." Blank line before this paragraph.
+7. Sign-off: blank line, then "Best,\\nManmit"`
+  } else {
+    structure = `STRUCTURE — follow exactly, no labels:
+1. Subject: max 7 words. Specific to their actual product or infrastructure. Not a question. Not generic.
+2. Greeting: "Hi [first name]," on its own line. Always "Hi Name," — never just "Name,".
+3. Hook paragraph: ONE specific, non-obvious detail from the company website about what they're building or how their system works. Not their funding round. Not their headcount. Something about the actual product or technical approach. 1-2 sentences max.
+4. Problem paragraph: What data engineering problem does that create? Say what actually breaks or slows down. 1-2 sentences. Blank line before this paragraph.
+5. Credential paragraph: Pick ONE engagement from the resume that is most relevant to this company's situation. Name the client and what was built. Then offer: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
+6. Sign-off: blank line, then "Best,\\nManmit"`
+  }
+
+  let constraints
+  if (isRecruiting) {
+    constraints = `CONSTRAINTS:
+- Body is max 120 words (not counting subject or sign-off).
+- Every paragraph is separated by a blank line. No wall of text.
+- No em dashes.
+- No buzzwords, fluff, or promotional language.
+- No "I saw your job posting", no applying language, no desperation tone.
+- No apologies, no time constraint mentions, no summaries.
+- Manmit is a senior, confident operator — not a job seeker. He works through recruiting partners.
+- The tone must communicate: senior, placeable, reduces their search time, high-value candidate.`
+  } else {
+    constraints = `CONSTRAINTS:
+- Body is max 130 words (not counting subject or sign-off).
+- Every paragraph is separated by a blank line. No wall of text.
+- No job posting references. No "I saw you're hiring". No applying language whatsoever.
+- Manmit is not a candidate. He's a senior operator offering to solve a problem faster than a hire would.
+- Never list more than one client credential — pick the most relevant one from the resume.
+- The hook must be specific enough that it cannot appear in any other company's email.`
+  }
 
   return `You draft cold outreach emails for Manmit Singh, a senior data engineering contractor.
 
@@ -136,21 +186,9 @@ ${resumeText}
 
 ${modeContext}
 
-STRUCTURE — follow exactly, no labels:
-1. Subject: max 7 words. Specific to their actual product or infrastructure. Not a question. Not generic.
-2. Greeting: "Hi [first name]," on its own line. Always "Hi Name," — never just "Name,".
-3. Hook paragraph: ONE specific, non-obvious detail from the company website about what they're building or how their system works. Not their funding round. Not their headcount. Something about the actual product or technical approach. 1-2 sentences max.
-4. Problem paragraph: What data engineering problem does that create? Say what actually breaks or slows down. 1-2 sentences. Blank line before this paragraph.
-5. Credential paragraph: Pick ONE engagement from the resume that is most relevant to this company's situation. Name the client and what was built. Then offer: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
-6. Sign-off: blank line, then "Best,\\nManmit"
+${structure}
 
-CONSTRAINTS:
-- Body is max 130 words (not counting subject or sign-off).
-- Every paragraph is separated by a blank line. No wall of text.
-- No job posting references. No "I saw you're hiring". No applying language whatsoever.
-- Manmit is not a candidate. He's a senior operator offering to solve a problem faster than a hire would.
-- Never list more than one client credential — pick the most relevant one from the resume.
-- The hook must be specific enough that it cannot appear in any other company's email.
+${constraints}
 
 ${WRITING_RULES}
 

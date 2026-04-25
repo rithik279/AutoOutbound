@@ -868,6 +868,7 @@ export default function App() {
   // ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
   if (phase === 'discover') return (
     <div>
+      {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={c.h1}>Find contacts from a prompt</h1>

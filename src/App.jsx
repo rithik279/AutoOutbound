@@ -1328,11 +1328,10 @@ export default function App() {
 
         const isFriend = currentUser?.userId === 'friend'
         // Settings tabs for friend
-        if (isFriend) {
-          return (
-            <div>
-              {statusBar()}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        if (isFriend) return (
+          <div>
+            {statusBar()}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                 <div>
                   <h1 style={c.h1}>Settings</h1>
                   <p style={{ ...c.muted, marginTop: 4 }}>Configure your account</p>

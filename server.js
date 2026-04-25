@@ -562,7 +562,7 @@ app.get('/api/gmail/auth-start', (req, res) => {
         })
       }
     })
-    server.listen
+    server.listen(3334)
   })
   res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
 })

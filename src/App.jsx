@@ -762,7 +762,6 @@ export default function App() {
           <div style={{ width: 1, height: 16, background: '#ddd' }} />
           <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
         </div>
-        <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
             <h1 style={c.h1}>Settings</h1>

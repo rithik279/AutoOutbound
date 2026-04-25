@@ -79,28 +79,24 @@ Keep q_keywords focused: 2–4 words describing the industry or product type.`
   return parseJSON(text)
 }
 
-// ── Manmit's resume — key facts for email personalisation ──────────────────
-const RESUME = `
-Manmit Singh — Senior Data Engineering Contractor, Toronto (remote, USD contracts)
-
-EXPERIENCE: 24 years IT, 18+ years specialising in ETL, data pipelines, and data warehousing.
-
-CORE TOOLS: Informatica IICS / PowerCenter (primary), Talend, Azure Data Factory, GCP Dataflow/BigQuery, Python, SQL, PL/SQL.
-CLOUD: AWS (S3, Glue, Redshift, EMR), Azure (Synapse, Data Lake, Databricks), GCP (BigQuery, Dataflow, Fusion).
-DATA: Hadoop/Hive/Spark, Kafka, SSIS, IBM DataStage, Oracle, SQL Server, Snowflake, Teradata.
-
-ENGAGEMENTS (most recent first):
-- Parkland/Sunoco (Oct 2023–present): Informatica PowerCenter + IICS pipelines for finance, retail, and supply chain. SAP-to-SQL Server ingestion. 99%+ uptime. 40% runtime reduction on key jobs.
-- The Co-operators (Aug 2021–Aug 2023): End-to-end ETL for General Ledger migration using Informatica Cloud. Salesforce Classic → Lightning data migration.
-- Scotiabank (Feb 2020–Aug 2021): Salesforce GBM → Lightning data migration. Metadata management framework in Talend. Python batch + streaming. Jenkins/BitBucket DevOps deployments.
-- Rogers Communications (Jun–Dec 2019): Roaming Data Mart ETL using Informatica IICS. Hive/Hadoop on-prem to cloud ingestion.
-- TD Canada Trust (Sep 2018–May 2019): Google BigQuery pipelines and Python data streaming. Talend Cloud + Kafka data integration.
-- Finastra/D+H (Oct 2015–Aug 2018): Managed ETL team. Informatica + Google Dataflow cloud ETL. Power BI frameworks. Python cross-cluster data movement.
-- Scotiabank (Oct 2013–Sep 2015): HFA Compensation and Treasury Compensation pipelines. Data quality scorecards. Complex Informatica mappings, Type 2/3 SCDs.
-- Earlier (2007–2013): Rogers, Co-operators, Shoppers Drug Mart, Marsh & McLennan — IBM DataStage, Informatica 8–9, Guidewire, Oracle, Teradata.
-
-POSITIONING: Available for remote USD contracts as senior contract capacity. Not a job seeker. Plugs into existing teams and delivers immediately.
-`
+// ── Fetch Manmit's resume text from the server (extracted from .docx) ──────
+let _cachedResume = null
+async function getResume() {
+  if (_cachedResume) return _cachedResume
+  try {
+    const res = await fetch('/api/resume-text')
+    if (!res.ok) throw new Error('failed')
+    const data = await res.json()
+    _cachedResume = data.text || ''
+  } catch {
+    // fallback summary if endpoint unavailable
+    _cachedResume = `Manmit Singh — Senior Data Engineering Contractor, Toronto (remote, USD contracts).
+24 years IT, 18+ years ETL/data pipelines. Tools: Informatica IICS/PowerCenter, Talend, ADF, GCP, Python, SQL.
+Key clients: Parkland/Sunoco, Scotiabank, TD, Rogers, Finastra, Co-operators.
+Available for remote USD senior contract roles. Not a job seeker.`
+  }
+  return _cachedResume
+}
 
 // ── Human writing rules (condensed for system prompt) ──────────────────────
 const WRITING_RULES = `

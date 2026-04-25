@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { searchPeople, bulkEnrich, searchOrgs } from './lib/apollo.js'
 import { draftEmail, fetchSiteContent, promptToApolloParams, promptToApolloOrgParams } from './lib/ai.js'
 import { parseCSV, parseCompanyList, parseResearchCSV } from './lib/csv.js'

@@ -52,6 +52,25 @@ const ENTRY_LEVELS = [
   { id: 'contacts', emoji: '✉️', label: 'Just draft & send', desc: 'Already have your contacts — skip prospecting, go straight to AI email drafting', badge: '#dc2626' },
 ]
 
+const RECRUITER_MODE_TITLES = [
+  'Data Engineering Recruiter', 'Data Recruiter', 'Data & AI Recruiter',
+  'Analytics Recruiter', 'Data Platform Recruiter', 'Data Scientist Recruiter',
+  'Technical Recruiter', 'IT Recruiter',
+  'Account Manager', 'Client Partner', 'Delivery Partner', 'Client Solutions Manager',
+  'Delivery Manager', 'Resource Manager', 'Talent Delivery Lead',
+  'Head of Data & Analytics', 'Practice Lead, Data Engineering',
+  'Director of Data Recruiting', 'Director of Technology Recruiting',
+  'Staffing Consultant', 'Principal Consultant',
+  'Engagement Manager', 'Principal Recruiter'
+]
+
+const RECRUITER_MODE_BLOCKLIST = [
+  'hr ', 'human resources', 'people ops', 'coordinator',
+  'legal', 'counsel', 'design', 'designer', 'brand', 'content', 'creative',
+  'marketing', 'sales', 'revenue', 'business development', 'biz dev',
+  'community', 'social media', 'public relations', ' pr ', 'info@', 'careers@'
+]
+
 const CAMPAIGN_MODES = {
   finance: {
     id: 'finance',
@@ -79,6 +98,16 @@ const CAMPAIGN_MODES = {
     ],
     seniorities: ['vp', 'head', 'c_suite'],
     promptHint: 'Target Series A/B AI startups. Decision makers are VP of Engineering or CTO — most haven\'t hired a dedicated Head of Data yet.'
+  },
+  recruiting: {
+    id: 'recruiting',
+    label: 'Recruiting firms',
+    desc: 'Data/tech recruiters, account managers, delivery leads — help place you at their clients',
+    color: '#059669',
+    titles: RECRUITER_MODE_TITLES,
+    seniorities: ['senior', 'manager', 'director', 'vp', 'head', 'c_suite'],
+    promptHint: 'Target US-based recruiting/staffing firms that place data, analytics, or technical contractors. Reach Data Recruiters, Account Managers, Client Partners, Delivery Managers, and Practice Leads. NOT generic HR, coordinators, or info@ emails.',
+    blocklist: RECRUITER_MODE_BLOCKLIST
   }
 }
 

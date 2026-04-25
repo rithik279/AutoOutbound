@@ -270,23 +270,16 @@ app.post('/api/schedule-campaign', async (req, res) => {
   try { await getGraphToken() }
   catch (e) { return res.status(503).json({ error: e.message }) }
 
-  let sent = 0
+  const queue = loadQueue()
+  const newEntries = emails.map(({ to, subject, body, sendAt }) => ({
+    id: crypto.randomUUID(),
+    to, subject, body, sendAt, sent: false
+  }))
+  saveQueue([...queue, ...newEntries])
+  newEntries.forEach(scheduleEmail)
 
-  emails.forEach(({ to, subject, body, sendAt }) => {
-    const delay = Math.max(0, new Date(sendAt).getTime() - Date.now())
-    setTimeout(async () => {
-      try {
-        await sendViaGraph({ to, subject, body })
-        sent++
-        console.log(`[campaign] sent to ${to} (${sent}/${emails.length})`)
-      } catch (e) {
-        console.error(`[campaign] failed to ${to}: ${e.message}`)
-      }
-    }, delay)
-  })
-
-  console.log(`[campaign] ${emails.length} emails scheduled`)
-  res.json({ ok: true, count: emails.length })
+  console.log(`[campaign] ${newEntries.length} emails scheduled`)
+  res.json({ ok: true, count: newEntries.length })
 })
 
 // ── Health check ───────────────────────────────────────────────────────────

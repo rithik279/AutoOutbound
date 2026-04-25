@@ -282,14 +282,24 @@ async function sendViaGraph({ to, subject, body }) {
   }
 }
 
-// ── Auth status check ─────────────────────────────────────────────────────
-app.get('/api/auth-status', async (req, res) => {
-  try {
-    await getGraphToken()
-    res.json({ ok: true })
-  } catch (e) {
-    res.status(401).json({ ok: false, error: e.message })
-  }
+// ── Token health ──────────────────────────────────────────────────────────
+app.get('/api/token-health', async (req, res) => {
+  const h = getTokenHealth()
+  if (h.status === 'ok') return res.json({ ok: true, status: 'ok', minutesLeft: h.minutesLeft })
+  if (h.status === 'expired') return res.json({ ok: false, status: 'expired', minutesLeft: 0 })
+  if (h.status === 'critical') return res.json({ ok: false, status: 'critical', minutesLeft: h.minutesLeft })
+  if (h.status === 'warning') return res.json({ ok: true, status: 'warning', minutesLeft: h.minutesLeft })
+  if (h.status === 'missing') return res.json({ ok: false, status: 'missing', minutesLeft: 0 })
+  res.json({ ok: false, status: 'error', minutesLeft: 0 })
+})
+
+// ── Schedule queue status ─────────────────────────────────────────────────
+app.get('/api/schedule-status', (req, res) => {
+  const queue = loadQueue()
+  const sent = queue.filter(e => e.sent).length
+  const pending = queue.filter(e => !e.sent).length
+  const total = queue.length
+  res.json({ total, sent, pending })
 })
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────

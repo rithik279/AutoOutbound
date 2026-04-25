@@ -3,5 +3,6 @@ dist/
 .env
 .env.local
 .env.*.local
+.tokens.json
 # Added by code-review-graph
 .code-review-graph/

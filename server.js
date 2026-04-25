@@ -137,6 +137,16 @@ app.post('/api/fetch-site', async (req, res) => {
   }
 })
 
+// ── Resume text (extracted from .docx for email personalisation) ──────────
+app.get('/api/resume-text', async (req, res) => {
+  try {
+    const result = await mammoth.extractRawText({ path: join(__dirname, 'Singh_Manmit_2026_03_04.docx') })
+    res.json({ text: result.value })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ── Schedule campaign emails (Outlook SMTP, server-side timers) ───────────
 app.post('/api/schedule-campaign', async (req, res) => {
   if (!OUTLOOK_PASS) {

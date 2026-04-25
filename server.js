@@ -463,6 +463,138 @@ app.put('/api/user/profile', (req, res) => {
   res.json({ ok: true })
 })
 
+// ── Gmail OAuth ─────────────────────────────────────────────────────────────
+const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || ''
+const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || ''
+const GMAIL_REDIRECT_URI = 'http://localhost:3334/callback'
+
+function getGmailTokensPath(userId) {
+  return join(__dirname, `gmail_tokens_${userId}.json`)
+}
+
+function getGmailTokenHealth(userId) {
+  const path = getGmailTokensPath(userId)
+  if (!existsSync(path)) return { status: 'missing', minutesLeft: 0 }
+  try {
+    const t = JSON.parse(readFileSync(path, 'utf8'))
+    const msLeft = t.expiresAt - Date.now()
+    const minutesLeft = Math.round(msLeft / 60000)
+    if (msLeft < 0) return { status: 'expired', minutesLeft: 0 }
+    if (msLeft < 10 * 60000) return { status: 'critical', minutesLeft }
+    if (msLeft < 30 * 60000) return { status: 'warning', minutesLeft }
+    return { status: 'ok', minutesLeft }
+  } catch {
+    return { status: 'error', minutesLeft: 0 }
+  }
+}
+
+async function getGmailToken(userId) {
+  const path = getGmailTokensPath(userId)
+  if (!existsSync(path)) throw new Error('Gmail not connected — click "Connect Gmail" in settings')
+  const t = JSON.parse(readFileSync(path, 'utf8'))
+  if (!t.accessToken) throw new Error('Invalid Gmail token')
+
+  // Refresh if within 5 minutes of expiry
+  if (t.expiresAt - Date.now() < 5 * 60 * 1000) {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: GMAIL_CLIENT_ID,
+        client_secret: GMAIL_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: t.refreshToken
+      })
+    })
+    const data = await res.json()
+    if (!data.access_token) throw new Error('Gmail token refresh failed — reconnect Gmail')
+    t.accessToken = data.access_token
+    t.refreshToken = data.refresh_token || t.refreshToken
+    t.expiresAt = Date.now() + data.expires_in * 1000
+    writeFileSync(path, JSON.stringify(t, null, 2))
+  }
+  return t.accessToken
+}
+
+app.get('/api/gmail/auth-start', (req, res) => {
+  const clientId = GMAIL_CLIENT_ID
+  const redirect = GMAIL_REDIRECT_URI
+  if (!clientId) {
+    return res.status(503).json({ error: 'Gmail OAuth not configured — set GMAIL_CLIENT_ID in .env' })
+  }
+  const verifier = crypto.randomBytes(32).toString('base64url')
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirect,
+    scope: 'https://www.googleapis.com/auth/gmail.send',
+    access_type: 'offline',
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    prompt: 'consent'
+  })}`
+  import('http').then(({ createServer }) => {
+    const server = createServer((req, res) => {
+      const url = new URL(req.url, `http://localhost:3334`)
+      const code = url.searchParams.get('code')
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
+      server.close()
+      if (code) {
+        fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: clientId, client_secret: GMAIL_CLIENT_SECRET,
+            code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier
+          })
+        }).then(r => r.json()).then(data => {
+          if (data.access_token) {
+            // Store in friend's tokens by default (resolve from cookie or default to 'friend')
+            const userId = 'friend' // TODO: pass userId via state in auth URL
+            writeFileSync(getGmailTokensPath(userId), JSON.stringify({
+              clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000
+            }, null, 2))
+            // Also update user's gmailTokens flag
+            const users = loadUsers()
+            users[userId].gmailTokens = true
+            saveUsers(users)
+            console.log('[GMAIL] Authorized successfully for friend')
+          }
+        })
+      }
+    })
+    server.listen
+  })
+  res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
+})
+
+app.get('/api/gmail/token-health', (req, res) => {
+  const userId = req.headers['x-user-id'] || 'friend'
+  const h = getGmailTokenHealth(userId)
+  if (h.status === 'ok') return res.json({ ok: true, status: 'ok', minutesLeft: h.minutesLeft })
+  if (h.status === 'expired') return res.json({ ok: false, status: 'expired', minutesLeft: 0 })
+  if (h.status === 'critical') return res.json({ ok: false, status: 'critical', minutesLeft: h.minutesLeft })
+  if (h.status === 'warning') return res.json({ ok: true, status: 'warning', minutesLeft: h.minutesLeft })
+  if (h.status === 'missing') return res.json({ ok: false, status: 'missing', minutesLeft: 0 })
+  res.json({ ok: false, status: 'error', minutesLeft: 0 })
+})
+
+async function sendViaGmail({ to, subject, body }, userId) {
+  const token = await getGmailToken(userId)
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      raw: Buffer.from(`To: ${to}\r\nSubject: ${subject}\r\n\r\n${body}`).toString('base64url')
+    })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `Gmail API ${res.status}`)
+  }
+}
+
 // ── Health check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 

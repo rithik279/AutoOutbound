@@ -5,6 +5,7 @@ import { dirname, join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import fetch from 'node-fetch'
 import mammoth from 'mammoth'
+import crypto from 'crypto'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()

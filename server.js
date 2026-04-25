@@ -21,8 +21,8 @@ const OPENAI_KEY    = process.env.VITE_OPENAI_KEY    || [
 ].join('')
 const ANTHROPIC_KEY = process.env.VITE_ANTHROPIC_KEY || ''
 const APOLLO_KEY    = process.env.VITE_APOLLO_KEY    || 'T4AMhsNxCK-' + '6JULweSKang'
-const OUTLOOK_USER  = process.env.OUTLOOK_USER        || 'manmit.singh@live.com'
-const OUTLOOK_PASS  = process.env.OUTLOOK_PASS        || 'Rithik!234!'   // your Outlook / Live account password
+const SENDER_EMAIL  = process.env.OUTLOOK_USER || 'manmit.singh@live.com'
+const TOKENS_PATH   = join(__dirname, '.tokens.json')
 
 // ── CORS for Vite dev ──────────────────────────────────────────────────────
 app.use((req, res, next) => {

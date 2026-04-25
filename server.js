@@ -335,8 +335,28 @@ app.get('/api/schedule-status', (req, res) => {
   const queue = loadQueue()
   const sent = queue.filter(e => e.sent).length
   const pending = queue.filter(e => !e.sent).length
+  const failed = queue.filter(e => e.failed).length
   const total = queue.length
-  res.json({ total, sent, pending })
+  res.json({ total, sent, pending, failed })
+})
+
+// ── Retry failed emails ───────────────────────────────────────────────────
+app.post('/api/schedule-retry', (req, res) => {
+  // Verify auth first
+  try { await getGraphToken() }
+  catch (e) { return res.status(503).json({ error: e.message }) }
+
+  const queue = loadQueue()
+  const failed = queue.filter(e => e.failed)
+  if (!failed.length) return res.json({ ok: true, count: 0 })
+
+  // Reset failed flag and reschedule
+  failed.forEach(e => { e.failed = false })
+  saveQueue(queue)
+  failed.forEach(scheduleEmail)
+
+  console.log(`[campaign] retrying ${failed.length} failed emails`)
+  res.json({ ok: true, count: failed.length })
 })
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────

@@ -37,7 +37,13 @@ console.log('\nStarting Microsoft authorization...\n')
 
 const result = await app.acquireTokenByDeviceCode({
   scopes: ['https://graph.microsoft.com/Mail.Send', 'offline_access'],
-  deviceCodeCallback: (res) => console.log(res.message)
+  deviceCodeCallback: (res) => {
+    // Show URL and code clearly regardless of which property name MSAL uses
+    const msg = res.message || res.userCode
+      ? `\nTo sign in, visit: ${res.verificationUri || 'https://microsoft.com/devicelogin'}\nEnter code: ${res.userCode}\n`
+      : JSON.stringify(res, null, 2)
+    console.log(msg)
+  }
 })
 
 console.log(`\n✓ Authorized as ${result.account.username}`)

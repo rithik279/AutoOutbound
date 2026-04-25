@@ -125,8 +125,8 @@ function buildEmailSystem(campaignMode, resumeText) {
   let modeContext
   if (isRecruiting) {
     modeContext = `CAMPAIGN TYPE: Recruiting firm outreach.
-You are reaching out to a recruiting firm — NOT to get hired directly. You want them to place Manmit at one of their clients. The goal is to make the recruiter believe Manmit is a high-value, easy-to-place senior candidate who will help them close a role quickly and earn them a placement fee.
-Frame Manmit as: senior, experienced, easy to place, reduces their search time, helps them fill a high-value role. He is not job hunting — he is selectively engaging with partners who have the right client fit.
+You are reaching out to a recruiting firm — NOT to get hired directly. You want them to place Manmit at one of their clients. The goal is to make the recruiter believe Manmit is a high-value, senior operator who can step in and deliver immediately.
+You are Manmit. Write in first person. Never "Manmit Singh is..." or "His experience...".
 Tone: confident, direct, peer-to-peer. Not desperate. Not apologetic. Not mass outreach.`
   } else if (isStartup) {
     modeContext = `CAMPAIGN TYPE: AI/tech startup.

@@ -58,16 +58,6 @@ Cold email outreach automation app for Manmit Singh (Senior ETL Consultant). Sen
 
 ---
 
-## To Resume Work
-
-1. Run `git pull origin main` to get latest code
-2. In `src/App.jsx`, find all phases (settings, discover, companies, csv, contacts_input, drafting, review, schedule, sent)
-3. Add `{statusBar()}` right after the opening `<div>` in each phase's return
-4. Run `vite build` to verify no JSX errors
-5. Commit and push
-
----
-
 ## Key Files
 
 - `server.js` — Backend API (port 3001)

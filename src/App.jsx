@@ -368,13 +368,14 @@ export default function App() {
         const tierCEO     = { label: 'CEO', params: { person_titles: ['CEO', 'Chief Executive Officer'], person_seniorities: ['c_suite'], per_page: 3, ...orgFilter }, useFilter: false }
         const tierMode    = { label: 'mode titles', params: { person_titles: mode.titles, person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
         const tierBroad   = { label: 'broad seniority', params: { person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
+        const tierCSuite  = { label: 'any C-suite', params: { person_seniorities: ['c_suite', 'owner', 'founder', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
 
-        // Order: hint-specific first, then standard tiers, then fallbacks
+        // Order: hint-specific first, then standard tiers, then C-suite catch-all
         let tiers
-        if (isFounderHint)      tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierCEO]
-        else if (isEngHint)     tiers = [tierCTO, tierMode, tierBroad, tierFounder, tierCEO]
-        else if (isDataHint)    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder]
-        else                    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder]
+        if (isFounderHint)      tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierCEO, tierCSuite]
+        else if (isEngHint)     tiers = [tierCTO, tierMode, tierBroad, tierFounder, tierCEO, tierCSuite]
+        else if (isDataHint)    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder, tierCSuite]
+        else                    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder, tierCSuite]
 
         let topPeople = []
         for (const tier of tiers) {
@@ -382,7 +383,7 @@ export default function App() {
           let people = uniqueBy(res.people || [], p => p.id || `${p.first_name}|${p.last_name}`)
           if (tier.useFilter) people = people.filter(p => isTitleRelevant(p.title, campaignMode))
           logCompany(`[${co.co}] ${tier.label}: ${people.length} relevant`)
-          if (people.length > 0) { topPeople = people.slice(0, 2); break }
+          if (people.length > 0) { topPeople = people.slice(0, 1); break }
         }
 
         if (topPeople.length > 0) {

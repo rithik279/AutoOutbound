@@ -310,6 +310,17 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
 
+  // Settings local state (for editable fields)
+  const [localSenderName, setLocalSenderName] = useState('')
+  const [localSenderEmail, setLocalSenderEmail] = useState('')
+  // Sync when profile loads
+  useEffect(() => {
+    if (profile) {
+      setLocalSenderName(profile.senderName || currentUser?.name || '')
+      setLocalSenderEmail(profile.senderEmail || currentUser?.email || '')
+    }
+  }, [profile, currentUser])
+
   // Config
   const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history
   const [entryLevel, setEntryLevel] = useState(null)

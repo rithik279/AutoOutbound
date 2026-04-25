@@ -1322,43 +1322,21 @@ export default function App() {
     )
   }
 
-  // ── MACRO ─────────────────────────────────────────────────────────────────
-  if (phase === 'macro') return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div><h1 style={c.h1}>Outlook VBA macro ready</h1><p style={{ ...c.muted, marginTop: 4 }}>Copy → paste into Outlook → run once</p></div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setPhase('schedule')} style={c.ghostBtn}>← Back</button>
-          <button onClick={() => {
-            const msg = encodeURIComponent('Campaign macro ready. Open Outlook, press Alt+F11, Insert > Module, paste, press F5.')
-            window.open(`https://wa.me/?text=${msg}`, '_blank')
-          }} style={c.ghostBtn}>WhatsApp</button>
-          <button onClick={copyMacro} style={copied ? c.successBtn : c.primaryBtn}>{copied ? 'Copied ✓' : 'Copy macro'}</button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
-        {['1. Open Outlook', '2. Alt + F11', '3. Insert → Module', '4. Paste → F5 → Run'].map((s, i) => (
-          <div key={i} style={{ ...c.card, padding: '12px', textAlign: 'center' }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 13 }}>{s.split('. ')[0]}.</p>
-            <p style={{ ...c.muted, fontSize: 12, margin: 0 }}>{s.split('. ').slice(1).join('. ')}</p>
-          </div>
+  // ── SENT ──────────────────────────────────────────────────────────────────
+  if (phase === 'sent') return (
+    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+      <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
+      <p style={{ ...c.muted, marginBottom: 32 }}>
+        Sending via Outlook SMTP starting {sendDate} at {sendTime}, every {gap} min.
+        The server handles delivery — you can close this tab.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, maxWidth: 400, margin: '0 auto 32px' }}>
+        {[{ n: sentCount, l: 'scheduled' }, { n: sendTime, l: 'first send' }, { n: `${gap}m`, l: 'gap' }].map(s => (
+          <div key={s.l} style={c.statBox}><span style={c.statNum}>{s.n}</span><span style={c.statLbl}>{s.l}</span></div>
         ))}
       </div>
-
-      <pre style={{ background: '#111', color: '#e5e5e0', borderRadius: 12, padding: '1.25rem', fontSize: 11, lineHeight: 1.65, fontFamily: 'monospace', overflowX: 'auto', overflowY: 'auto', maxHeight: 500, whiteSpace: 'pre' }}>
-        {macroCode}
-      </pre>
-
-      <div style={{ display: 'flex', gap: 12, marginTop: 14, justifyContent: 'space-between', alignItems: 'center' }}>
-        <p style={{ ...c.muted, fontSize: 12, flex: 1 }}>
-          Emails queue in Outbox with deferred delivery. Outlook fires them at each scheduled time — keep it open or open before each send.
-        </p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setPhase('entry')} style={c.ghostBtn}>New campaign</button>
-          <button onClick={copyMacro} style={copied ? c.successBtn : c.primaryBtn}>{copied ? 'Copied ✓' : 'Copy macro'}</button>
-        </div>
-      </div>
+      <button onClick={() => setPhase('entry')} style={c.primaryBtn}>New campaign</button>
     </div>
   )
 

@@ -1382,7 +1382,7 @@ export default function App() {
         {reviewStatusBar}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
-            <h1 style={c.h1}>Review & approve</h1> = sel ? drafts[sel.id] : null
+            <h1 style={c.h1}>Review & approve</h1>
     const isEditing = sel && editing === sel.id
     const N = contacts.length
     const readyCount = Object.values(drafts).filter(d => d).length

@@ -9,6 +9,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@azure/msal-node": "^5.1.2",
     "express": "^4.18.2",
     "mammoth": "^1.12.0",
     "node-fetch": "^3.3.2",

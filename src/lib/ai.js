@@ -176,7 +176,8 @@ export async function fetchSiteContent(domain) {
 
 // ── Draft one email ────────────────────────────────────────────────────────
 export async function draftEmail(contact, aiConfig, campaignMode, siteContent) {
-  const system = buildEmailSystem(campaignMode)
+  const resumeText = await getResume()
+  const system = buildEmailSystem(campaignMode, resumeText)
 
   const firstName = contact.first || contact.name?.split(' ')[0] || contact.name
   const title = contact.title ? `, ${contact.title}` : ''

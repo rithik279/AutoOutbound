@@ -122,6 +122,14 @@ const TITLE_BLOCKLIST = [
 function isTitleRelevant(title, mode) {
   if (!title) return false
   const t = title.toLowerCase()
+
+  // Recruiting mode has its own blocklist defined in CAMPAIGN_MODES
+  if (mode === 'recruiting') {
+    const blocklist = CAMPAIGN_MODES.recruiting.blocklist
+    if (blocklist.some(bad => t.includes(bad))) return false
+    return RECRUITER_MODE_TITLES.some(ok => t.includes(ok.toLowerCase()))
+  }
+
   if (TITLE_BLOCKLIST.some(bad => t.includes(bad))) return false
   if (mode === 'startup') {
     return /engineer|cto|chief tech|technology|infrastructure|platform|technical|founder/i.test(t)

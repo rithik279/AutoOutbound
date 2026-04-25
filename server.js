@@ -193,9 +193,12 @@ app.get('/api/resume-text', async (req, res) => {
 
 // ── Microsoft Graph API — token management (raw OAuth2, no MSAL) ───────────
 function getTokenHealth() {
+  console.log('[DEBUG] getTokenHealth start')
   if (!existsSync(TOKENS_PATH)) return { status: 'missing', minutesLeft: 0 }
+  console.log('[DEBUG] tokens file exists, reading...')
   try {
     const t = JSON.parse(readFileSync(TOKENS_PATH, 'utf8'))
+    console.log('[DEBUG] tokens parsed, returning')
     const msLeft = t.expiresAt - Date.now()
     const minutesLeft = Math.round(msLeft / 60000)
     if (msLeft < 0) return { status: 'expired', minutesLeft: 0 }

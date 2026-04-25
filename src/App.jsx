@@ -286,6 +286,10 @@ export default function App() {
   const userResumeText = profile?.resumeText || null
   const userPrompt = profile?.prompt || null
 
+  // Login local state
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPass, setLoginPass] = useState('')
+
   // Config
   const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history
   const [entryLevel, setEntryLevel] = useState(null)

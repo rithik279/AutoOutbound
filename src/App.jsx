@@ -278,60 +278,6 @@ export default function App() {
   const [scheduleError, setScheduleError] = useState('')
   const [sentCount, setSentCount] = useState(0)
 
-  // Auth & job status
-  const [authStatus, setAuthStatus] = useState(null) // null=loading, {ok, status, minutesLeft}
-  const [scheduleStatus, setScheduleStatus] = useState(null) // {total, sent, pending, failed}
-  const [reAuthLoading, setReAuthLoading] = useState(false)
-  const [retryLoading, setRetryLoading] = useState(false)
-
-  // Poll auth & schedule status
-  useEffect(() => {
-    async function fetchStatus() {
-      try {
-        const [authRes, schedRes] = await Promise.all([
-          fetch('/api/token-health'),
-          fetch('/api/schedule-status')
-        ])
-        const auth = await authRes.json()
-        const sched = await schedRes.json()
-        setAuthStatus(auth)
-        setScheduleStatus(sched)
-      } catch {}
-    }
-    fetchStatus()
-    const id = setInterval(fetchStatus, 30000) // refresh every 30s
-    return () => clearInterval(id)
-  }, [])
-
-  async function runReAuth() {
-    setReAuthLoading(true)
-    window.open('http://localhost:3001/api/auth-start', '_blank')
-    // Poll until auth succeeds
-    for (let i = 0; i < 30; i++) {
-      await new Promise(r => setTimeout(r, 2000))
-      try {
-        const res = await fetch('/api/token-health')
-        const data = await res.json()
-        if (data.ok) { setAuthStatus(data); break }
-      } catch {}
-    }
-    setReAuthLoading(false)
-  }
-
-  async function runRetryFailed() {
-    setRetryLoading(true)
-    try {
-      const res = await fetch('/api/schedule-retry', { method: 'POST' })
-      const data = await res.json()
-      if (data.ok) {
-        // Refresh status after retry
-        const schedRes = await fetch('/api/schedule-status')
-        setScheduleStatus(await schedRes.json())
-      }
-    } catch {}
-    setRetryLoading(false)
-  }
-
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
@@ -718,12 +664,6 @@ export default function App() {
   // RENDER
   // ════════════════════════════════════════════════════════════════════════
 
-  // ── STATUS BAR VARIABLES (used in all phases) ───────────────────────────
-  const authColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
-  const authLabel = authStatus?.status === 'ok' ? 'Outlook connected' : authStatus?.status === 'warning' ? `Outlook expires in ${authStatus?.minutesLeft}m` : authStatus?.status === 'critical' ? `Outlook critical — ${authStatus?.minutesLeft}m left` : authStatus?.status === 'expired' ? 'Outlook expired' : 'Outlook unknown'
-  const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
-  const hasFailed = scheduleStatus?.failed > 0
-
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
   if (phase === 'entry') return (
     <div>
@@ -764,25 +704,6 @@ export default function App() {
 
     return (
       <div>
-        {/* Status bar */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-            <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-            {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-              <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-                {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-              </button>
-            )}
-          </div>
-          <div style={{ width: 1, height: 16, background: '#ddd' }} />
-          <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
             <h1 style={c.h1}>Settings</h1>
@@ -868,25 +789,6 @@ export default function App() {
   // ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
   if (phase === 'discover') return (
     <div>
-      {/* Status bar */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-          {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-            <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-            </button>
-          )}
-        </div>
-        <div style={{ width: 1, height: 16, background: '#ddd' }} />
-        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={c.h1}>Find contacts from a prompt</h1>
@@ -956,25 +858,6 @@ export default function App() {
   // ── LEVEL 1: COMPANY LIST → APOLLO ──────────────────────────────────────
   if (phase === 'companies') return (
     <div>
-      {/* Status bar */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-          {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-            <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-            </button>
-          )}
-        </div>
-        <div style={{ width: 1, height: 16, background: '#ddd' }} />
-        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={c.h1}>Find decision makers by company</h1>
@@ -1154,25 +1037,6 @@ export default function App() {
   // ── LEVEL 2: CSV ────────────────────────────────────────────────────────
   if (phase === 'csv') return (
     <div>
-      {/* Status bar */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-          {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-            <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-            </button>
-          )}
-        </div>
-        <div style={{ width: 1, height: 16, background: '#ddd' }} />
-        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={c.h1}>Import from CSV</h1>
@@ -1240,25 +1104,6 @@ export default function App() {
   if (phase === 'contacts_input') {
     return (
       <div>
-        {/* Status bar */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-            <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-            {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-              <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-                {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-              </button>
-            )}
-          </div>
-          <div style={{ width: 1, height: 16, background: '#ddd' }} />
-          <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <h1 style={c.h1}>Your contacts</h1>
@@ -1299,25 +1144,6 @@ export default function App() {
     const N = contacts.length
     return (
       <div>
-        {/* Status bar */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-            <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-            {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-              <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-                {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-              </button>
-            )}
-          </div>
-          <div style={{ width: 1, height: 16, background: '#ddd' }} />
-          <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <h1 style={c.h1}>Drafting {N} emails…</h1>
@@ -1359,30 +1185,7 @@ export default function App() {
   // ── REVIEW ────────────────────────────────────────────────────────────────
   if (phase === 'review') {
     const sel = selected || contacts[0]
-    // Status bar
-    const reviewStatusBar = (
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-          {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-            <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-            </button>
-          )}
-        </div>
-        <div style={{ width: 1, height: 16, background: '#ddd' }} />
-        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-        </div>
-        {reviewStatusBar}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-          <div>
-            <h1 style={c.h1}>Review & approve</h1>
+    const selDraft = sel ? drafts[sel.id] : null
     const isEditing = sel && editing === sel.id
     const N = contacts.length
     const readyCount = Object.values(drafts).filter(d => d).length
@@ -1391,7 +1194,6 @@ export default function App() {
 
     return (
       <div>
-        {reviewStatusBar}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <h1 style={c.h1}>Review & approve</h1>
@@ -1507,20 +1309,6 @@ export default function App() {
 
     return (
       <div>
-        {/* Status bar */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-            <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-            {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-              <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-                {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-              </button>
-            )}
-          </div>
-          <div style={{ width: 1, height: 16, background: '#ddd' }} />
-          <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div><h1 style={c.h1}>Schedule campaign</h1><p style={{ ...c.muted, marginTop: 4 }}>{N} approved · set your send window</p></div>
           <button onClick={() => setPhase('review')} style={c.ghostBtn}>← Review</button>
@@ -1578,20 +1366,6 @@ export default function App() {
   // ── SENT ──────────────────────────────────────────────────────────────────
   if (phase === 'sent') return (
     <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-      {/* Status bar */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 24, border: '1px solid #eee', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-        </div>
-        <div style={{ width: 1, height: 16, background: '#ddd' }} />
-        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
-          {hasFailed && (
-            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-            </button>
-          )}
-      </div>
       <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
       <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
       <p style={{ ...c.muted, marginBottom: 32 }}>

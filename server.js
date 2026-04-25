@@ -396,9 +396,9 @@ app.post('/api/schedule-campaign', async (req, res) => {
   catch (e) { return res.status(503).json({ error: e.message }) }
 
   const queue = loadQueue()
-  const newEntries = emails.map(({ to, subject, body, sendAt }) => ({
+  const newEntries = emails.map(({ to, subject, body, sendAt, company }) => ({
     id: crypto.randomUUID(),
-    to, subject, body, sendAt, sent: false
+    to, subject, body, sendAt, sent: false, company: company || ''
   }))
   saveQueue([...queue, ...newEntries])
   newEntries.forEach(scheduleEmail)

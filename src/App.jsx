@@ -1227,6 +1227,7 @@ export default function App() {
     const N = contacts.length
     return (
       <div>
+        {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <h1 style={c.h1}>Drafting {N} emails…</h1>

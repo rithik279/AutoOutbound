@@ -1116,7 +1116,7 @@ export default function App() {
   )
 
   // ── LEVEL 2: CSV ────────────────────────────────────────────────────────
-  if (phase === 'csv') return (
+  else if (phase === 'csv') return (
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

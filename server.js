@@ -407,6 +407,62 @@ app.post('/api/schedule-campaign', async (req, res) => {
   res.json({ ok: true, count: newEntries.length })
 })
 
+// ── User management ───────────────────────────────────────────────────────
+const USERS_PATH = join(__dirname, 'users.json')
+
+function loadUsers() {
+  try { return existsSync(USERS_PATH) ? JSON.parse(readFileSync(USERS_PATH, 'utf8')) : {} }
+  catch { return {} }
+}
+function saveUsers(users) {
+  writeFileSync(USERS_PATH, JSON.stringify(users, null, 2))
+}
+
+app.post('/api/user/login', (req, res) => {
+  const { email, password } = req.body
+  const users = loadUsers()
+  const found = Object.entries(users).find(([, u]) => u.email === email && u.password === password)
+  if (!found) return res.status(401).json({ error: 'Invalid email or password' })
+  const [userId] = found
+  res.json({ ok: true, userId, name: found[1].name, email: found[1].email })
+})
+
+app.get('/api/user/profile', (req, res) => {
+  const userId = req.headers['x-user-id']
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+  const users = loadUsers()
+  const user = users[userId]
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  // Return profile without sensitive fields
+  res.json({
+    name: user.name,
+    email: user.email,
+    senderName: user.senderName,
+    modelId: user.modelId,
+    campaignMode: user.campaignMode,
+    emailProvider: user.emailProvider,
+    resumeText: user.resumeText || null,
+    prompt: user.prompt || null,
+    hasGmailToken: !!(user.gmailTokens)
+  })
+})
+
+app.put('/api/user/profile', (req, res) => {
+  const userId = req.headers['x-user-id']
+  if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+  const users = loadUsers()
+  if (!users[userId]) return res.status(404).json({ error: 'User not found' })
+  const { name, senderName, modelId, campaignMode, resumeText, prompt } = req.body
+  if (name !== undefined) users[userId].name = name
+  if (senderName !== undefined) users[userId].senderName = senderName
+  if (modelId !== undefined) users[userId].modelId = modelId
+  if (campaignMode !== undefined) users[userId].campaignMode = campaignMode
+  if (resumeText !== undefined) users[userId].resumeText = resumeText
+  if (prompt !== undefined) users[userId].prompt = prompt
+  saveUsers(users)
+  res.json({ ok: true })
+})
+
 // ── Health check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fetch from 'node-fetch'
 import nodemailer from 'nodemailer'
+import mammoth from 'mammoth'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()

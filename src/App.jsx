@@ -1340,6 +1340,7 @@ export default function App() {
 
     return (
       <div>
+        {reviewStatusBar}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <h1 style={c.h1}>Review & approve</h1>

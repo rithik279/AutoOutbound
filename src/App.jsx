@@ -593,8 +593,12 @@ export default function App() {
         draftsRef.current[contact.id] = { subject, body, status: 'ready' }
       } catch (e) {
         draftsRef.current[contact.id] = {
-          subject: `Data engineering — ${contact.co || contact.company}`,
-          body: `Hi ${contact.first || contact.name?.split(' ')[0]},\n\nI'm a senior data engineering contractor with 24 years of experience in Informatica ETL and Python pipelines across financial services and tech. I'm available for remote USD contracts.\n\nWorth a quick call?\n\nBest,\nManmit`,
+          subject: campaignMode === 'recruiting'
+            ? `Senior ETL contractor — available for placements`
+            : `Data engineering — ${contact.co || contact.company}`,
+          body: campaignMode === 'recruiting'
+            ? `Hi ${contact.first || contact.name?.split(' ')[0]},\n\nI'm a senior data engineering contractor — 24+ years in ETL, Python, and enterprise data systems. I'm actively working through recruiting partners for client placements and wanted to explore alignment.\n\nExperience includes Informatica pipelines at Scotiabank, TD, and Rogers. Comfortable in financial services, regulatory, and high-volume data environments.\n\nOpen to a quick 15-minute call if you have relevant roles.\n\nBest,\nManmit`
+            : `Hi ${contact.first || contact.name?.split(' ')[0]},\n\nI'm a senior data engineering contractor with 24 years of experience in Informatica ETL and Python pipelines across financial services and tech. I'm available for remote USD contracts.\n\nWorth a quick call?\n\nBest,\nManmit`,
           status: 'fallback', error: e.message
         }
       }

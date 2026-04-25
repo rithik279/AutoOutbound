@@ -347,7 +347,7 @@ app.get('/api/schedule-status', (req, res) => {
 })
 
 // ── Retry failed emails ───────────────────────────────────────────────────
-app.post('/api/schedule-retry', (req, res) => {
+app.post('/api/schedule-retry', async (req, res) => {
   // Verify auth first
   try { await getGraphToken() }
   catch (e) { return res.status(503).json({ error: e.message }) }

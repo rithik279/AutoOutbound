@@ -791,7 +791,11 @@ export default function App() {
         })}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={loadSentHistory} style={{ ...c.ghostBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 16 }}>📧</span>
+          View sent emails {scheduleStatus?.sent ? `(${scheduleStatus.sent})` : ''}
+        </button>
         <button onClick={() => { if (entryLevel) setPhase('settings') }} disabled={!entryLevel} style={c.primaryBtn}>
           Continue →
         </button>

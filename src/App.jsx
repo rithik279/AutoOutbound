@@ -1183,7 +1183,7 @@ export default function App() {
   )
 
   // ── LEVEL 3: MANUAL CONTACTS INPUT ──────────────────────────────────────
-  if (phase === 'contacts_input') {
+  if (phase === 'contacts_input')
     return (
       <div>
         {statusBar()}

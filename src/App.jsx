@@ -278,6 +278,57 @@ export default function App() {
   const [scheduleError, setScheduleError] = useState('')
   const [sentCount, setSentCount] = useState(0)
 
+  // Auth & job status
+  const [authStatus, setAuthStatus] = useState(null)
+  const [scheduleStatus, setScheduleStatus] = useState(null)
+  const [reAuthLoading, setReAuthLoading] = useState(false)
+  const [retryLoading, setRetryLoading] = useState(false)
+
+  useEffect(() => {
+    async function fetchStatus() {
+      try {
+        const [authRes, schedRes] = await Promise.all([
+          fetch('/api/token-health'),
+          fetch('/api/schedule-status')
+        ])
+        const auth = await authRes.json()
+        const sched = await schedRes.json()
+        setAuthStatus(auth)
+        setScheduleStatus(sched)
+      } catch {}
+    }
+    fetchStatus()
+    const id = setInterval(fetchStatus, 30000)
+    return () => clearInterval(id)
+  }, [])
+
+  async function runReAuth() {
+    setReAuthLoading(true)
+    window.open('http://localhost:3001/api/auth-start', '_blank')
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      try {
+        const res = await fetch('/api/token-health')
+        const data = await res.json()
+        if (data.ok) { setAuthStatus(data); break }
+      } catch {}
+    }
+    setReAuthLoading(false)
+  }
+
+  async function runRetryFailed() {
+    setRetryLoading(true)
+    try {
+      const res = await fetch('/api/schedule-retry', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        const schedRes = await fetch('/api/schedule-status')
+        setScheduleStatus(await schedRes.json())
+      }
+    } catch {}
+    setRetryLoading(false)
+  }
+
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 

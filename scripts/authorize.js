@@ -4,7 +4,7 @@
 // It prints a URL + code — open the URL in a browser, sign in with
 // manmit.singh@live.com, enter the code. Done. Tokens saved to .tokens.json.
 
-import msal from '@azure/msal-node'
+import { PublicClientApplication } from '@azure/msal-node'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 
 const CLIENT_ID = process.argv[2]

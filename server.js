@@ -186,7 +186,35 @@ app.get('/api/resume-text', async (req, res) => {
 })
 
 // ── Microsoft Graph API — token management (raw OAuth2, no MSAL) ───────────
+function getTokenHealth() {
+  if (!existsSync(TOKENS_PATH)) return { status: 'missing', minutesLeft: 0 }
+  try {
+    const t = JSON.parse(readFileSync(TOKENS_PATH, 'utf8'))
+    const msLeft = t.expiresAt - Date.now()
+    const minutesLeft = Math.round(msLeft / 60000)
+    if (msLeft < 0) return { status: 'expired', minutesLeft: 0 }
+    if (msLeft < 10 * 60000) return { status: 'critical', minutesLeft }
+    if (msLeft < 30 * 60000) return { status: 'warning', minutesLeft }
+    return { status: 'ok', minutesLeft }
+  } catch {
+    return { status: 'error', minutesLeft: 0 }
+  }
+}
+
+function logTokenHealth() {
+  const h = getTokenHealth()
+  if (h.status === 'expired') {
+    console.error('\n[TOKEN] EXPIRED — scheduled sends will fail. Run: node scripts/authorize.js f923c348-569c-4c61-8734-278ac0d47bee\n')
+  } else if (h.status === 'critical') {
+    console.warn(`[TOKEN] CRITICAL — expires in ${h.minutesLeft}min. Refresh with: node scripts/authorize.js f923c348-569c-4c61-8734-278ac0d47bee`)
+  } else if (h.status === 'warning') {
+    console.warn(`[TOKEN] Warning — expires in ${h.minutesLeft}min`)
+  }
+}
+
 async function getGraphToken() {
+  logTokenHealth() // log on every call
+
   if (!existsSync(TOKENS_PATH)) {
     throw new Error('Not authorized — run: node scripts/authorize.js <CLIENT_ID>')
   }
@@ -211,9 +239,13 @@ async function getGraphToken() {
     t.refreshToken = data.refresh_token || t.refreshToken
     t.expiresAt    = Date.now() + data.expires_in * 1000
     writeFileSync(TOKENS_PATH, JSON.stringify(t, null, 2))
+    console.log('[TOKEN] Refreshed successfully')
   }
   return t.accessToken
 }
+
+// Background health check every 10 minutes
+setInterval(logTokenHealth, 10 * 60 * 1000)
 
 async function sendViaGraph({ to, subject, body }) {
   const token = await getGraphToken()

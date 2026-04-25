@@ -336,6 +336,15 @@ export default function App() {
     setRetryLoading(false)
   }
 
+  async function loadSentHistory() {
+    try {
+      const res = await fetch('/api/sent-emails')
+      const data = await res.json()
+      setSentHistory(data.emails || [])
+      setPhase('sent_history')
+    } catch {}
+  }
+
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 

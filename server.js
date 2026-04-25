@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
@@ -70,7 +71,7 @@ function scheduleEmail({ id, to, subject, body, sendAt }) {
 // ── CORS for Vite dev ──────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-apollo-key')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-apollo-key, x-user-id')
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   if (req.method === 'OPTIONS') return res.sendStatus(200)
   next()
@@ -338,8 +339,9 @@ app.get('/api/token-health', async (req, res) => {
 
 // ── Sent emails list ─────────────────────────────────────────────────────
 app.get('/api/sent-emails', (req, res) => {
+  const userId = req.headers['x-user-id'] || 'friend'
   const queue = loadQueue()
-  const sent = queue.filter(e => e.sent)
+  const sent = queue.filter(e => e.sent && e.userId === userId)
   res.json({ emails: sent.map(e => ({
     to: e.to,
     subject: e.subject,
@@ -352,7 +354,8 @@ app.get('/api/sent-emails', (req, res) => {
 
 // ── Schedule queue status ─────────────────────────────────────────────────
 app.get('/api/schedule-status', (req, res) => {
-  const queue = loadQueue()
+  const userId = req.headers['x-user-id'] || 'friend'
+  const queue = loadQueue().filter(e => e.userId === userId)
   const sent = queue.filter(e => e.sent).length
   const pending = queue.filter(e => !e.sent).length
   const failed = queue.filter(e => e.failed).length
@@ -366,8 +369,9 @@ app.post('/api/schedule-retry', async (req, res) => {
   try { await getGraphToken() }
   catch (e) { return res.status(503).json({ error: e.message }) }
 
+  const userId = req.headers['x-user-id'] || 'friend'
   const queue = loadQueue()
-  const failed = queue.filter(e => e.failed)
+  const failed = queue.filter(e => e.failed && e.userId === userId)
   if (!failed.length) return res.json({ ok: true, count: 0 })
 
   // Reset failed flag and reschedule — stagger 2 minutes apart
@@ -380,13 +384,14 @@ app.post('/api/schedule-retry', async (req, res) => {
     scheduleEmail(email)
   })
 
-  console.log(`[campaign] retrying ${failed.length} failed emails`)
+  console.log(`[campaign] retrying ${failed.length} failed emails for user ${userId}`)
   res.json({ ok: true, count: failed.length })
 })
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────
 app.post('/api/schedule-campaign', async (req, res) => {
   const { emails } = req.body  // [{ to, subject, body, sendAt }]
+  const userId = req.headers['x-user-id'] || 'friend'
   if (!Array.isArray(emails) || !emails.length) {
     return res.status(400).json({ error: 'Missing emails array' })
   }
@@ -398,7 +403,7 @@ app.post('/api/schedule-campaign', async (req, res) => {
   const queue = loadQueue()
   const newEntries = emails.map(({ to, subject, body, sendAt, company }) => ({
     id: crypto.randomUUID(),
-    to, subject, body, sendAt, sent: false, company: company || ''
+    to, subject, body, sendAt, sent: false, company: company || '', userId
   }))
   saveQueue([...queue, ...newEntries])
   newEntries.forEach(scheduleEmail)
@@ -522,6 +527,7 @@ app.get('/api/gmail/auth-start', (req, res) => {
   if (!clientId) {
     return res.status(503).json({ error: 'Gmail OAuth not configured — set GMAIL_CLIENT_ID in .env' })
   }
+  const userId = req.query.userId || 'friend'
   const verifier = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
@@ -550,14 +556,14 @@ app.get('/api/gmail/auth-start', (req, res) => {
           })
         }).then(r => r.json()).then(data => {
           if (data.access_token) {
-            const userId = 'friend'
             writeFileSync(getGmailTokensPath(userId), JSON.stringify({
               clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000
             }, null, 2))
             const users = loadUsers()
+            users[userId] = users[userId] || {}
             users[userId].gmailTokens = true
             saveUsers(users)
-            console.log('[GMAIL] Authorized successfully for friend')
+            console.log(`[GMAIL] Authorized for ${userId}`)
           }
         })
       }

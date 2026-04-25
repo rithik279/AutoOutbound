@@ -212,7 +212,7 @@ function exportCSV(contacts, filename = 'contacts') {
 }
 
 // ── Friend Settings Component ─────────────────────────────────────────────
-function FriendSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser }) {
+function FriendSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser, emailProvider, setEmailProvider }) {
   const [tab, setTab] = useState('profile') // profile | resume | prompt | email
   const [resumeFile, setResumeFile] = useState(null)
   const [resumeStatus, setResumeStatus] = useState('')
@@ -299,7 +299,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
 
   async function handleConnectGmail() {
     setGmailLoading(true)
-    window.open('http://localhost:3001/api/gmail/auth-start', '_blank')
+    window.open(`http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
     // Poll for token
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
@@ -491,16 +491,272 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
       {/* Email tab */}
       {tab === 'email' && (
         <div style={{ ...c.card }}>
-          <h2 style={c.h2}>Connect Gmail</h2>
-          <p style={c.muted}>Sign in with your Google account to send emails directly from the app.</p>
-          <button onClick={handleConnectGmail} disabled={gmailLoading} style={{ ...c.primaryBtn, marginTop: 12 }}>
-            {gmailLoading ? 'Opening Google sign-in…' : '🔗 Connect Gmail'}
+          <h2 style={c.h2}>Email Account</h2>
+          <p style={c.muted}>Choose your email provider and connect your account.</p>
+
+          {/* Provider selector */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {[
+              { id: 'gmail', label: 'Gmail', icon: '📧' },
+              { id: 'outlook', label: 'Outlook', icon: '📬' }
+            ].map(opt => {
+              const isActive = emailProvider === opt.id
+              const isConnected = opt.id === 'gmail' ? profile?.hasGmailToken : profile?.hasOutlookToken
+              return (
+                <div key={opt.id} onClick={() => setEmailProvider(opt.id)} style={{
+                  flex: 1, padding: '12px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+                  background: isActive ? '#111' + '10' : '#f7f7f5',
+                  border: isActive ? '2px solid #111' : '2px solid #e5e5e0',
+                }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{opt.label}</div>
+                  {isConnected && <div style={{ fontSize: 10, color: '#16a34a', marginTop: 2 }}>Connected</div>}
+                </div>
+              )
+            })}
+          </div>
+
+          <button onClick={async () => {
+            if (emailProvider === 'gmail') {
+              await handleConnectGmail()
+            } else {
+              setGmailLoading(true)
+              window.open('http://localhost:3001/api/auth-start', '_blank')
+              for (let i = 0; i < 30; i++) {
+                await new Promise(r => setTimeout(r, 2000))
+                try {
+                  const res = await fetch('/api/token-health')
+                  const data = await res.json()
+                  if (data.ok) { setGmailStatus(data); break }
+                } catch {}
+              }
+              setGmailLoading(false)
+            }
+          }} disabled={gmailLoading} style={{ ...c.primaryBtn, marginTop: 4 }}>
+            {gmailLoading ? 'Opening sign-in…' : `Connect ${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'}`}
           </button>
-          {profile?.hasGmailToken && (
-            <p style={{ fontSize: 13, color: '#16a34a', marginTop: 10 }}>✓ Gmail connected</p>
+          {(profile?.hasGmailToken || profile?.hasOutlookToken) && (
+            <p style={{ fontSize: 13, color: '#16a34a', marginTop: 10 }}>✓ {emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} connected</p>
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── SETUP WIZARD (friend first-run) ───────────────────────────────────────
+function SetupWizard({ currentUser, onComplete }) {
+  const [step, setStep] = useState(1) // 1=profile, 2=provider, 3=auth, 4=done
+  const [localName, setLocalName] = useState(currentUser?.name || '')
+  const [localEmail, setLocalEmail] = useState(currentUser?.email || '')
+  const [provider, setProvider] = useState('gmail')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authDone, setAuthDone] = useState(false)
+  const [campaignMode, setCampaignMode] = useState('startup')
+  const [modelId, setModelId] = useState('gpt-4o-mini')
+
+  const STEPS = ['Account', 'Email Provider', 'Authorize', 'Done']
+
+  async function saveProfileAndProvider() {
+    await fetch('/api/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
+      body: JSON.stringify({
+        senderName: localName,
+        senderEmail: localEmail,
+        emailProvider: provider,
+        campaignMode,
+        modelId
+      })
+    })
+  }
+
+  async function handleConnect() {
+    setAuthLoading(true)
+    const authUrl = provider === 'gmail'
+      ? `http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`
+      : 'http://localhost:3001/api/auth-start'
+    window.open(authUrl, '_blank')
+    // Poll until token is ready
+    const checkHealth = provider === 'gmail'
+      ? `/api/gmail/token-health`
+      : '/api/token-health'
+    const headers = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      try {
+        const res = await fetch(checkHealth, { headers })
+        const data = await res.json()
+        if (data.ok || data.status === 'ok') { setAuthDone(true); break }
+      } catch {}
+    }
+    setAuthLoading(false)
+  }
+
+  async function handleFinish() {
+    localStorage.setItem('friendSetupCompleted', 'true')
+    await saveProfileAndProvider()
+    localStorage.setItem('session', JSON.stringify({
+      userId: currentUser.userId,
+      name: localName,
+      email: localEmail
+    }))
+    onComplete()
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+    }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: '32px 36px', width: 480, maxWidth: '95vw' }}>
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 28, justifyContent: 'center' }}>
+          {STEPS.map((s, i) => (
+            <div key={i} style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: i + 1 <= step ? '#111' : '#ddd',
+              transition: 'background 0.2s'
+            }} />
+          ))}
+        </div>
+
+        <h2 style={{ ...c.h1, marginBottom: 4 }}>Welcome{currentUser?.name ? `, ${currentUser.name}` : ''}!</h2>
+        <p style={{ ...c.muted, marginBottom: 24 }}>Let's get your account set up — this only takes a minute.</p>
+
+        {/* Step 1: Profile */}
+        {step === 1 && (
+          <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={c.label}>Your name</label>
+                <input value={localName} onChange={e => setLocalName(e.target.value)} placeholder="e.g. James O'Brien" />
+              </div>
+              <div>
+                <label style={c.label}>Your email address</label>
+                <input type="email" value={localEmail} onChange={e => setLocalEmail(e.target.value)} placeholder="e.g. james@company.com" />
+              </div>
+              <div>
+                <label style={c.label}>Campaign type</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {Object.entries(CAMPAIGN_MODES).map(([id, mode]) => (
+                    <div key={id} onClick={() => setCampaignMode(id)} style={{
+                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: campaignMode === id ? mode.color + '18' : '#f5f5f3',
+                      color: campaignMode === id ? mode.color : '#555',
+                      border: campaignMode === id ? `1.5px solid ${mode.color}` : '1.5px solid #ddd'
+                    }}>
+                      {mode.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={c.label}>AI model</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {MODELS.map(m => (
+                    <div key={m.id} onClick={() => setModelId(m.id)} style={{
+                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: modelId === m.id ? m.color + '18' : '#f5f5f3',
+                      color: modelId === m.id ? m.color : '#555',
+                      border: modelId === m.id ? `1.5px solid ${m.color}` : '1.5px solid #ddd'
+                    }}>
+                      {m.label}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setStep(2)} disabled={!localName.trim() || !localEmail.trim()} style={{ ...c.primaryBtn, opacity: (!localName.trim() || !localEmail.trim()) ? 0.5 : 1 }}>
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Email provider */}
+        {step === 2 && (
+          <div>
+            <p style={{ ...c.muted, marginBottom: 16 }}>Which email provider will you use to send emails?</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {[
+                { id: 'gmail', label: 'Gmail', desc: 'Use your Google account', icon: '📧' },
+                { id: 'outlook', label: 'Outlook', desc: 'Use your Microsoft account', icon: '📬' }
+              ].map(opt => (
+                <div key={opt.id} onClick={() => setProvider(opt.id)} style={{
+                  flex: 1, padding: '16px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
+                  background: provider === opt.id ? '#111' + '10' : '#f7f7f5',
+                  border: provider === opt.id ? '2px solid #111' : '2px solid #e5e5e0',
+                  transition: 'all 0.15s'
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>{opt.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{opt.label}</div>
+                  <div style={{ fontSize: 11, color: '#888' }}>{opt.desc}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={() => setStep(1)} style={c.ghostBtn}>← Back</button>
+              <button onClick={async () => { await saveProfileAndProvider(); setStep(3) }} style={c.primaryBtn}>
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Authorize */}
+        {step === 3 && (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>{provider === 'gmail' ? '📧' : '📬'}</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+              Connect your {provider === 'gmail' ? 'Gmail' : 'Outlook'} account
+            </h3>
+            <p style={{ ...c.muted, marginBottom: 24 }}>
+              We'll open a secure sign-in page. After authorizing, come back here and we'll confirm.
+            </p>
+            {!authDone && (
+              <button onClick={handleConnect} disabled={authLoading} style={{ ...c.primaryBtn, minWidth: 200 }}>
+                {authLoading ? 'Waiting for authorization…' : `Connect ${provider === 'gmail' ? 'Gmail' : 'Outlook'}`}
+              </button>
+            )}
+            {authLoading && !authDone && (
+              <p style={{ fontSize: 12, color: '#888', marginTop: 10 }}>Waiting… check the popup window</p>
+            )}
+            {authDone && (
+              <div>
+                <div style={{ color: '#16a34a', fontSize: 14, fontWeight: 700, marginBottom: 16 }}>✓ Authorized!</div>
+                <button onClick={() => setStep(4)} style={c.primaryBtn}>
+                  Continue →
+                </button>
+              </div>
+            )}
+            <br />
+            <button onClick={() => setStep(2)} style={{ ...c.ghostBtn, marginTop: 12, fontSize: 12 }}>← Choose different provider</button>
+          </div>
+        )}
+
+        {/* Step 4: Done */}
+        {step === 4 && (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>You're all set!</h3>
+            <p style={{ ...c.muted, marginBottom: 24 }}>
+              Your account is configured and ready to go.
+            </p>
+            <button onClick={handleFinish} style={c.primaryBtn}>
+              Start drafting emails →
+            </button>
+          </div>
+        )}
+
+        {/* Step nav hint */}
+        {step < 4 && (
+          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
+            <span style={{ fontSize: 11, color: '#bbb' }}>Step {step} of 3</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -556,6 +812,10 @@ export default function App() {
       if (!res.ok) { setLoginError(data.error || 'Login failed'); return }
       setCurrentUser({ userId: data.userId, name: data.name, email: data.email })
       localStorage.setItem('session', JSON.stringify({ userId: data.userId, name: data.name, email: data.email }))
+      // Trigger setup wizard for friend on first login
+      if (data.userId === 'friend' && localStorage.getItem('friendSetupCompleted') !== 'true') {
+        setShowSetupWizard(true)
+      }
     } catch {
       setLoginError('Connection error')
     }
@@ -568,6 +828,7 @@ export default function App() {
     localStorage.removeItem('session')
     setPhase('entry')
     setSettingsOpen(false)
+    setShowSetupWizard(false)
   }
 
   // Apply user profile to app state
@@ -612,6 +873,11 @@ export default function App() {
     if (profile) {
       setLocalSenderName(profile.senderName || currentUser?.name || '')
       setLocalSenderEmail(profile.senderEmail || currentUser?.email || '')
+      if (profile.emailProvider) setEmailProvider(profile.emailProvider)
+      // Trigger setup wizard on first login (friend only, one-time)
+      if (isFriend && !setupCompleted && !showSetupWizard) {
+        setShowSetupWizard(true)
+      }
     }
   }, [profile, currentUser])
 
@@ -676,8 +942,22 @@ export default function App() {
   const [scheduleError, setScheduleError] = useState('')
   const [sentCount, setSentCount] = useState(0)
 
+  // Friend setup wizard
+  const [showSetupWizard, setShowSetupWizard] = useState(false)
+  const isFriend = currentUser?.userId === 'friend'
+  const setupCompleted = isFriend ? (localStorage.getItem('friendSetupCompleted') === 'true') : true
+
+  // Email provider
+  const [emailProvider, setEmailProvider] = useState(profile?.emailProvider || 'gmail')
+
+  // Draft confirmation (friend: "use existing or edit" before drafting)
+  const [draftConfirmContacts, setDraftConfirmContacts] = useState(null)
+  const [draftConfirmLoading, setDraftConfirmLoading] = useState(false)
+  const [draftConfirmError, setDraftConfirmError] = useState('')
+
   // Auth & job status
   const [authStatus, setAuthStatus] = useState(null)
+  const [gmailAuthStatus, setGmailAuthStatus] = useState(null)
   const [scheduleStatus, setScheduleStatus] = useState(null)
   const [reAuthLoading, setReAuthLoading] = useState(false)
   const [retryLoading, setRetryLoading] = useState(false)
@@ -694,12 +974,20 @@ export default function App() {
         const sched = await schedRes.json()
         setAuthStatus(auth)
         setScheduleStatus(sched)
+        // Also poll Gmail status for friend
+        if (isFriend) {
+          try {
+            const gmailRes = await fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
+            const gmail = await gmailRes.json()
+            setGmailAuthStatus(gmail)
+          } catch {}
+        }
       } catch {}
     }
     fetchStatus()
     const id = setInterval(fetchStatus, 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [isFriend, currentUser])
 
   async function runReAuth() {
     setReAuthLoading(true)
@@ -730,7 +1018,7 @@ export default function App() {
 
   async function loadSentHistory() {
     try {
-      const res = await fetch('/api/sent-emails')
+      const res = await fetch('/api/sent-emails', { headers: { 'x-user-id': currentUser?.userId || 'friend' } })
       const data = await res.json()
       setSentHistory(data.emails || [])
       setPhase('sent_history')
@@ -740,18 +1028,36 @@ export default function App() {
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
-  // Status bar
-  const authColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
-  const authLabel = authStatus?.status === 'ok' ? 'Outlook connected' : authStatus?.status === 'warning' ? `Outlook expires in ${authStatus?.minutesLeft}m` : authStatus?.status === 'critical' ? `Outlook critical — ${authStatus?.minutesLeft}m left` : authStatus?.status === 'expired' ? 'Outlook expired' : 'Outlook unknown'
+  // Status bar — dynamic for friend (gmail/outlook) vs dad (outlook only)
+  const activeAuthStatus = isFriend
+    ? (emailProvider === 'outlook' ? authStatus : gmailAuthStatus)
+    : authStatus
+  const activeAuthColor = activeAuthStatus?.status === 'ok' ? '#16a34a' : activeAuthStatus?.status === 'warning' ? '#d97706' : activeAuthStatus?.status === 'expired' ? '#dc2626' : '#888'
+  const activeAuthLabel = activeAuthStatus?.status === 'ok'
+    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} connected`
+    : activeAuthStatus?.status === 'warning'
+    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} expires in ${activeAuthStatus?.minutesLeft}m`
+    : activeAuthStatus?.status === 'critical'
+    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} critical — ${activeAuthStatus?.minutesLeft}m left`
+    : activeAuthStatus?.status === 'expired'
+    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} expired`
+    : 'Not connected'
+  const activeAuthExpiry = activeAuthStatus?.minutesLeft != null ? ` · ${activeAuthStatus.minutesLeft}m left` : ''
+  const activeProvider = isFriend ? emailProvider : 'outlook'
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
   const hasFailed = scheduleStatus?.failed > 0
-  const authExpiry = authStatus?.minutesLeft != null ? ` · expires in ${authStatus.minutesLeft}m` : ''
   const statusBar = (wide = false) => (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-        <span style={{ fontSize: 12, color: '#666' }}>{authLabel}{authExpiry}</span>
-        <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeAuthColor }} />
+        <span style={{ fontSize: 12, color: '#666' }}>{activeAuthLabel}{activeAuthExpiry}</span>
+        <button onClick={() => {
+          if (isFriend && emailProvider === 'gmail') {
+            window.open(`http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+          } else {
+            runReAuth()
+          }
+        }} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
           {reAuthLoading ? 'Opening…' : 'Re-authorize'}
         </button>
       </div>
@@ -1057,6 +1363,12 @@ export default function App() {
   // ── START DRAFTING ──────────────────────────────────────────────────────
   function beginDrafting(contactList) {
     if (!canDraft) return
+    // Friend: prompt to use existing config or edit before drafting
+    if (isFriend) {
+      setDraftConfirmContacts(contactList)
+      setDraftConfirmError('')
+      return
+    }
     setContacts(contactList)
     setDrafts({})
     draftsRef.current = {}
@@ -1238,10 +1550,17 @@ export default function App() {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={loadSentHistory} style={{ ...c.ghostBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 16 }}>📧</span>
-          View sent emails {scheduleStatus?.sent ? `(${scheduleStatus.sent})` : ''}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={loadSentHistory} style={{ ...c.ghostBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 16 }}>📧</span>
+            View sent emails {scheduleStatus?.sent ? `(${scheduleStatus.sent})` : ''}
+          </button>
+          {isFriend && (
+            <button onClick={() => setPhase('settings')} style={c.ghostBtn}>
+              ✏️ Edit Account
+            </button>
+          )}
+        </div>
         <button onClick={() => { if (entryLevel) setPhase('settings') }} disabled={!entryLevel} style={c.primaryBtn}>
           Continue →
         </button>
@@ -1277,6 +1596,8 @@ export default function App() {
             campaignMode={campaignMode}
             modelId={modelId}
             currentUser={currentUser}
+            emailProvider={emailProvider}
+            setEmailProvider={setEmailProvider}
           />
         )
 
@@ -2010,5 +2331,69 @@ export default function App() {
     )
   }
 
-  return null
+  // ── DRAFT CONFIRMATION (friend: use existing or edit before drafting) ──
+  if (draftConfirmContacts) {
+    const contacts = draftConfirmContacts
+    return (
+      <div>
+        {statusBar()}
+        <div style={{ ...c.card, maxWidth: 560, margin: '40px auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📋</div>
+            <h2 style={{ ...c.h1, marginBottom: 8 }}>Ready to draft {contacts.length} emails?</h2>
+            <p style={{ ...c.muted }}>Use your saved account settings, or update them first.</p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button onClick={async () => {
+              // Verify OAuth token exists before drafting
+              setDraftConfirmLoading(true)
+              setDraftConfirmError('')
+              try {
+                const healthUrl = emailProvider === 'gmail'
+                  ? '/api/gmail/token-health'
+                  : '/api/token-health'
+                const headers = emailProvider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
+                const res = await fetch(healthUrl, { headers })
+                const data = await res.json()
+                if (!data.ok && data.status !== 'ok') {
+                  setDraftConfirmError('Your email account is not connected. Please go to Settings → Email Account and authorize first.')
+                  setDraftConfirmLoading(false)
+                  return
+                }
+              } catch {
+                setDraftConfirmError('Could not verify email account. Check your connection.')
+                setDraftConfirmLoading(false)
+                return
+              }
+              setDraftConfirmContacts(null)
+              setDraftConfirmLoading(false)
+              beginDrafting(contacts)
+            }} disabled={draftConfirmLoading} style={{ ...c.primaryBtn, width: '100%', padding: '14px' }}>
+              {draftConfirmLoading ? 'Verifying account…' : `✓ Use existing config & draft ${contacts.length} emails →`}
+            </button>
+            <button onClick={() => { setDraftConfirmContacts(null); setPhase('settings') }} style={{ ...c.ghostBtn, width: '100%', padding: '12px' }}>
+              ✏️ Edit account settings first
+            </button>
+            <button onClick={() => setDraftConfirmContacts(null)} style={{ ...c.ghostBtn, width: '100%', fontSize: 12, color: '#888' }}>
+              Cancel
+            </button>
+          </div>
+          {draftConfirmError && (
+            <div style={{ marginTop: 12, background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>
+              {draftConfirmError}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {/* Wizard overlay renders on top of current phase */}
+      {isFriend && showSetupWizard && (
+        <SetupWizard currentUser={currentUser} onComplete={() => setShowSetupWizard(false)} />
+      )}
+    </>
+  )
 }

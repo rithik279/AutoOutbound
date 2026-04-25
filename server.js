@@ -550,12 +550,10 @@ app.get('/api/gmail/auth-start', (req, res) => {
           })
         }).then(r => r.json()).then(data => {
           if (data.access_token) {
-            // Store in friend's tokens by default (resolve from cookie or default to 'friend')
-            const userId = 'friend' // TODO: pass userId via state in auth URL
+            const userId = 'friend'
             writeFileSync(getGmailTokensPath(userId), JSON.stringify({
               clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000
             }, null, 2))
-            // Also update user's gmailTokens flag
             const users = loadUsers()
             users[userId].gmailTokens = true
             saveUsers(users)

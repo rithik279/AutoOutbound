@@ -1,6 +1,5 @@
 {
   "routes": [
-    { "src": "/api/(.*)", "dest": "https://campaign-api.onrender.com/api/:1" },
-    { "src": "/auto-outbound/(.*)", "dest": "/auto-outbound/index.html" }
+    { "src": "/api/(.*)", "dest": "https://campaign-api.onrender.com/api/$1" }
   ]
 }

@@ -282,6 +282,43 @@ async function sendViaGraph({ to, subject, body }) {
   }
 }
 
+// ── Trigger re-auth via popup ────────────────────────────────────────────
+app.get('/api/auth-start', (req, res) => {
+  const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
+  const port = 3333
+  const redirect = `http://localhost:${port}/callback`
+  const verifier = crypto.randomBytes(32).toString('base64url')
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
+  const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${new URLSearchParams({
+    client_id: clientId, response_type: 'code', redirect_uri: redirect,
+    scope: 'https://graph.microsoft.com/Mail.Send offline_access openid profile',
+    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
+  })}`
+  // Spawn a mini callback server on port 3333
+  import('http').then(({ createServer }) => {
+    const server = createServer((req, res) => {
+      const url = new URL(req.url, `http://localhost:${port}`)
+      const code = url.searchParams.get('code')
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized.</h2><p>You can close this tab.</p></body></html>')
+      server.close()
+      if (code) {
+        fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
+        }).then(r => r.json()).then(data => {
+          if (data.access_token) {
+            writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
+            console.log('[AUTH] Re-authorized successfully')
+          }
+        })
+      }
+    })
+    server.listen(port)
+  })
+  res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Microsoft sign-in...</p></body></html>`)
+})
+
 // ── Token health ──────────────────────────────────────────────────────────
 app.get('/api/token-health', async (req, res) => {
   const h = getTokenHealth()

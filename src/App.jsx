@@ -48,8 +48,6 @@ const MODELS = [
 const ENTRY_LEVELS = [
   { id: 'scratch', emoji: '🔍', label: 'From a prompt', desc: 'Describe who you want to reach — AI finds companies + decision makers via Apollo', badge: '#7c3aed' },
   { id: 'companies', emoji: '🏢', label: 'Company list', desc: 'Paste company names or domains — we find the right people via Apollo + enrich emails', badge: '#0891b2' },
-  { id: 'csv', emoji: '📋', label: 'CSV upload', desc: 'Already have a contact list? Upload or paste CSV with name, email, company, title', badge: '#059669' },
-  { id: 'contacts', emoji: '✉️', label: 'Just draft & send', desc: 'Already have your contacts — skip prospecting, go straight to AI email drafting', badge: '#dc2626' },
 ]
 
 const RECRUITER_MODE_TITLES = [

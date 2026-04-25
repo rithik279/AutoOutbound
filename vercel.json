@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://campaign-api.onrender.com/api/:path*" }
+    { "source": "/auto-outbound/:path*", "destination": "/auto-outbound/index.html" }
   ]
 }

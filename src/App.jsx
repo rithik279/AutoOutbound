@@ -1394,6 +1394,7 @@ export default function App() {
 
     return (
       <div>
+        {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div><h1 style={c.h1}>Schedule campaign</h1><p style={{ ...c.muted, marginTop: 4 }}>{N} approved · set your send window</p></div>
           <button onClick={() => setPhase('review')} style={c.ghostBtn}>← Review</button>

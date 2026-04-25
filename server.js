@@ -36,7 +36,7 @@ function saveQueue(queue) {
 function markSent(id) {
   const queue = loadQueue()
   const item = queue.find(e => e.id === id)
-  if (item) { item.sent = true; item.failed = false; saveQueue(queue) }
+  if (item) { item.sent = true; item.failed = false; item.sentAt = new Date().toISOString(); saveQueue(queue) }
 }
 function markFailed(id, error) {
   const queue = loadQueue()

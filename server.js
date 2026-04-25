@@ -147,39 +147,34 @@ app.get('/api/resume-text', async (req, res) => {
   }
 })
 
-// ── Microsoft Graph API — get access token (auto-refreshes via MSAL cache) ─
-function getMsalApp() {
-  if (!existsSync(TOKENS_PATH)) return null
-  const cached = JSON.parse(readFileSync(TOKENS_PATH, 'utf8'))
-  if (!cached.clientId) return null
-
-  const cachePlugin = {
-    beforeCacheAccess: async (ctx) => {
-      ctx.tokenCache.deserialize(readFileSync(TOKENS_PATH, 'utf8'))
-    },
-    afterCacheAccess: async (ctx) => {
-      if (ctx.cacheHasChanged) writeFileSync(TOKENS_PATH, ctx.tokenCache.serialize())
-    }
-  }
-  return new PublicClientApplication({
-    auth: {
-      clientId: cached.clientId,
-      authority: 'https://login.microsoftonline.com/consumers'
-    },
-    cache: { cachePlugin }
-  })
-}
-
+// ── Microsoft Graph API — token management (raw OAuth2, no MSAL) ───────────
 async function getGraphToken() {
-  const app = getMsalApp()
-  if (!app) throw new Error('Not authorized — run: node scripts/authorize.js <CLIENT_ID>')
-  const accounts = await app.getTokenCache().getAllAccounts()
-  if (!accounts.length) throw new Error('No account found — run: node scripts/authorize.js <CLIENT_ID>')
-  const result = await app.acquireTokenSilent({
-    scopes: ['https://graph.microsoft.com/Mail.Send'],
-    account: accounts[0]
-  })
-  return result.accessToken
+  if (!existsSync(TOKENS_PATH)) {
+    throw new Error('Not authorized — run: node scripts/authorize.js <CLIENT_ID>')
+  }
+  const t = JSON.parse(readFileSync(TOKENS_PATH, 'utf8'))
+  if (!t.accessToken) throw new Error('Invalid token file — run: node scripts/authorize.js <CLIENT_ID>')
+
+  // Refresh if within 5 minutes of expiry
+  if (t.expiresAt - Date.now() < 5 * 60 * 1000) {
+    const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     t.clientId,
+        grant_type:    'refresh_token',
+        refresh_token: t.refreshToken,
+        scope:         'https://graph.microsoft.com/Mail.Send offline_access'
+      })
+    })
+    const data = await res.json()
+    if (!data.access_token) throw new Error('Token refresh failed — re-run: node scripts/authorize.js <CLIENT_ID>')
+    t.accessToken  = data.access_token
+    t.refreshToken = data.refresh_token || t.refreshToken
+    t.expiresAt    = Date.now() + data.expires_in * 1000
+    writeFileSync(TOKENS_PATH, JSON.stringify(t, null, 2))
+  }
+  return t.accessToken
 }
 
 async function sendViaGraph({ to, subject, body }) {

@@ -25,7 +25,7 @@ const cachePlugin = {
   }
 }
 
-const app = new msal.PublicClientApplication({
+const app = new PublicClientApplication({
   auth: {
     clientId: CLIENT_ID,
     authority: 'https://login.microsoftonline.com/consumers'

@@ -148,38 +148,107 @@ app.get('/api/resume-text', async (req, res) => {
   }
 })
 
-// ── Schedule campaign emails (Outlook SMTP, server-side timers) ───────────
-app.post('/api/schedule-campaign', async (req, res) => {
-  if (!OUTLOOK_PASS) {
-    return res.status(503).json({ error: 'Outlook password not set in server.js' })
+// ── Microsoft Graph API — get access token (auto-refreshes via MSAL cache) ─
+function getMsalApp() {
+  if (!existsSync(TOKENS_PATH)) return null
+  const cached = JSON.parse(readFileSync(TOKENS_PATH, 'utf8'))
+  if (!cached.clientId) return null
+
+  const cachePlugin = {
+    beforeCacheAccess: async (ctx) => {
+      ctx.tokenCache.deserialize(readFileSync(TOKENS_PATH, 'utf8'))
+    },
+    afterCacheAccess: async (ctx) => {
+      if (ctx.cacheHasChanged) writeFileSync(TOKENS_PATH, ctx.tokenCache.serialize())
+    }
   }
+  return new msal.PublicClientApplication({
+    auth: {
+      clientId: cached.clientId,
+      authority: 'https://login.microsoftonline.com/consumers'
+    },
+    cache: { cachePlugin }
+  })
+}
+
+async function getGraphToken() {
+  const app = getMsalApp()
+  if (!app) throw new Error('Not authorized — run: node scripts/authorize.js <CLIENT_ID>')
+  const accounts = await app.getTokenCache().getAllAccounts()
+  if (!accounts.length) throw new Error('No account found — run: node scripts/authorize.js <CLIENT_ID>')
+  const result = await app.acquireTokenSilent({
+    scopes: ['https://graph.microsoft.com/Mail.Send'],
+    account: accounts[0]
+  })
+  return result.accessToken
+}
+
+async function sendViaGraph({ to, subject, body }) {
+  const token = await getGraphToken()
+
+  // Attach resume
+  const resumePath = join(__dirname, 'Singh_Manmit_2026_03_04.docx')
+  const attachments = []
+  if (existsSync(resumePath)) {
+    attachments.push({
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: 'Manmit_Singh_Resume.docx',
+      contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      contentBytes: readFileSync(resumePath).toString('base64')
+    })
+  }
+
+  const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: {
+        subject,
+        body: { contentType: 'Text', content: body },
+        toRecipients: [{ emailAddress: { address: to } }],
+        attachments
+      },
+      saveToSentItems: true
+    })
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `Graph API ${res.status}`)
+  }
+}
+
+// ── Auth status check ─────────────────────────────────────────────────────
+app.get('/api/auth-status', async (req, res) => {
+  try {
+    await getGraphToken()
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(401).json({ ok: false, error: e.message })
+  }
+})
+
+// ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────
+app.post('/api/schedule-campaign', async (req, res) => {
   const { emails } = req.body  // [{ to, subject, body, sendAt }]
   if (!Array.isArray(emails) || !emails.length) {
     return res.status(400).json({ error: 'Missing emails array' })
   }
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp-mail.outlook.com',
-    port: 587,
-    secure: false,
-    auth: { user: OUTLOOK_USER, pass: OUTLOOK_PASS }
-  })
+  // Verify auth before queuing
+  try { await getGraphToken() }
+  catch (e) { return res.status(503).json({ error: e.message }) }
 
   let sent = 0
-  let failed = 0
 
   emails.forEach(({ to, subject, body, sendAt }) => {
     const delay = Math.max(0, new Date(sendAt).getTime() - Date.now())
     setTimeout(async () => {
       try {
-        await transporter.sendMail({
-          from: OUTLOOK_USER, to, subject, text: body,
-          attachments: [{ filename: 'Manmit_Singh_Resume.docx', path: join(__dirname, 'Singh_Manmit_2026_03_04.docx') }]
-        })
+        await sendViaGraph({ to, subject, body })
         sent++
         console.log(`[campaign] sent to ${to} (${sent}/${emails.length})`)
       } catch (e) {
-        failed++
         console.error(`[campaign] failed to ${to}: ${e.message}`)
       }
     }, delay)
@@ -187,33 +256,6 @@ app.post('/api/schedule-campaign', async (req, res) => {
 
   console.log(`[campaign] ${emails.length} emails scheduled`)
   res.json({ ok: true, count: emails.length })
-})
-
-// ── Send review email (Outlook → self) ────────────────────────────────────
-app.post('/api/send-review-email', async (req, res) => {
-  if (!OUTLOOK_PASS) {
-    return res.status(503).json({ error: 'Outlook password not set — add OUTLOOK_PASS in server.js' })
-  }
-  const { filename, content } = req.body
-  if (!content) return res.status(400).json({ error: 'Missing content' })
-  try {
-    const transporter = nodemailer.createTransport({
-      host: 'smtp-mail.outlook.com',
-      port: 587,
-      secure: false,
-      auth: { user: OUTLOOK_USER, pass: OUTLOOK_PASS }
-    })
-    await transporter.sendMail({
-      from: OUTLOOK_USER,
-      to: OUTLOOK_USER,
-      subject: `Campaign review — ${filename || 'drafts.txt'}`,
-      text: 'Your campaign drafts are attached. Open on your phone to review.',
-      attachments: [{ filename: filename || 'campaign-review.txt', content, contentType: 'text/plain' }]
-    })
-    res.json({ ok: true })
-  } catch (e) {
-    res.status(500).json({ error: e.message })
-  }
 })
 
 // ── Health check ───────────────────────────────────────────────────────────

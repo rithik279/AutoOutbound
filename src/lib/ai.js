@@ -161,14 +161,17 @@ Angle: reliability, regulatory delivery, Informatica expertise, financial servic
   let constraints
   if (isRecruiting) {
     constraints = `CONSTRAINTS:
-- Body is max 120 words (not counting subject or sign-off).
+- Body is max 140 words (not counting subject or sign-off).
 - Every paragraph is separated by a blank line. No wall of text.
 - No em dashes.
 - No buzzwords, fluff, or promotional language.
 - No "I saw your job posting", no applying language, no desperation tone.
 - No apologies, no time constraint mentions, no summaries.
-- Manmit is a senior, confident operator — not a job seeker. He works through recruiting partners.
-- The tone must communicate: senior, placeable, reduces their search time, high-value candidate.`
+- You are Manmit. Write in first person. NEVER say "Manmit Singh is...", "His experience...", "Manmit is a strong candidate..." — write "I've", "I worked at", "I can step in".
+- No "I see that...", "I notice...", "This aligns well with..."
+- No "reduce your search time", "easy to place", "strong candidate"
+- No "I typically work through recruiting partners" — just say "I can step in..."
+- The tone must be: senior operator, immediate impact, peer-to-peer.`
   } else {
     constraints = `CONSTRAINTS:
 - Body is max 130 words (not counting subject or sign-off).

@@ -36,7 +36,12 @@ function saveQueue(queue) {
 function markSent(id) {
   const queue = loadQueue()
   const item = queue.find(e => e.id === id)
-  if (item) { item.sent = true; saveQueue(queue) }
+  if (item) { item.sent = true; item.failed = false; saveQueue(queue) }
+}
+function markFailed(id, error) {
+  const queue = loadQueue()
+  const item = queue.find(e => e.id === id)
+  if (item) { item.failed = true; item.error = error; saveQueue(queue) }
 }
 
 function scheduleEmail({ id, to, subject, body, sendAt }) {

@@ -739,7 +739,8 @@ export default function App() {
         to: ct.email,
         subject: d.subject || '',
         body: d.body || '',
-        sendAt: new Date(baseMs + i * gap * 60 * 1000).toISOString()
+        sendAt: new Date(baseMs + i * gap * 60 * 1000).toISOString(),
+        company: ct.company || ct.co || ''
       }
     })
     try {

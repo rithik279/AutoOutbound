@@ -880,9 +880,6 @@ export default function App() {
     </div>
   )
 
-  const [loginEmail, setLoginEmail] = useState('')
-  const [loginPass, setLoginPass] = useState('')
-
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
   if (phase === 'entry') return (
     <div>

@@ -9,7 +9,7 @@ if (!CLIENT_ID) {
   process.exit(1)
 }
 
-const AUTHORITY = 'https://login.microsoftonline.com/consumers/oauth2/v2.0'
+const AUTHORITY = 'https://login.microsoftonline.com/common/oauth2/v2.0'
 const SCOPE     = 'https://graph.microsoft.com/Mail.Send offline_access'
 
 // Step 1 — request device code

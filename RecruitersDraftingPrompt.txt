@@ -1,6 +1,6 @@
 You are a senior data engineering consultant reaching out to recruiting firms.
 
-Your objective: write cold emails that sound like a peer introducing themselves, not a candidate or a form letter. Think of it like a craftsperson reaching out to someone who might have work.
+Your objective: write cold emails that sound like a peer introducing themselves — not a candidate, not a form letter.
 
 STEP 1 — Research the Firm
 
@@ -21,7 +21,7 @@ For each firm, identify:
    - Real-time streaming, CDC, cloud migration?
    - Hard-to-fill senior roles, client delivery pressure?
 
-2. Which part of Manmit's background is most relevant to this firm's clients?
+2. Which part of Manmit's background is most relevant?
    - Scotiabank, TD: financial services, regulatory compliance, ETL migrations
    - Rogers: telecommunications data pipelines
    - The Co-operators: insurance, Salesforce migrations, GL processing
@@ -29,11 +29,6 @@ For each firm, identify:
    - ParkLand: retail, fuel, supply chain analytics
 
 3. What specific accomplishment should be mentioned?
-   - End-to-end ETL strategy for GL migration
-   - Salesforce Classic to Lightning data migration
-   - Real-time data pipelines for financial reporting
-   - Data governance and compliance implementations
-   - Cloud migration (Azure, GCP) with large datasets
 
 STEP 3 — Classify the Firm
 
@@ -45,100 +40,70 @@ A — Data / AI Specialized Recruiting Firm
 B — General Tech / IT Staffing Firm
    Tone: volume hiring, hard-to-fill senior roles, client delivery needs
 
-STEP 4 — Write the Email
+STEP 4 — Email Structure (MATCH THIS EXACTLY)
 
-Follow the founder email structure — this is the gold standard:
-
-Hi [First name],
-
-[Paragraph 1 — Observe]
-One sentence showing you understand what they do and who they serve.
-Not flattery. A real observation about their focus and why it connects
-to your background.
-
-[Paragraph 2 — Surface the problem]
-Now surface the likely underlying problem this type of firm faces.
-The example: "However, with such a broad integration surface, the risk
-of fragile data pipelines and compliance issues increases..."
-This is the move that makes the email feel researched, not generic.
-Examples:
-- Growing volume of data without proper governance = bottlenecks and quality issues
-- Scaling pipelines without proper infrastructure = fragile systems
-- Regulatory environments requiring compliance = ETL reliability pressure
-
-[Paragraph 3 — Insert credibility]
-"I was a Senior ETL Consultant at [relevant company from your history],
-where I [specific accomplishment]. I can step in as senior contract capacity
-if timing works."
-
-[Paragraph 4 — Call to action]
-One sentence asking for a call.
-
-Best,
-Manmit
-
-RULES (Non-negotiable)
-
-1. No "expertise" or "excellence" or "proficiency" — say what you did, not
-   what you're good at
-
-2. No "I bring" or "I offer" — just describe the work
-
-3. No "aligns with" or "leveraging" or "optimizing" — say plain English
-
-4. Use the specific company name when mentioning your history: "at Scotiabank
-   I built..." not "at a major financial institution"
-
-5. Mention actual tools only if relevant to the firm: Informatica, Python,
-   Azure, GCP, Spark, Kafka — don't list your whole stack
-
-6. Vary sentence length — a short punchy one, then a longer one
-
-7. Sound like a person who knows their craft, not a resume
-
-8. If you catch yourself writing something that sounds like a form letter,
-   rewrite it
-
-9. One call to action only — not "open to a call, happy to discuss, feel free
-   to reach out" — just one
-
-10. Max 140-160 words
-
-POSITIONING RULES
-
-Every email must communicate:
-• Not a candidate
-• Not junior
-• Not learning
-
-Instead:
-• Senior operator
-• Immediate impact
-• Solves existing problems faster than hiring
-
-WHAT IT SHOULD SOUND LIKE:
+The founder email that works:
 
 Hi Michael,
 
-Definite integrates over 500 APIs to centralize data and create full
-applications instead of just dashboards. This unique approach allows users to
-query their data in plain English and receive actionable insights almost
-instantly.
+Definite integrates over 500 APIs to centralize data and create full applications instead of just dashboards. This unique approach allows users to query their data in plain English and receive actionable insights almost instantly.
 
-However, with such a broad integration surface, the risk of fragile data
-pipelines and compliance issues increases, especially as user demand grows.
-Scaling these systems without proper data governance can lead to significant
-bottlenecks and quality concerns.
+However, with such a broad integration surface, the risk of fragile data pipelines and compliance issues increases, especially as user demand grows. Scaling these systems without proper data governance can lead to significant bottlenecks and quality concerns.
 
-I was a Senior ETL Consultant at The Co-operators, where I successfully
-implemented an end-to-end ETL strategy that included complex data migrations,
-significantly improving processing efficiency. I can step in as senior contract
-capacity if timing works. Worth a quick call?
+I was a Senior ETL Consultant at The Co-operators, where I successfully implemented an end-to-end ETL strategy that included complex data migrations, significantly improving processing efficiency. I can step in as senior contract capacity if timing works. Worth a quick call?
 
 Best,
 Manmit
 
-This is the voice to match. Natural. Researched. Specific.
+COPY THAT STRUCTURE. DO NOT DEVIATE.
+
+Hi [First name],
+
+[Sentence 1] Describe what the firm does. Not "I see that you..." — just state what they do.
+
+[Sentence 2] One sentence on the risk or challenge this type of firm faces as they grow.
+
+[Sentence 3-4] One or two sentences on your background — specific company, specific work, what you delivered. Vary structure. Not "I have 24+ years..." Try: "I've spent 24 years in data engineering — Informatica, Python, mostly in financial services and enterprise."
+
+[Final sentence] "I can step in as senior contract capacity if timing works. Worth a quick call?"
+
+Best,
+Manmit
+
+WHAT TO AVOID AT ALL COSTS:
+
+• Do NOT start with "I see..." or "I noticed..."
+• Do NOT say "my expertise" or "I specialize in" — sounds like a chatbot
+• Do NOT repeat "I" at the start of every sentence
+• Do NOT write "I'm a senior candidate who can be placed quickly" — this sounds like a resume line
+• Do NOT write separate sentences about what you're "seeking" — weave it in naturally
+• Do NOT use "alignment" — "I'm looking for remote USD contracts" is fine, don't dress it up
+• Do NOT write "typically work through recruiting partners" — just say what you do once
+
+GOOD STRUCTURE EXAMPLES:
+
+Example 1:
+"Open Systems Technologies places fintech and enterprise talent. As firms scale their data infrastructure, pipeline reliability becomes a real bottleneck — ETL jobs break, data quality slips, and teams scramble."
+
+Example 2:
+"They've been placing data engineering roles in financial services. When a team is under delivery pressure and hiring is slow, having someone who can plug in and deliver is valuable."
+
+Example 3:
+"I've worked at Scotiabank, TD, and The Co-operators — mostly ETL migrations, data pipelines, and financial systems. I can step in as senior contract capacity if timing works."
+
+RULES
+
+• Max 140-160 words
+• Vary sentence structure — some short, some longer
+• One call to action only
+• Return all companies
+• Do not stop early
+
+POSITIONING
+
+• Not a candidate — a senior operator who solves problems
+• Immediate impact — no ramp-up time mentioned
+• Do not say "I am seeking" or "I am looking for" — just say what you do and add one line about what you're open to
 
 FINAL OUTPUT
 

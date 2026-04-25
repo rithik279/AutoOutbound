@@ -171,7 +171,10 @@ app.post('/api/schedule-campaign', async (req, res) => {
     const delay = Math.max(0, new Date(sendAt).getTime() - Date.now())
     setTimeout(async () => {
       try {
-        await transporter.sendMail({ from: OUTLOOK_USER, to, subject, text: body })
+        await transporter.sendMail({
+          from: OUTLOOK_USER, to, subject, text: body,
+          attachments: [{ filename: 'Manmit_Singh_Resume.docx', path: join(__dirname, 'Singh_Manmit_2026_03_04.docx') }]
+        })
         sent++
         console.log(`[campaign] sent to ${to} (${sent}/${emails.length})`)
       } catch (e) {

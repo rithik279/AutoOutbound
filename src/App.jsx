@@ -996,7 +996,7 @@ export default function App() {
           <div style={{ ...c.row, gap: 14 }}>
             <div style={{ flex: 1 }}>
               <label style={c.label}>Your name (sign-off)</label>
-              <input placeholder="e.g. James O'Brien" value={senderName} onChange={e => setSenderName(e.target.value)} />
+              <input placeholder="e.g. James O'Brien" value={localSenderName} onChange={e => setLocalSenderName(e.target.value)} />
             </div>
             <div style={{ flex: 1 }}>
               <label style={c.label}>Your email (Outlook sends from this)</label>

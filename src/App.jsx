@@ -289,6 +289,7 @@ export default function App() {
   const [scheduleStatus, setScheduleStatus] = useState(null)
   const [reAuthLoading, setReAuthLoading] = useState(false)
   const [retryLoading, setRetryLoading] = useState(false)
+  const [sentHistory, setSentHistory] = useState([])
 
   useEffect(() => {
     async function fetchStatus() {

@@ -1220,6 +1220,7 @@ export default function App() {
         )}
       </div>
     )
+  }
 
   // ── DRAFTING ─────────────────────────────────────────────────────────────
   if (phase === 'drafting') {

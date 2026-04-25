@@ -219,13 +219,76 @@ function exportCSV(contacts, filename = 'contacts') {
 const ENV_KEYS = { openai: true, anthropic: true, apollo: true }
 
 export default function App() {
+  // User session
+  const [currentUser, setCurrentUser] = useState(null) // { userId, name, email } or null
+  const [profile, setProfile] = useState(null) // full profile from server
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // Load session from localStorage on mount
+  useEffect(() => {
+    const raw = localStorage.getItem('session')
+    if (raw) {
+      try {
+        const session = JSON.parse(raw)
+        if (session?.userId) {
+          setCurrentUser({ userId: session.userId, name: session.name, email: session.email })
+        }
+      } catch {}
+    }
+  }, [])
+
+  // Fetch profile when user changes
+  useEffect(() => {
+    async function loadProfile() {
+      if (!currentUser) return
+      try {
+        const res = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+        if (res.ok) setProfile(await res.json())
+      } catch {}
+    }
+    loadProfile()
+  }, [currentUser])
+
+  async function handleLogin(email, password) {
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      const res = await fetch('/api/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      const data = await res.json()
+      if (!res.ok) { setLoginError(data.error || 'Login failed'); return }
+      setCurrentUser({ userId: data.userId, name: data.name, email: data.email })
+      localStorage.setItem('session', JSON.stringify({ userId: data.userId, name: data.name, email: data.email }))
+    } catch {
+      setLoginError('Connection error')
+    }
+    setLoginLoading(false)
+  }
+
+  function handleLogout() {
+    setCurrentUser(null)
+    setProfile(null)
+    localStorage.removeItem('session')
+    setPhase('entry')
+    setSettingsOpen(false)
+  }
+
+  // Apply user profile to app state
+  const senderName = profile?.senderName || currentUser?.name || 'Manmit Singh'
+  const senderEmail = profile?.senderEmail || currentUser?.email || ''
+  const modelId = profile?.modelId || 'gpt-4o-mini'
+  const campaignMode = profile?.campaignMode || 'startup'
+  const userResumeText = profile?.resumeText || null
+  const userPrompt = profile?.prompt || null
+
   // Config
   const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history
   const [entryLevel, setEntryLevel] = useState(null)
-  const [senderName, setSenderName] = useState(import.meta.env.VITE_SENDER_NAME || 'Manmit Singh')
-  const [senderEmail, setSenderEmail] = useState(import.meta.env.VITE_SENDER_EMAIL || 'manmit.singh@live.com')
-  const [modelId, setModelId] = useState('gpt-4o-mini')
-  const [campaignMode, setCampaignMode] = useState('finance')
 
   // Discovery state
   const [discoverPrompt, setDiscoverPrompt] = useState('')

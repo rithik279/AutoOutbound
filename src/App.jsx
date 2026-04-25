@@ -1003,7 +1003,7 @@ export default function App() {
             {MODELS.map(m => {
               const sel = modelId === m.id
               return (
-                <div key={m.id} onClick={() => setModelId(m.id)} style={{
+                <div key={m.id} onClick={() => setModelIdFn(m.id)} style={{
                   border: sel ? `2px solid ${m.color}` : '1px solid #e5e5e0',
                   borderRadius: 10, padding: 14, cursor: 'pointer',
                   background: sel ? m.color + '0a' : '#fafaf8'

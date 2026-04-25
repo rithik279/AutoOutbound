@@ -123,11 +123,17 @@ function isTitleRelevant(title, mode) {
   if (!title) return false
   const t = title.toLowerCase()
 
-  // Recruiting mode has its own blocklist defined in CAMPAIGN_MODES
+  // Recruiting mode — keyword-based matching (not exact title match)
   if (mode === 'recruiting') {
     const blocklist = CAMPAIGN_MODES.recruiting.blocklist
     if (blocklist.some(bad => t.includes(bad))) return false
-    return RECRUITER_MODE_TITLES.some(ok => t.includes(ok.toLowerCase()))
+    // Must have a recruiter/consulting/delivery keyword
+    const hasRecruiterKeyword = /\b(recruiter|recruiting|staffing|staff firm|consultant|consulting|delivery|engagement|business development manager)\b/i.test(t)
+    if (!hasRecruiterKeyword) return false
+    // Must have a data/tech/seniority keyword to confirm it's not generic admin
+    const hasDataKeyword = /\b(data|analytics|ai|technology|tech|software|engineering|information)\b/i.test(t)
+    const hasSeniorKeyword = /\b(senior|lead|director|vp|head|principal|manager|chief|executive|founder|partner)\b/i.test(t)
+    return hasDataKeyword || hasSeniorKeyword
   }
 
   if (TITLE_BLOCKLIST.some(bad => t.includes(bad))) return false

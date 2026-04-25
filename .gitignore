@@ -3,3 +3,5 @@ dist/
 .env
 .env.local
 .env.*.local
+# Added by code-review-graph
+.code-review-graph/

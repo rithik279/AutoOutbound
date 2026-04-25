@@ -3,6 +3,7 @@ import { createRequire } from 'module'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import fetch from 'node-fetch'
+import nodemailer from 'nodemailer'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -18,6 +19,8 @@ const OPENAI_KEY    = process.env.VITE_OPENAI_KEY    || [
 ].join('')
 const ANTHROPIC_KEY = process.env.VITE_ANTHROPIC_KEY || ''
 const APOLLO_KEY    = process.env.VITE_APOLLO_KEY    || 'T4AMhsNxCK-' + '6JULweSKang'
+const OUTLOOK_USER  = process.env.OUTLOOK_USER        || 'manmit.singh@live.com'
+const OUTLOOK_PASS  = process.env.OUTLOOK_PASS        || 'Rithik!234!'   // your Outlook / Live account password
 
 // ── CORS for Vite dev ──────────────────────────────────────────────────────
 app.use((req, res, next) => {
@@ -128,6 +131,71 @@ app.post('/api/fetch-site', async (req, res) => {
       .slice(0, 4000)
 
     res.json({ text, url: base })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ── Schedule campaign emails (Outlook SMTP, server-side timers) ───────────
+app.post('/api/schedule-campaign', async (req, res) => {
+  if (!OUTLOOK_PASS) {
+    return res.status(503).json({ error: 'Outlook password not set in server.js' })
+  }
+  const { emails } = req.body  // [{ to, subject, body, sendAt }]
+  if (!Array.isArray(emails) || !emails.length) {
+    return res.status(400).json({ error: 'Missing emails array' })
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: 'smtp-mail.outlook.com',
+    port: 587,
+    secure: false,
+    auth: { user: OUTLOOK_USER, pass: OUTLOOK_PASS }
+  })
+
+  let sent = 0
+  let failed = 0
+
+  emails.forEach(({ to, subject, body, sendAt }) => {
+    const delay = Math.max(0, new Date(sendAt).getTime() - Date.now())
+    setTimeout(async () => {
+      try {
+        await transporter.sendMail({ from: OUTLOOK_USER, to, subject, text: body })
+        sent++
+        console.log(`[campaign] sent to ${to} (${sent}/${emails.length})`)
+      } catch (e) {
+        failed++
+        console.error(`[campaign] failed to ${to}: ${e.message}`)
+      }
+    }, delay)
+  })
+
+  console.log(`[campaign] ${emails.length} emails scheduled`)
+  res.json({ ok: true, count: emails.length })
+})
+
+// ── Send review email (Outlook → self) ────────────────────────────────────
+app.post('/api/send-review-email', async (req, res) => {
+  if (!OUTLOOK_PASS) {
+    return res.status(503).json({ error: 'Outlook password not set — add OUTLOOK_PASS in server.js' })
+  }
+  const { filename, content } = req.body
+  if (!content) return res.status(400).json({ error: 'Missing content' })
+  try {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp-mail.outlook.com',
+      port: 587,
+      secure: false,
+      auth: { user: OUTLOOK_USER, pass: OUTLOOK_PASS }
+    })
+    await transporter.sendMail({
+      from: OUTLOOK_USER,
+      to: OUTLOOK_USER,
+      subject: `Campaign review — ${filename || 'drafts.txt'}`,
+      text: 'Your campaign drafts are attached. Open on your phone to review.',
+      attachments: [{ filename: filename || 'campaign-review.txt', content, contentType: 'text/plain' }]
+    })
+    res.json({ ok: true })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

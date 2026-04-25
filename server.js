@@ -162,7 +162,7 @@ function getMsalApp() {
       if (ctx.cacheHasChanged) writeFileSync(TOKENS_PATH, ctx.tokenCache.serialize())
     }
   }
-  return new msal.PublicClientApplication({
+  return new PublicClientApplication({
     auth: {
       clientId: cached.clientId,
       authority: 'https://login.microsoftonline.com/consumers'

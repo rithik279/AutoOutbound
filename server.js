@@ -157,7 +157,7 @@ async function getGraphToken() {
 
   // Refresh if within 5 minutes of expiry
   if (t.expiresAt - Date.now() < 5 * 60 * 1000) {
-    const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+    const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({

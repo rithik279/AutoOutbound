@@ -889,7 +889,7 @@ export default function App() {
           <p style={{ ...c.muted, marginTop: 6 }}>Where are you starting from?</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setSettingsOpen(true)} style={c.ghostBtn}>⚙️ Settings</button>
+          <button onClick={() => setPhase('settings')} style={c.ghostBtn}>⚙️ Settings</button>
           <button onClick={handleLogout} style={{ ...c.ghostBtn, color: '#dc2626' }}>Logout</button>
         </div>
       </div>

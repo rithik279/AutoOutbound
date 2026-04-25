@@ -318,6 +318,20 @@ export default function App() {
     setReAuthLoading(false)
   }
 
+  async function runRetryFailed() {
+    setRetryLoading(true)
+    try {
+      const res = await fetch('/api/schedule-retry', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        // Refresh status after retry
+        const schedRes = await fetch('/api/schedule-status')
+        setScheduleStatus(await schedRes.json())
+      }
+    } catch {}
+    setRetryLoading(false)
+  }
+
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 

@@ -1332,28 +1332,27 @@ export default function App() {
           <div>
             {statusBar()}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <div>
-                  <h1 style={c.h1}>Settings</h1>
-                  <p style={{ ...c.muted, marginTop: 4 }}>Configure your account</p>
-                </div>
-                <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
+              <div>
+                <h1 style={c.h1}>Settings</h1>
+                <p style={{ ...c.muted, marginTop: 4 }}>Configure your account</p>
               </div>
-              <FriendSettings
-                profile={profile}
-                localSenderName={localSenderName}
-                setLocalSenderName={setLocalSenderName}
-                localSenderEmail={localSenderEmail}
-                setLocalSenderEmail={setLocalSenderEmail}
-                onUpdateProfile={updateProfile}
-                setCampaignModeFn={setCampaignModeFn}
-                setModelIdFn={setModelIdFn}
-                campaignMode={campaignMode}
-                modelId={modelId}
-                currentUser={currentUser}
-              />
+              <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
             </div>
-          )
-        }
+            <FriendSettings
+              profile={profile}
+              localSenderName={localSenderName}
+              setLocalSenderName={setLocalSenderName}
+              localSenderEmail={localSenderEmail}
+              setLocalSenderEmail={setLocalSenderEmail}
+              onUpdateProfile={updateProfile}
+              setCampaignModeFn={setCampaignModeFn}
+              setModelIdFn={setModelIdFn}
+              campaignMode={campaignMode}
+              modelId={modelId}
+              currentUser={currentUser}
+            />
+          </div>
+        )
 
         return (
           <div>

@@ -968,7 +968,7 @@ export default function App() {
             {Object.values(CAMPAIGN_MODES).map(mode => {
               const sel = campaignMode === mode.id
               return (
-                <div key={mode.id} onClick={() => setCampaignMode(mode.id)} style={{
+                <div key={mode.id} onClick={() => setCampaignModeFn(mode.id)} style={{
                   border: sel ? `2px solid ${mode.color}` : '1px solid #e5e5e0',
                   borderRadius: 10, padding: 14, cursor: 'pointer',
                   background: sel ? mode.color + '0a' : '#fafaf8'

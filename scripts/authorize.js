@@ -5,7 +5,7 @@
 // manmit.singh@live.com, enter the code. Done. Tokens saved to .tokens.json.
 
 import msal from '@azure/msal-node'
-import { writeFileSync } from 'fs'
+import { writeFileSync, readFileSync, existsSync } from 'fs'
 
 const CLIENT_ID = process.argv[2]
 if (!CLIENT_ID) {
@@ -18,7 +18,9 @@ const cachePlugin = {
   beforeCacheAccess: async () => {},
   afterCacheAccess: async (ctx) => {
     if (ctx.cacheHasChanged) {
-      writeFileSync('.tokens.json', ctx.tokenCache.serialize())
+      // Merge client ID into the saved cache so server can read it
+      const cache = JSON.parse(ctx.tokenCache.serialize())
+      writeFileSync('.tokens.json', JSON.stringify({ ...cache, clientId: CLIENT_ID }, null, 2))
     }
   }
 }
@@ -37,10 +39,6 @@ const result = await app.acquireTokenByDeviceCode({
   scopes: ['https://graph.microsoft.com/Mail.Send', 'offline_access'],
   deviceCodeCallback: (res) => console.log(res.message)
 })
-
-// Also save the client ID so the server knows which app to use
-const tokens = JSON.parse(require('fs').readFileSync('.tokens.json', 'utf8'))
-writeFileSync('.tokens.json', JSON.stringify({ ...tokens, clientId: CLIENT_ID }, null, 2))
 
 console.log(`\n✓ Authorized as ${result.account.username}`)
 console.log('✓ Tokens saved to .tokens.json — server is ready to send emails\n')

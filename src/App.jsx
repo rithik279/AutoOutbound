@@ -1253,6 +1253,11 @@ export default function App() {
           </div>
           <div style={{ width: 1, height: 16, background: '#ddd' }} />
           <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>

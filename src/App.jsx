@@ -220,7 +220,7 @@ const ENV_KEYS = { openai: true, anthropic: true, apollo: true }
 
 export default function App() {
   // Config
-  const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent
+  const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history
   const [entryLevel, setEntryLevel] = useState(null)
   const [senderName, setSenderName] = useState(import.meta.env.VITE_SENDER_NAME || 'Manmit Singh')
   const [senderEmail, setSenderEmail] = useState(import.meta.env.VITE_SENDER_EMAIL || 'manmit.singh@live.com')

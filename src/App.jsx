@@ -1527,6 +1527,15 @@ export default function App() {
   // ── SENT ──────────────────────────────────────────────────────────────────
   if (phase === 'sent') return (
     <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+      {/* Status bar */}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 24, border: '1px solid #eee', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
+          <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
+        </div>
+        <div style={{ width: 1, height: 16, background: '#ddd' }} />
+        <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+      </div>
       <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
       <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
       <p style={{ ...c.muted, marginBottom: 32 }}>

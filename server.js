@@ -336,6 +336,20 @@ app.get('/api/token-health', async (req, res) => {
   res.json({ ok: false, status: 'error', minutesLeft: 0 })
 })
 
+// ── Sent emails list ─────────────────────────────────────────────────────
+app.get('/api/sent-emails', (req, res) => {
+  const queue = loadQueue()
+  const sent = queue.filter(e => e.sent)
+  res.json({ emails: sent.map(e => ({
+    to: e.to,
+    subject: e.subject,
+    company: e.company || '',
+    sentAt: e.sentAt || null,
+    failed: e.failed || false,
+    error: e.error || null
+  })) })
+})
+
 // ── Schedule queue status ─────────────────────────────────────────────────
 app.get('/api/schedule-status', (req, res) => {
   const queue = loadQueue()

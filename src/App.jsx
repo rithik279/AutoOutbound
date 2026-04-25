@@ -584,75 +584,39 @@ export default function App() {
     setEditing(null)
   }
 
-  // ── MACRO GENERATOR ─────────────────────────────────────────────────────
-  function generateMacro() {
-    const [y, mo, dy] = (sendDate || new Date().toISOString().split('T')[0]).split('-').map(Number)
-    const [h, m] = sendTime.split(':').map(Number)
-    const N = contacts.length
-    const lastM = h * 60 + m + (N - 1) * gap
-    const lH = Math.floor(lastM / 60) % 24, lM = lastM % 60
-
-    const blocks = contacts.map((ct, i) => {
-      const d = drafts[ct.id]; if (!d) return ''
-      const tm = h * 60 + m + i * gap
-      const sh = Math.floor(tm / 60) % 24, sm = tm % 60
-      const dayOff = Math.floor(tm / (24 * 60))
-      return `
-    ' ── ${i + 1}. ${ct.co || ct.company} — ${ct.name}
-    Set oMail = Application.CreateItem(olMailItem)
-    With oMail
-        .To = "${ct.email}"
-        .Subject = "${(d.subject || '').replace(/"/g, '""')}"
-        .Body = "${(d.body || '').split('\n').map(l => l.replace(/"/g, '""')).join('" & vbCrLf & "')}"
-        .SentOnBehalfOfName = "${senderEmail}"
-        .DeferredDeliveryTime = DateSerial(${y}, ${mo}, ${dy + dayOff}) + TimeSerial(${sh}, ${sm}, 0)
-        .Send
-    End With
-    Set oMail = Nothing
-    Application.Wait (Now + TimeValue("0:00:01"))`
-    }).filter(Boolean).join('\n')
-
-    const code = `'================================================================
-' OUTBOUND CAMPAIGN MACRO — OUTLOOK VBA
-' Generated : ${new Date().toLocaleString()}
-' Model     : ${model.label}
-' Contacts  : ${N}  |  Interval : ${gap} min
-' From      : ${senderEmail}
-' First     : ${sendDate} ${sendTime}
-' Last      : ~${String(lH).padStart(2, '0')}:${String(lM).padStart(2, '0')}
-' Tokens    : ${totalTokens.toLocaleString()}
-'================================================================
-' HOW TO USE:
-'   1. Open Outlook desktop app
-'   2. Press Alt + F11  (opens VBA Editor)
-'   3. Click Insert > Module
-'   4. Paste this entire script
-'   5. Press F5, choose SendCampaign, click Run
-'   6. Confirm the dialog — emails queue in Outbox
-'
-'   Outlook sends each email at its scheduled time automatically.
-'   Keep Outlook open (or open before each send time).
-'================================================================
-
-Sub SendCampaign()
-    Dim oMail As MailItem
-
-    If MsgBox("Queue ${N} emails starting ${sendDate} at ${sendTime}?" & vbCrLf & _
-              "Interval: ${gap} min  |  From: ${senderEmail}", _
-              vbYesNo + vbQuestion, "Confirm Campaign") = vbNo Then Exit Sub
-${blocks}
-
-    MsgBox "${N} emails queued with deferred delivery." & vbCrLf & _
-           "First: ${sendDate} ${sendTime}  |  Last: ~${String(lH).padStart(2, '0')}:${String(lM).padStart(2, '0')}", _
-           vbInformation, "Campaign Scheduled"
-End Sub`
-    setMacroCode(code)
-    setPhase('macro')
-  }
-
-  async function copyMacro() {
-    await navigator.clipboard.writeText(macroCode)
-    setCopied(true); setTimeout(() => setCopied(false), 2500)
+  // ── SCHEDULE SEND ───────────────────────────────────────────────────────
+  async function scheduleSend() {
+    const approvedContacts = contacts.filter(c => approved.has(c.id))
+    if (!approvedContacts.length || !sendDate || !sendTime) return
+    setScheduleSending(true)
+    setScheduleError('')
+    const baseMs = new Date(`${sendDate}T${sendTime}`).getTime()
+    const emails = approvedContacts.map((ct, i) => {
+      const d = drafts[ct.id] || {}
+      return {
+        to: ct.email,
+        subject: d.subject || '',
+        body: d.body || '',
+        sendAt: new Date(baseMs + i * gap * 60 * 1000).toISOString()
+      }
+    })
+    try {
+      const res = await fetch('/api/schedule-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails })
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setSentCount(emails.length)
+        setPhase('sent')
+      } else {
+        setScheduleError(data.error || 'Server error — check Outlook credentials in server.js')
+      }
+    } catch (e) {
+      setScheduleError(e.message)
+    }
+    setScheduleSending(false)
   }
 
   // ════════════════════════════════════════════════════════════════════════

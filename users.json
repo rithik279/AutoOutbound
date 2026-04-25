@@ -1,0 +1,27 @@
+{
+  "dad": {
+    "email": "manmit.singh@live.com",
+    "password": "loveisall",
+    "name": "Manmit Singh",
+    "senderName": "Manmit Singh",
+    "senderEmail": "manmit.singh@live.com",
+    "modelId": "gpt-4o-mini",
+    "campaignMode": "startup",
+    "emailProvider": "microsoft",
+    "tokensPath": "./.tokens.json",
+    "resumePath": "./Singh_Manmit_2026_03_04.docx",
+    "resumeText": null
+  },
+  "friend": {
+    "email": "rishikchak2008@gmail.com",
+    "password": "UWswe$2031",
+    "name": "Rishik",
+    "senderName": "Rishik",
+    "senderEmail": "",
+    "modelId": "gpt-4o-mini",
+    "campaignMode": "startup",
+    "emailProvider": null,
+    "resumeText": null,
+    "gmailTokens": null
+  }
+}

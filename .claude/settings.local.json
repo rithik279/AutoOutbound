@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.apollo.io)",
+      "Bash(netstat -ano)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx vite *)",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(python3 *)",
+      "Bash(node *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ]
+}

@@ -1000,7 +1000,7 @@ export default function App() {
             </div>
             <div style={{ flex: 1 }}>
               <label style={c.label}>Your email (Outlook sends from this)</label>
-              <input type="email" placeholder="you@company.com" value={senderEmail} onChange={e => setSenderEmail(e.target.value)} />
+              <input type="email" placeholder="you@company.com" value={localSenderEmail} onChange={e => setLocalSenderEmail(e.target.value)} />
             </div>
           </div>
         </div>

@@ -1023,8 +1023,7 @@ export default function App() {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button disabled={!canContinue} onClick={() => {
-            const next = { scratch: 'discover', companies: 'companies', csv: 'csv', contacts: 'contacts_input' }
-            setPhase(next[entryLevel] || 'contacts_input')
+            const next = { scratch: 'discover', companies: 'companies' }
           }} style={c.primaryBtn}>
             Continue →
           </button>

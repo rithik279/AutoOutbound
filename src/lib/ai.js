@@ -118,7 +118,7 @@ WRITING RULES — follow without exception:
 `
 
 // ── Build email drafting system prompt ─────────────────────────────────────
-function buildEmailSystem(campaignMode) {
+function buildEmailSystem(campaignMode, resumeText) {
   const isStartup = campaignMode === 'startup'
 
   const modeContext = isStartup
@@ -131,23 +131,25 @@ Angle: reliability, regulatory delivery, Informatica expertise, financial servic
 
   return `You draft cold outreach emails for Manmit Singh, a senior data engineering contractor.
 
-${RESUME}
+MANMIT'S RESUME (use this as context — pick the most relevant experience for this specific company):
+${resumeText}
 
 ${modeContext}
 
 STRUCTURE — follow exactly, no labels:
 1. Subject: max 7 words. Specific to their actual product or infrastructure. Not a question. Not generic.
-2. Greeting: first name only, comma, new line.
-3. Hook sentence: ONE specific, non-obvious detail from the company website about what they're building or how their system works. Not their funding round. Not their headcount. Something about the actual product or technical approach that shows you read it.
-4. Problem bridge: 1-2 sentences. What data engineering problem does that specific thing create? Say what actually breaks or slows down — don't say "this is challenging".
-5. Credential + offer: 1-2 sentences. Name ONE specific past engagement where Manmit solved a similar problem (name the client and what was built). Then: "I can step in as senior contract capacity if timing works. Worth a quick call?"
-6. Sign-off: "Best,\nManmit"
+2. Greeting: "Hi [first name]," on its own line. Always "Hi Name," — never just "Name,".
+3. Hook paragraph: ONE specific, non-obvious detail from the company website about what they're building or how their system works. Not their funding round. Not their headcount. Something about the actual product or technical approach. 1-2 sentences max.
+4. Problem paragraph: What data engineering problem does that create? Say what actually breaks or slows down. 1-2 sentences. Blank line before this paragraph.
+5. Credential paragraph: Pick ONE engagement from the resume that is most relevant to this company's situation. Name the client and what was built. Then offer: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
+6. Sign-off: blank line, then "Best,\\nManmit"
 
 CONSTRAINTS:
 - Body is max 130 words (not counting subject or sign-off).
+- Every paragraph is separated by a blank line. No wall of text.
 - No job posting references. No "I saw you're hiring". No applying language whatsoever.
 - Manmit is not a candidate. He's a senior operator offering to solve a problem faster than a hire would.
-- Never list more than one client credential — pick the most relevant one and use it.
+- Never list more than one client credential — pick the most relevant one from the resume.
 - The hook must be specific enough that it cannot appear in any other company's email.
 
 ${WRITING_RULES}

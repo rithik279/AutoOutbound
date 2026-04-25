@@ -1450,8 +1450,6 @@ export default function App() {
   // ── SENT ──────────────────────────────────────────────────────────────────
   if (phase === 'sent') return (
     <div>
-      {statusBar()}
-      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
         <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
         <p style={{ ...c.muted, marginBottom: 32 }}>

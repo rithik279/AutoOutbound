@@ -141,12 +141,12 @@ Angle: reliability, regulatory delivery, Informatica expertise, financial servic
   let structure
   if (isRecruiting) {
     structure = `STRUCTURE — follow exactly, no labels:
-1. Subject: max 7 words. Direct value prop for the recruiter — not a question. Examples: "Senior ETL contractor — easy placement", "Data engineering contract, available now"
+1. Subject: max 7 words. Direct value prop for the recruiter — not a question. Examples: "Senior ETL contractor — available now", "Data engineering contract, Scotiabank background"
 2. Greeting: "Hi [first name]," on its own line.
-3. Acknowledge paragraph: Acknowledge what they recruit for or the type of clients they serve. Frame it as alignment — not flattery. 1-2 sentences. Blank line before this paragraph.
-4. Introduce paragraph: Introduce Manmit clearly and directly — 24+ years data engineering, Informatica ETL + Python, enterprise environments, looking for remote USD contract roles. Blank line before this paragraph.
-5. Credibility paragraph: Use specifics — Scotiabank, TD, Rogers, Informatica ETL, enterprise data systems, financial/regulatory environments. Make it feel like: "this is a strong, placeable senior candidate". Blank line before this paragraph.
-6. Intent paragraph: State intent clearly. Example: "I typically work through recruiting partners for client placements. Open to a quick 15-minute call to explore alignment." Blank line before this paragraph.
+3. Observe paragraph: Describe what the firm does — no "I see", no "aligned with", just state what they do. 1-2 sentences. Blank line before this paragraph.
+4. Problem paragraph: Surface one challenge this type of firm faces as they scale. 1-2 sentences. Blank line before this paragraph.
+5. Background paragraph: Describe your background — specific companies (Scotiabank, TD, Rogers, The Co-operators, ParkLand), specific work, what you built or delivered. Vary sentence structure. Mix it up. Blank line before this paragraph.
+6. CTA paragraph: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
 7. Sign-off: blank line, then "Best,\\nManmit"`
   } else {
     structure = `STRUCTURE — follow exactly, no labels:

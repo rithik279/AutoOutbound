@@ -286,6 +286,28 @@ export default function App() {
   const userResumeText = profile?.resumeText || null
   const userPrompt = profile?.prompt || null
 
+  // Profile update helpers (for settings page)
+  async function updateProfile(updates) {
+    if (!currentUser) return
+    try {
+      await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
+        body: JSON.stringify(updates)
+      })
+      const res = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+      if (res.ok) setProfile(await res.json())
+    } catch {}
+  }
+  const setCampaignModeFn = useCallback(v => {
+    setProfile(p => p ? { ...p, campaignMode: v } : p)
+    updateProfile({ campaignMode: v })
+  }, [currentUser])
+  const setModelIdFn = useCallback(v => {
+    setProfile(p => p ? { ...p, modelId: v } : p)
+    updateProfile({ modelId: v })
+  }, [currentUser])
+
   // Login local state
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')

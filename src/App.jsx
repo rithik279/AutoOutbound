@@ -703,8 +703,7 @@ export default function App() {
   // RENDER
   // ════════════════════════════════════════════════════════════════════════
 
-  // ── STATUS BAR (shown on all pages except entry) ───────────────────────
-  const showStatusBar = phase !== 'entry' && phase !== 'settings'
+  // ── STATUS BAR VARIABLES (used in all phases) ───────────────────────────
   const authColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
   const authLabel = authStatus?.status === 'ok' ? 'Outlook connected' : authStatus?.status === 'warning' ? `Outlook expires in ${authStatus?.minutesLeft}m` : authStatus?.status === 'critical' ? `Outlook critical — ${authStatus?.minutesLeft}m left` : authStatus?.status === 'expired' ? 'Outlook expired' : 'Outlook unknown'
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent` : 'checking…'

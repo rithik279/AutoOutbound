@@ -1258,16 +1258,18 @@ export default function App() {
 
   // ── SCHEDULE ──────────────────────────────────────────────────────────────
   if (phase === 'schedule') {
-    const N = contacts.length
+    const approvedList = contacts.filter(c => approved.has(c.id))
+    const N = approvedList.length
     const [sh, sm] = sendTime.split(':').map(Number)
     const total = (N - 1) * gap
     const endH = Math.floor((sh * 60 + sm + total) / 60) % 24
     const endM = (sh * 60 + sm + total) % 60
+    const canSend = N > 0 && sendDate && sendTime && !scheduleSending
 
     return (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div><h1 style={c.h1}>Schedule campaign</h1><p style={{ ...c.muted, marginTop: 4 }}>{approved.size} approved · set your send window</p></div>
+          <div><h1 style={c.h1}>Schedule campaign</h1><p style={{ ...c.muted, marginTop: 4 }}>{N} approved · set your send window</p></div>
           <button onClick={() => setPhase('review')} style={c.ghostBtn}>← Review</button>
         </div>
         <div style={{ ...c.card, marginBottom: 14 }}>
@@ -1289,24 +1291,32 @@ export default function App() {
         <div style={{ ...c.card, marginBottom: 16 }}>
           <h2 style={c.h2}>Send timeline</h2>
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-            {contacts.map((ct, i) => {
+            {approvedList.map((ct, i) => {
               const tm = sh * 60 + sm + i * gap
               const hh = Math.floor(tm / 60) % 24, mm = tm % 60
+              const d = drafts[ct.id]
               return (
-                <div key={ct.id} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, padding: '4px 0', borderBottom: '1px solid #f0f0ec' }}>
+                <div key={ct.id} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, padding: '6px 0', borderBottom: '1px solid #f0f0ec' }}>
                   <span style={{ ...c.muted, minWidth: 40, fontFamily: 'monospace', fontSize: 11 }}>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</span>
                   <Avatar name={ct.name} size={20} />
                   <span style={{ flex: 1, fontWeight: 500 }}>{ct.name}</span>
                   <span style={c.muted}>{ct.co || ct.company}</span>
-                  {approved.has(ct.id) && <span style={{ color: '#16a34a', fontSize: 12 }}>✓</span>}
+                  <span style={{ fontSize: 11, color: '#888', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d?.subject}</span>
                 </div>
               )
             })}
           </div>
         </div>
+        {scheduleError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', marginBottom: 14, color: '#991b1b', fontSize: 13 }}>
+            {scheduleError}
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={c.small}>Total spread: {Math.floor(total / 60)}h {total % 60}m</p>
-          <button onClick={generateMacro} disabled={!sendDate || !sendTime} style={c.primaryBtn}>Generate Outlook macro →</button>
+          <p style={c.small}>Total spread: {Math.floor(total / 60)}h {total % 60}m · Sent via Outlook SMTP</p>
+          <button onClick={scheduleSend} disabled={!canSend} style={c.primaryBtn}>
+            {scheduleSending ? 'Scheduling…' : `Schedule ${N} email${N !== 1 ? 's' : ''} →`}
+          </button>
         </div>
       </div>
     )

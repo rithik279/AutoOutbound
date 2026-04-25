@@ -55,19 +55,19 @@ const ENTRY_LEVELS = [
 const RECRUITER_MODE_TITLES = [
   'Data Engineering Recruiter', 'Data Recruiter', 'Data & AI Recruiter',
   'Analytics Recruiter', 'Data Platform Recruiter', 'Data Scientist Recruiter',
-  'Technical Recruiter', 'IT Recruiter',
+  'Technical Recruiter', 'IT Recruiter', 'Recruiter', 'Staffing Recruiter',
   'Account Manager', 'Client Partner', 'Delivery Partner', 'Client Solutions Manager',
   'Delivery Manager', 'Resource Manager', 'Talent Delivery Lead',
   'Head of Data & Analytics', 'Practice Lead, Data Engineering',
   'Director of Data Recruiting', 'Director of Technology Recruiting',
-  'Staffing Consultant', 'Principal Consultant',
-  'Engagement Manager', 'Principal Recruiter'
+  'Staffing Consultant', 'Principal Consultant', 'Engagement Manager', 'Principal Recruiter',
+  'Business Development Manager', 'Practice Director', 'Delivery Director',
 ]
 
 const RECRUITER_MODE_BLOCKLIST = [
-  'hr ', 'human resources', 'people ops', 'coordinator',
+  'hr ', 'human resources', 'people ops', 'coordinator', 'executive assistant',
   'legal', 'counsel', 'design', 'designer', 'brand', 'content', 'creative',
-  'marketing', 'sales', 'revenue', 'business development', 'biz dev',
+  'marketing', 'sales rep', 'sales associate', 'sales executive',
   'community', 'social media', 'public relations', ' pr ', 'info@', 'careers@'
 ]
 

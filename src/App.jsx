@@ -881,6 +881,11 @@ export default function App() {
         </div>
         <div style={{ width: 1, height: 16, background: '#ddd' }} />
         <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
@@ -964,6 +969,11 @@ export default function App() {
         </div>
         <div style={{ width: 1, height: 16, background: '#ddd' }} />
         <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
@@ -1157,6 +1167,11 @@ export default function App() {
         </div>
         <div style={{ width: 1, height: 16, background: '#ddd' }} />
         <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
@@ -1348,6 +1363,11 @@ export default function App() {
         </div>
         <div style={{ width: 1, height: 16, background: '#ddd' }} />
         <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
       </div>
     )
     const selDraft = sel ? drafts[sel.id] : null
@@ -1554,6 +1574,11 @@ export default function App() {
         </div>
         <div style={{ width: 1, height: 16, background: '#ddd' }} />
         <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+          {hasFailed && (
+            <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
+            </button>
+          )}
       </div>
       <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
       <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>

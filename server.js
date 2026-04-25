@@ -327,6 +327,7 @@ app.get('/api/auth-start', (req, res) => {
 
 // ── Token health ──────────────────────────────────────────────────────────
 app.get('/api/token-health', async (req, res) => {
+  console.log('[DEBUG] /api/token-health called')
   const h = getTokenHealth()
   if (h.status === 'ok') return res.json({ ok: true, status: 'ok', minutesLeft: h.minutesLeft })
   if (h.status === 'expired') return res.json({ ok: false, status: 'expired', minutesLeft: 0 })

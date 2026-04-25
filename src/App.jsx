@@ -237,8 +237,9 @@ export default function App() {
   const [sendDate, setSendDate] = useState('')
   const [sendTime, setSendTime] = useState('09:00')
   const [gap, setGap] = useState(5)
-  const [macroCode, setMacroCode] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [scheduleSending, setScheduleSending] = useState(false)
+  const [scheduleError, setScheduleError] = useState('')
+  const [sentCount, setSentCount] = useState(0)
 
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }

@@ -211,6 +211,300 @@ function exportCSV(contacts, filename = 'contacts') {
   URL.revokeObjectURL(url)
 }
 
+// ── Friend Settings Component ─────────────────────────────────────────────
+function FriendSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser }) {
+  const [tab, setTab] = useState('profile') // profile | resume | prompt | email
+  const [resumeFile, setResumeFile] = useState(null)
+  const [resumeStatus, setResumeStatus] = useState('')
+  const [promptTab, setPromptTab] = useState('chat') // chat | edit
+  const [promptChat, setPromptChat] = useState([])
+  const [promptInput, setPromptInput] = useState('')
+  const [promptLoading, setPromptLoading] = useState(false)
+  const [editPrompt, setEditPrompt] = useState('')
+  const [pendingPrompt, setPendingPrompt] = useState(null)
+  const [gmailStatus, setGmailStatus] = useState(null)
+  const [gmailLoading, setGmailLoading] = useState(false)
+
+  // Sync edit prompt when profile loads
+  useEffect(() => {
+    if (profile?.prompt) setEditPrompt(profile.prompt)
+  }, [profile])
+
+  async function handleResumeUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setResumeFile(file)
+    setResumeStatus('Extracting text…')
+    try {
+      const text = await file.text()
+      // For .docx files, use mammoth; for text just use content
+      let resumeText = text
+      if (file.name.endsWith('.docx')) {
+        const res = await fetch('/api/resume-text-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
+          body: text
+        })
+        if (res.ok) {
+          const data = await res.json()
+          resumeText = data.text
+        }
+      }
+      await onUpdateProfile({ resumeText })
+      setResumeStatus(`Uploaded! ${resumeText.length} chars`)
+    } catch {
+      setResumeStatus('Failed to upload')
+    }
+  }
+
+  async function handlePromptChat() {
+    if (!promptInput.trim() || promptLoading) return
+    const current = profile?.prompt || ''
+    const userMsg = { role: 'user', content: promptInput }
+    setPromptChat(c => [...c, userMsg])
+    setPromptInput('')
+    setPromptLoading(true)
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          system: `You are an email prompt expert. The user wants to modify their cold email prompt.
+Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no commentary, no markdown, just the raw text).`,
+          messages: [{ role: 'user', content: promptInput }]
+        })
+      })
+      const data = await res.json()
+      const modified = data.choices?.[0]?.message?.content || ''
+      setPendingPrompt(modified)
+      setPromptChat(c => [...c, { role: 'assistant', content: 'Preview updated! Review the changes below.' }])
+    } catch {
+      setPromptChat(c => [...c, { role: 'assistant', content: 'Failed to update prompt. Try again.' }])
+    }
+    setPromptLoading(false)
+  }
+
+  async function acceptPrompt() {
+    if (pendingPrompt) {
+      await onUpdateProfile({ prompt: pendingPrompt })
+      setEditPrompt(pendingPrompt)
+      setPendingPrompt(null)
+    }
+  }
+
+  async function handleSaveManualPrompt() {
+    await onUpdateProfile({ prompt: editPrompt })
+  }
+
+  async function handleConnectGmail() {
+    setGmailLoading(true)
+    window.open('http://localhost:3001/api/gmail/auth-start', '_blank')
+    // Poll for token
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      try {
+        const res = await fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
+        const data = await res.json()
+        if (data.ok) { setGmailStatus(data); break }
+      } catch {}
+    }
+    setGmailLoading(false)
+  }
+
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'resume', label: 'Resume', icon: '📄' },
+    { id: 'prompt', label: 'AI Prompt', icon: '✏️' },
+    { id: 'email', label: 'Email Account', icon: '📧' },
+  ]
+
+  return (
+    <div>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+            border: 'none', cursor: 'pointer',
+            background: tab === t.id ? '#111' : '#fff',
+            color: tab === t.id ? '#fff' : '#555',
+            border: tab === t.id ? 'none' : '1px solid #ddd'
+          }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Profile tab */}
+      {tab === 'profile' && (
+        <div>
+          <div style={{ ...c.card, marginBottom: 14 }}>
+            <h2 style={c.h2}>Your details</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={c.label}>Your name (for email sign-off)</label>
+                <input value={localSenderName} onChange={e => setLocalSenderName(e.target.value)} placeholder="e.g. James O'Brien" />
+              </div>
+              <div>
+                <label style={c.label}>Your email (Gmail sends from this)</label>
+                <input type="email" value={localSenderEmail} onChange={e => setLocalSenderEmail(e.target.value)} placeholder="you@gmail.com" />
+              </div>
+              <button onClick={() => onUpdateProfile({ senderName: localSenderName, senderEmail: localSenderEmail })} style={c.primaryBtn}>
+                Save profile
+              </button>
+            </div>
+          </div>
+
+          <div style={{ ...c.card, marginBottom: 14 }}>
+            <h2 style={c.h2}>Campaign type</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {Object.values(CAMPAIGN_MODES).map(mode => {
+                const sel = campaignMode === mode.id
+                return (
+                  <div key={mode.id} onClick={() => setCampaignModeFn(mode.id)} style={{
+                    border: sel ? `2px solid ${mode.color}` : '1px solid #e5e5e0',
+                    borderRadius: 10, padding: 14, cursor: 'pointer',
+                    background: sel ? mode.color + '0a' : '#fafaf8'
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: sel ? mode.color : '#111' }}>{mode.label}</div>
+                    <div style={{ fontSize: 12, color: '#666', lineHeight: 1.4 }}>{mode.desc}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ ...c.card, marginBottom: 14 }}>
+            <h2 style={c.h2}>AI model</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {MODELS.map(m => {
+                const sel = modelId === m.id
+                return (
+                  <div key={m.id} onClick={() => setModelIdFn(m.id)} style={{
+                    border: sel ? `2px solid ${m.color}` : '1px solid #e5e5e0',
+                    borderRadius: 10, padding: 14, cursor: 'pointer',
+                    background: sel ? m.color + '0a' : '#fafaf8'
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>{m.label}</div>
+                    <div style={{ ...c.pill(m.color, m.note), marginBottom: 8 }}>{m.note}</div>
+                    <div style={{ fontSize: 11, color: '#666' }}>Est. 26 emails: {m.cost}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resume tab */}
+      {tab === 'resume' && (
+        <div style={{ ...c.card }}>
+          <h2 style={c.h2}>Upload your resume</h2>
+          <p style={c.muted}>The resume text is used by AI to personalize cold emails. Upload a .docx or .txt file.</p>
+          <div style={{ marginTop: 14, marginBottom: 14 }}>
+            <input type="file" accept=".docx,.txt,.pdf" onChange={handleResumeUpload} />
+          </div>
+          {resumeStatus && (
+            <p style={{ fontSize: 13, color: resumeStatus.includes('Failed') ? '#dc2626' : '#16a34a', marginBottom: 12 }}>{resumeStatus}</p>
+          )}
+          {profile?.resumeText && (
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Current resume text:</p>
+              <pre style={{ fontSize: 12, background: '#f7f7f5', padding: 14, borderRadius: 8, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                {profile.resumeText.slice(0, 800)}{profile.resumeText.length > 800 ? '…' : ''}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Prompt tab */}
+      {tab === 'prompt' && (
+        <div>
+          <div style={{ ...c.card, marginBottom: 14 }}>
+            <h2 style={c.h2}>Edit your email prompt</h2>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <button onClick={() => setPromptTab('chat')} style={{ ...c.ghostBtn, background: promptTab === 'chat' ? '#111' : undefined, color: promptTab === 'chat' ? '#fff' : undefined }}>
+                💬 AI Chat
+              </button>
+              <button onClick={() => setPromptTab('edit')} style={{ ...c.ghostBtn, background: promptTab === 'edit' ? '#111' : undefined, color: promptTab === 'edit' ? '#fff' : undefined }}>
+                ✏️ Manual Edit
+              </button>
+            </div>
+
+            {promptTab === 'chat' && (
+              <div>
+                <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 14 }}>
+                  {promptChat.map((msg, i) => (
+                    <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0ec' }}>
+                      <span style={{ fontWeight: 700, fontSize: 11, color: msg.role === 'user' ? '#0066cc' : '#16a34a' }}>
+                        {msg.role === 'user' ? 'You: ' : 'AI: '}
+                      </span>
+                      <span style={{ fontSize: 13 }}>{msg.content}</span>
+                    </div>
+                  ))}
+                  {promptLoading && <p style={{ fontSize: 13, color: '#888' }}>Thinking…</p>}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    style={{ flex: 1 }}
+                    placeholder="e.g. make it shorter, use more formal tone, focus on fintech"
+                    value={promptInput}
+                    onChange={e => setPromptInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handlePromptChat()}
+                  />
+                  <button onClick={handlePromptChat} disabled={promptLoading || !promptInput.trim()} style={c.primaryBtn}>Send</button>
+                </div>
+              </div>
+            )}
+
+            {promptTab === 'edit' && (
+              <div>
+                <textarea
+                  style={{ width: '100%', minHeight: 200, fontFamily: 'monospace', fontSize: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8 }}
+                  value={editPrompt}
+                  onChange={e => setEditPrompt(e.target.value)}
+                />
+                <button onClick={handleSaveManualPrompt} style={{ ...c.primaryBtn, marginTop: 10 }}>
+                  Save prompt
+                </button>
+              </div>
+            )}
+          </div>
+
+          {pendingPrompt && (
+            <div style={{ ...c.card, marginBottom: 14, border: '2px solid #d97706' }}>
+              <h2 style={c.h2}>Preview — review before saving</h2>
+              <pre style={{ fontSize: 12, background: '#fef3c7', padding: 14, borderRadius: 8, maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                {pendingPrompt}
+              </pre>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button onClick={acceptPrompt} style={c.successBtn}>✓ Accept changes</button>
+                <button onClick={() => setPendingPrompt(null)} style={c.ghostBtn}>Discard</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Email tab */}
+      {tab === 'email' && (
+        <div style={{ ...c.card }}>
+          <h2 style={c.h2}>Connect Gmail</h2>
+          <p style={c.muted}>Sign in with your Google account to send emails directly from the app.</p>
+          <button onClick={handleConnectGmail} disabled={gmailLoading} style={{ ...c.primaryBtn, marginTop: 12 }}>
+            {gmailLoading ? 'Opening Google sign-in…' : '🔗 Connect Gmail'}
+          </button>
+          {profile?.hasGmailToken && (
+            <p style={{ fontSize: 13, color: '#16a34a', marginTop: 10 }}>✓ Gmail connected</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── MAIN APP ───────────────────────────────────────────────────────────────
 // API keys live in server.js and .env — never in the browser bundle
 // The server proxy handles all OpenAI, Anthropic, and Apollo calls

@@ -1,8 +1,8 @@
-export default {
+module.exports = {
   apps: [{
     name: 'campaign',
     script: 'server.js',
-    cwd: '.',
+    cwd: __dirname,
     watch: false,
     autorestart: true,
     max_restarts: 10,

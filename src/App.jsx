@@ -489,14 +489,22 @@ export default function App() {
         const tierCEO     = { label: 'CEO', params: { person_titles: ['CEO', 'Chief Executive Officer'], person_seniorities: ['c_suite'], per_page: 3, ...orgFilter }, useFilter: false }
         const tierMode    = { label: 'mode titles', params: { person_titles: mode.titles, person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
         const tierBroad   = { label: 'broad seniority', params: { person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
+
+        // Recruiter mode: add a relaxed fallback that skips title filter entirely (company context is enough)
+        const isRecruiting = campaignMode === 'recruiting'
+        const tierRelaxed  = isRecruiting
+          ? { label: 'recruiter relaxed', params: { person_titles: ['Recruiter', 'Consultant', 'Account Manager', 'Director', 'VP', 'Manager', 'Senior Associate', 'Lead', 'Partner'], person_seniorities: ['senior', 'manager', 'director', 'vp', 'head', 'c_suite', 'founder', 'partner'], per_page: 8, ...orgFilter }, useFilter: false }
+          : null
+
+        // C-suite catch-all — separate from other tiers, always searched last
         const tierCSuite  = { label: 'any C-suite', params: { person_seniorities: ['c_suite', 'owner', 'founder', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
 
-        // Order: hint-specific first, then standard tiers, then C-suite catch-all
+        // Order: hint-specific first, then standard tiers, then recruiter relaxed, then C-suite
         let tiers
-        if (isFounderHint)      tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierCEO, tierCSuite]
-        else if (isEngHint)     tiers = [tierCTO, tierMode, tierBroad, tierFounder, tierCEO, tierCSuite]
-        else if (isDataHint)    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder, tierCSuite]
-        else                    tiers = [tierMode, tierBroad, tierCTO, tierCEO, tierFounder, tierCSuite]
+        if (isFounderHint)      tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierRelaxed, tierCEO, tierCSuite].filter(Boolean)
+        else if (isEngHint)     tiers = [tierCTO, tierMode, tierBroad, tierRelaxed, tierFounder, tierCEO, tierCSuite].filter(Boolean)
+        else if (isDataHint)    tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
+        else                    tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
 
         let topPeople = []
         for (const tier of tiers) {

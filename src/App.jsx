@@ -1452,7 +1452,7 @@ export default function App() {
     <div>
       {statusBar()}
       <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
       <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
       <p style={{ ...c.muted, marginBottom: 32 }}>
         Sending via Outlook SMTP starting {sendDate} at {sendTime}, every {gap} min.

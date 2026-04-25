@@ -1,5 +1,4 @@
 #!/bin/bash
-# hook-probe
 # Auto-commit any staged/modified tracked files after every Edit or Write tool use.
 INPUT=$(cat)
 

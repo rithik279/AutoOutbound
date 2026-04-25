@@ -1,50 +1,71 @@
-// Run once to authorize via Microsoft Graph:
+// Run once to authorize via Microsoft Graph device code flow:
 //   node scripts/authorize.js <YOUR_CLIENT_ID>
-//
-// It prints a URL + code — open the URL in a browser, sign in with
-// manmit.singh@live.com, enter the code. Done. Tokens saved to .tokens.json.
 
-import { PublicClientApplication } from '@azure/msal-node'
-import { writeFileSync, readFileSync, existsSync } from 'fs'
+import { writeFileSync } from 'fs'
 
 const CLIENT_ID = process.argv[2]
 if (!CLIENT_ID) {
   console.error('Usage: node scripts/authorize.js <YOUR_CLIENT_ID>')
-  console.error('Get the client ID from portal.azure.com → App registrations → your app → Overview')
   process.exit(1)
 }
 
-const cachePlugin = {
-  beforeCacheAccess: async () => {},
-  afterCacheAccess: async (ctx) => {
-    if (ctx.cacheHasChanged) {
-      // Merge client ID into the saved cache so server can read it
-      const cache = JSON.parse(ctx.tokenCache.serialize())
-      writeFileSync('.tokens.json', JSON.stringify({ ...cache, clientId: CLIENT_ID }, null, 2))
-    }
+const AUTHORITY = 'https://login.microsoftonline.com/consumers/oauth2/v2.0'
+const SCOPE     = 'https://graph.microsoft.com/Mail.Send offline_access'
+
+// Step 1 — request device code
+const dcRes = await fetch(`${AUTHORITY}/devicecode`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ client_id: CLIENT_ID, scope: SCOPE })
+})
+const dc = await dcRes.json()
+
+if (dc.error) {
+  console.error('Error getting device code:', dc.error_description || dc.error)
+  process.exit(1)
+}
+
+// Step 2 — show instructions to user
+console.log('\n' + dc.message + '\n')
+
+// Step 3 — poll until user signs in
+const interval = (dc.interval || 5) * 1000
+let token = null
+
+while (!token) {
+  await new Promise(r => setTimeout(r, interval))
+  const pollRes = await fetch(`${AUTHORITY}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:   CLIENT_ID,
+      grant_type:  'urn:ietf:params:oauth2:grant-type:device_code',
+      device_code: dc.device_code
+    })
+  })
+  const poll = await pollRes.json()
+
+  if (poll.access_token) {
+    token = poll
+  } else if (poll.error === 'authorization_pending') {
+    process.stdout.write('.')  // waiting
+  } else if (poll.error === 'slow_down') {
+    // back off
+  } else {
+    console.error('\nAuth failed:', poll.error_description || poll.error)
+    process.exit(1)
   }
 }
 
-const app = new PublicClientApplication({
-  auth: {
-    clientId: CLIENT_ID,
-    authority: 'https://login.microsoftonline.com/consumers'
-  },
-  cache: { cachePlugin }
-})
+console.log('\n')
 
-console.log('\nStarting Microsoft authorization...\n')
+// Step 4 — save tokens + client ID
+writeFileSync('.tokens.json', JSON.stringify({
+  clientId:     CLIENT_ID,
+  accessToken:  token.access_token,
+  refreshToken: token.refresh_token,
+  expiresAt:    Date.now() + token.expires_in * 1000
+}, null, 2))
 
-const result = await app.acquireTokenByDeviceCode({
-  scopes: ['https://graph.microsoft.com/Mail.Send', 'offline_access'],
-  deviceCodeCallback: (res) => {
-    // Show URL and code clearly regardless of which property name MSAL uses
-    const msg = res.message || res.userCode
-      ? `\nTo sign in, visit: ${res.verificationUri || 'https://microsoft.com/devicelogin'}\nEnter code: ${res.userCode}\n`
-      : JSON.stringify(res, null, 2)
-    console.log(msg)
-  }
-})
-
-console.log(`\n✓ Authorized as ${result.account.username}`)
-console.log('✓ Tokens saved to .tokens.json — server is ready to send emails\n')
+console.log('✓ Authorized — tokens saved to .tokens.json')
+console.log('✓ Server is ready to send emails via Microsoft Graph\n')

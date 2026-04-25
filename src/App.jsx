@@ -353,16 +353,15 @@ export default function App() {
   const authLabel = authStatus?.status === 'ok' ? 'Outlook connected' : authStatus?.status === 'warning' ? `Outlook expires in ${authStatus?.minutesLeft}m` : authStatus?.status === 'critical' ? `Outlook critical — ${authStatus?.minutesLeft}m left` : authStatus?.status === 'expired' ? 'Outlook expired' : 'Outlook unknown'
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
   const hasFailed = scheduleStatus?.failed > 0
+  const authExpiry = authStatus?.minutesLeft != null ? ` · expires in ${authStatus.minutesLeft}m` : ''
   const statusBar = (wide = false) => (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: authColor }} />
-        <span style={{ fontSize: 12, color: '#666' }}>{authLabel}</span>
-        {(authStatus?.status === 'expired' || authStatus?.status === 'critical' || authStatus?.status === 'missing') && (
-          <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
-            {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-          </button>
-        )}
+        <span style={{ fontSize: 12, color: '#666' }}>{authLabel}{authExpiry}</span>
+        <button onClick={runReAuth} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+          {reAuthLoading ? 'Opening…' : 'Re-authorize'}
+        </button>
       </div>
       <div style={{ width: 1, height: 16, background: '#ddd' }} />
       <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>

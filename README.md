@@ -38,7 +38,9 @@ Open **http://localhost:5173** in your browser. The Express API server starts on
 
 ### API keys
 
-The app comes pre-configured for demo use. To use your own keys, create a `.env` file in the project root:
+API keys are pre-configured in `server.js` — no `.env` file needed. Just clone and run.
+
+To swap in your own keys, create a `.env` file in the project root and they'll override the defaults:
 
 ```
 VITE_SENDER_NAME=Your Name
@@ -47,16 +49,6 @@ VITE_OPENAI_KEY=sk-...
 VITE_APOLLO_KEY=your-apollo-key
 VITE_ANTHROPIC_KEY=sk-ant-...
 ```
-
-If no `.env` is present the app falls back to the pre-configured keys in Settings — you can also enter or override keys directly in the Settings screen at runtime.
-
-**Where to get keys:**
-
-| Key | Link | Notes |
-|---|---|---|
-| OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Required for email drafting (GPT-4o / GPT-4o Mini) |
-| Apollo.io | app.apollo.io → Settings → API | Required for contact discovery. Free tier: ~50 email credits/month |
-| Anthropic | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | Optional — only needed if using Claude Sonnet for drafting |
 
 ---
 
@@ -100,8 +92,7 @@ Outlook fires each email at its scheduled time. Keep Outlook open (or reopen it 
 :5173  Vite dev server (React UI)
          |
 :3001  Express API server
+         ├── /api/ai/chat       — proxies OpenAI + Anthropic calls (keys stay server-side)
          ├── /api/apollo/*      — proxies Apollo calls (Apollo blocks browser CORS)
          └── /api/fetch-site    — fetches + strips company websites for email hooks
-
-OpenAI / Anthropic — called directly from browser (support CORS)
 ```

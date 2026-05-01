@@ -299,7 +299,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
 
   async function handleConnectGmail() {
     setGmailLoading(true)
-    window.open(`http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
     // Poll for token
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
@@ -1058,7 +1058,7 @@ export default function App() {
         <span style={{ fontSize: 12, color: '#666' }}>{activeAuthLabel}{activeAuthExpiry}</span>
         <button onClick={() => {
           if (isFriend && emailProvider === 'gmail') {
-            window.open(`http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
           } else {
             runReAuth()
           }

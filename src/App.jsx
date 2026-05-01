@@ -995,7 +995,7 @@ export default function App() {
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
-        const res = await fetch('/api/token-health')
+        const res = await fetch(`/api/token-health?_=${Date.now()}`)
         const data = await res.json()
         console.log('[ReAuth] poll', i, data)
         if (data.ok) {

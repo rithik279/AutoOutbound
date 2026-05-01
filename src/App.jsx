@@ -998,7 +998,11 @@ export default function App() {
         const res = await fetch('/api/token-health')
         const data = await res.json()
         console.log('[ReAuth] poll', i, data)
-        if (data.ok) { setAuthStatus(data); break }
+        if (data.ok) {
+          setAuthStatus(data)
+          setReAuthLoading(false)
+          return
+        }
       } catch (e) { console.error('[ReAuth] poll error', i, e) }
     }
     setReAuthLoading(false)

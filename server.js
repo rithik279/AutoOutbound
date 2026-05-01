@@ -621,6 +621,39 @@ app.get('/api/gmail/auth-start', async (req, res) => {
   res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
 })
 
+// Production Gmail callback
+app.get('/api/gmail/auth-callback', async (req, res) => {
+  const { code, state } = req.query
+  const userId = state || 'friend'
+  res.writeHead(200, { 'Content-Type': 'text/html' })
+  if (!code) {
+    res.end('<html><body><h2>Gmail auth failed: missing code.</h2><p>Close and try again.</p></body></html>')
+    return
+  }
+  const clientId = GMAIL_CLIENT_ID
+  const redirect = GMAIL_REDIRECT_URI
+  res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Gmail Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: clientId, client_secret: GMAIL_CLIENT_SECRET, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: '' })
+    })
+    const data = await tokenRes.json()
+    if (data.access_token) {
+      writeFileSync(getGmailTokensPath(userId), JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
+      const users = loadUsers()
+      users[userId] = users[userId] || {}
+      users[userId].gmailTokens = true
+      saveUsers(users)
+      console.log(`[GMAIL] Authorized for ${userId} via production callback`)
+    } else {
+      console.error('[GMAIL] Token exchange failed:', data)
+    }
+  } catch (e) {
+    console.error('[GMAIL] Token exchange error:', e.message)
+  }
+})
+
 app.get('/api/gmail/token-health', (req, res) => {
   const userId = req.headers['x-user-id'] || 'friend'
   const h = getGmailTokenHealth(userId)

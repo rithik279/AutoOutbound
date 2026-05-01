@@ -574,8 +574,8 @@ function SetupWizard({ currentUser, onComplete }) {
   async function handleConnect() {
     setAuthLoading(true)
     const authUrl = provider === 'gmail'
-      ? `http://localhost:3001/api/gmail/auth-start?userId=${currentUser.userId}`
-      : 'http://localhost:3001/api/auth-start'
+      ? `/api/gmail/auth-start?userId=${currentUser.userId}`
+      : '/api/auth-start'
     window.open(authUrl, '_blank')
     // Poll until token is ready
     const checkHealth = provider === 'gmail'

@@ -609,3 +609,11 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => console.log(`✓ API server running on http://localhost:${PORT}`))
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED] Rejection:', reason instanceof Error ? reason.message : reason)
+})
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT] Exception:', err.message)
+  process.exit(1)
+})

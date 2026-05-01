@@ -578,6 +578,9 @@ app.get('/api/gmail/auth-start', async (req, res) => {
   const userId = req.query.userId || 'friend'
   const verifier = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
+  const state = `${userId}:${crypto.randomBytes(8).toString('hex')}`
+  oauthVerifiers.set(state, { verifier, clientId, userId, redirect })
+
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
     client_id: clientId,
     response_type: 'code',
@@ -586,10 +589,15 @@ app.get('/api/gmail/auth-start', async (req, res) => {
     access_type: 'offline',
     code_challenge: challenge,
     code_challenge_method: 'S256',
-    prompt: 'consent'
+    prompt: 'consent',
+    state
   })}`
-  const { createServer } = await import('http')
-  const server = createServer((req, res) => {
+  const isProd = process.env.NODE_ENV === 'production'
+  if (isProd) {
+    res.redirect(authUrl)
+  } else {
+    const { createServer } = await import('http')
+    const server = createServer((req, res) => {
       const url = new URL(req.url, `http://localhost:3334`)
       const code = url.searchParams.get('code')
       res.writeHead(200, { 'Content-Type': 'text/html' })
@@ -618,7 +626,8 @@ app.get('/api/gmail/auth-start', async (req, res) => {
     })
     server.on('error', e => console.error(`[GMAIL] Callback server error: ${e.message}`))
     server.listen(3334, () => console.log(`[GMAIL] Callback server listening on 3334`))
-  res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
+    res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
+  }
 })
 
 // Production Gmail callback

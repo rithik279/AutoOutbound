@@ -569,7 +569,6 @@ app.get('/api/gmail/auth-start', async (req, res) => {
     })
     server.on('error', e => console.error(`[GMAIL] Callback server error: ${e.message}`))
     server.listen(3334, () => console.log(`[GMAIL] Callback server listening on 3334`))
-  })
   res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
 })
 

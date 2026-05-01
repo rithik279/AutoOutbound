@@ -520,7 +520,7 @@ async function getGmailToken(userId) {
   return t.accessToken
 }
 
-app.get('/api/gmail/auth-start', (req, res) => {
+app.get('/api/gmail/auth-start', async (req, res) => {
   const clientId = GMAIL_CLIENT_ID
   const redirect = GMAIL_REDIRECT_URI
   if (!clientId) {

@@ -633,19 +633,23 @@ app.get('/api/gmail/auth-start', async (req, res) => {
 // Production Gmail callback
 app.get('/api/gmail/auth-callback', async (req, res) => {
   const { code, state } = req.query
-  const userId = state || 'friend'
   res.writeHead(200, { 'Content-Type': 'text/html' })
-  if (!code) {
-    res.end('<html><body><h2>Gmail auth failed: missing code.</h2><p>Close and try again.</p></body></html>')
+  if (!code || !state) {
+    res.end('<html><body><h2>Gmail auth failed: missing code or state.</h2><p>Close and try again.</p></body></html>')
     return
   }
-  const clientId = GMAIL_CLIENT_ID
-  const redirect = GMAIL_REDIRECT_URI
+  const stored = oauthVerifiers.get(state)
+  if (!stored) {
+    res.end('<html><body><h2>Gmail auth failed: expired or invalid state.</h2><p>Close and try again.</p></body></html>')
+    return
+  }
+  oauthVerifiers.delete(state)
+  const { verifier, clientId, userId, redirect } = stored
   res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Gmail Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientId, client_secret: GMAIL_CLIENT_SECRET, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: '' })
+      body: new URLSearchParams({ client_id: clientId, client_secret: GMAIL_CLIENT_SECRET, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
     })
     const data = await tokenRes.json()
     if (data.access_token) {

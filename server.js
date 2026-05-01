@@ -296,40 +296,82 @@ async function sendViaGraph({ to, subject, body }) {
 app.get('/api/auth-start', async (req, res) => {
   const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
   const port = 3333
-  const redirect = `http://localhost:${port}/callback`
+  const isProd = process.env.NODE_ENV === 'production'
+  // For prod: use public hostname, port 443 (standard HTTPS). For dev: localhost.
+  const callbackHost = isProd ? `https://autooutbound.onrender.com` : `http://localhost:${port}`
+  const redirect = `${callbackHost}/api/auth-callback`
   const verifier = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
+  const state = crypto.randomBytes(8).toString('hex')
+  // Store verifier keyed by state
+  oauthVerifiers.set(state, { verifier, clientId, redirect })
+
   const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${new URLSearchParams({
     client_id: clientId, response_type: 'code', redirect_uri: redirect,
     scope: 'https://graph.microsoft.com/Mail.Send offline_access openid profile',
-    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
+    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query', state
   })}`
-  const { createServer } = await import('http')
-  console.log('[AUTH] Starting callback server on', port)
-  const server = createServer((req, res) => {
-    const url = new URL(req.url, `http://localhost:${port}`)
-    const code = url.searchParams.get('code')
-    console.log('[AUTH] Callback received, code:', code ? 'present' : 'missing', 'url:', req.url)
-    res.writeHead(200, { 'Content-Type': 'text/html' })
-    res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized.</h2><p>You can close this tab.</p></body></html>')
-    server.close()
-    if (code) {
-      console.log('[AUTH] Exchanging code for token...')
-      fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
-      }).then(r => r.json()).then(data => {
-        console.log('[AUTH] Token response:', data.access_token ? 'success' : 'error', Object.keys(data))
-        if (data.access_token) {
-          writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
-          console.log('[AUTH] Re-authorized successfully')
-        }
-      }).catch(e => console.error('[AUTH] Token exchange failed:', e.message))
+  if (isProd) {
+    // In prod, redirect browser to Microsoft, then Microsoft calls back to /api/auth-callback
+    res.redirect(authUrl)
+  } else {
+    // In dev, spawn a mini callback server on localhost:3333
+    const { createServer } = await import('http')
+    const server = createServer((req, res) => {
+      const url = new URL(req.url, `http://localhost:${port}`)
+      const code = url.searchParams.get('code')
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized.</h2><p>You can close this tab.</p></body></html>')
+      server.close()
+      if (code) {
+        fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
+        }).then(r => r.json()).then(data => {
+          if (data.access_token) {
+            writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
+            console.log('[AUTH] Re-authorized successfully')
+          }
+        }).catch(e => console.error('[AUTH] Token exchange failed:', e.message))
+      }
+    })
+    server.on('error', e => console.error(`[AUTH] Callback server error: ${e.message}`))
+    server.listen(port, () => console.log(`[AUTH] Callback server listening on ${port}`))
+    res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Microsoft sign-in...</p></body></html>`)
+  }
+})
+
+// Production callback — Microsoft calls this after auth
+app.get('/api/auth-callback', async (req, res) => {
+  const { code, state } = req.query
+  res.writeHead(200, { 'Content-Type': 'text/html' })
+  if (!code || !state) {
+    res.end('<html><body><h2>Auth failed: missing code or state.</h2><p>Close this tab and try again.</p></body></html>')
+    return
+  }
+  const stored = oauthVerifiers.get(state)
+  if (!stored) {
+    res.end('<html><body><h2>Auth failed: expired or invalid state.</h2><p>Close this tab and try again.</p></body></html>')
+    return
+  }
+  oauthVerifiers.delete(state)
+  const { verifier, clientId, redirect } = stored
+  res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
+  try {
+    const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
+    })
+    const data = await tokenRes.json()
+    if (data.access_token) {
+      writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
+      console.log('[AUTH] Re-authorized successfully via production callback')
+    } else {
+      console.error('[AUTH] Token exchange failed:', data)
     }
-  })
-  server.on('error', e => console.error(`[AUTH] Callback server error: ${e.message}`))
-  server.listen(port, () => console.log(`[AUTH] Callback server listening on ${port}`))
-  res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Microsoft sign-in...</p></body></html>`)
+  } catch (e) {
+    console.error('[AUTH] Token exchange error:', e.message)
+  }
 })
 
 // ── Token health ──────────────────────────────────────────────────────────

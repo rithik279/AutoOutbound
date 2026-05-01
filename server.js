@@ -539,8 +539,8 @@ app.get('/api/gmail/auth-start', (req, res) => {
     code_challenge_method: 'S256',
     prompt: 'consent'
   })}`
-  import('http').then(({ createServer }) => {
-    const server = createServer((req, res) => {
+  const { createServer } = await import('http')
+  const server = createServer((req, res) => {
       const url = new URL(req.url, `http://localhost:3334`)
       const code = url.searchParams.get('code')
       res.writeHead(200, { 'Content-Type': 'text/html' })

@@ -12,6 +12,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.use(express.json({ limit: '10mb' }))
 
+// In-memory store for OAuth verifiers (ephemeral — good enough for one-time auth flows)
+const oauthVerifiers = new Map()
+
 // ── Server-side API keys (never sent to browser) ───────────────────────────
 // Keys are split so GitHub secret scanning doesn't flag them — they reassemble at runtime
 const OPENAI_KEY    = process.env.VITE_OPENAI_KEY    || [

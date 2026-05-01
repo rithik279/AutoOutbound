@@ -302,17 +302,21 @@ app.get('/api/auth-start', async (req, res) => {
     code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
   })}`
   const { createServer } = await import('http')
+  console.log('[AUTH] Starting callback server on', port)
   const server = createServer((req, res) => {
     const url = new URL(req.url, `http://localhost:${port}`)
     const code = url.searchParams.get('code')
+    console.log('[AUTH] Callback received, code:', code ? 'present' : 'missing', 'url:', req.url)
     res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized.</h2><p>You can close this tab.</p></body></html>')
     server.close()
     if (code) {
+      console.log('[AUTH] Exchanging code for token...')
       fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
         method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
       }).then(r => r.json()).then(data => {
+        console.log('[AUTH] Token response:', data.access_token ? 'success' : 'error', Object.keys(data))
         if (data.access_token) {
           writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
           console.log('[AUTH] Re-authorized successfully')

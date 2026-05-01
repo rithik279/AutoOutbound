@@ -1000,7 +1000,6 @@ export default function App() {
         console.log('[ReAuth] poll', i, data)
         if (data.ok) {
           setAuthStatus(data)
-          setReAuthLoading(false)
           return
         }
       } catch (e) { console.error('[ReAuth] poll error', i, e) }

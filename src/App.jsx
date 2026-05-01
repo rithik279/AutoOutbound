@@ -521,7 +521,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
               await handleConnectGmail()
             } else {
               setGmailLoading(true)
-              window.open('http://localhost:3001/api/auth-start', '_blank')
+              window.open('/api/auth-start', '_blank')
               for (let i = 0; i < 30; i++) {
                 await new Promise(r => setTimeout(r, 2000))
                 try {
@@ -991,7 +991,7 @@ export default function App() {
 
   async function runReAuth() {
     setReAuthLoading(true)
-    window.open('http://localhost:3001/api/auth-start', '_blank')
+    window.open('/api/auth-start', '_blank')
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {

@@ -297,8 +297,8 @@ app.get('/api/auth-start', async (req, res) => {
   const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
   const port = 3333
   const isProd = process.env.NODE_ENV === 'production'
-  // For prod: use public hostname, port 443 (standard HTTPS). For dev: localhost.
-  const callbackHost = isProd ? `https://autooutbound.onrender.com` : `http://localhost:${port}`
+  // For prod: use request host dynamically. For dev: localhost.
+  const callbackHost = isProd ? `https://${req.get('host')}` : `http://localhost:${port}`
   const redirect = `${callbackHost}/api/auth-callback`
   const verifier = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')

@@ -295,6 +295,7 @@ async function sendViaGraph({ to, subject, body }) {
 // ── Trigger re-auth via popup ────────────────────────────────────────────
 app.get('/api/auth-start', async (req, res) => {
   const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
+  const clientSecret = process.env.OUTLOOK_CLIENT_SECRET
   const port = 3333
   const isProd = process.env.NODE_ENV === 'production'
   const callbackHost = isProd ? (process.env.OAUTH_REDIRECT_HOST || `https://${req.get('host')}`) : `http://localhost:${port}`

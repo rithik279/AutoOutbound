@@ -356,12 +356,12 @@ app.get('/api/auth-callback', async (req, res) => {
     return
   }
   oauthVerifiers.delete(state)
-  const { verifier, clientId, redirect } = stored
+  const { verifier, clientId, clientSecret, redirect } = stored
   res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
   try {
     const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
+      body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier })
     })
     const data = await tokenRes.json()
     if (data.access_token) {

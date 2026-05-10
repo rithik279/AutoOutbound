@@ -305,7 +305,7 @@ app.get('/api/auth-start', async (req, res) => {
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const state = crypto.randomBytes(8).toString('hex')
   // Store verifier keyed by state
-  oauthVerifiers.set(state, { verifier, clientId, redirect })
+  oauthVerifiers.set(state, { verifier, clientId, clientSecret, redirect })
 
   const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${new URLSearchParams({
     client_id: clientId, response_type: 'code', redirect_uri: redirect,

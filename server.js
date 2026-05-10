@@ -297,9 +297,9 @@ app.get('/api/auth-start', async (req, res) => {
   const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
   const port = 3333
   const isProd = process.env.NODE_ENV === 'production'
-  // For prod: use env var. For dev: localhost.
   const callbackHost = isProd ? (process.env.OAUTH_REDIRECT_HOST || `https://${req.get('host')}`) : `http://localhost:${port}`
   const redirect = `${callbackHost}/api/auth-callback`
+  console.log(`[AUTH-START] NODE_ENV=${process.env.NODE_ENV}, isProd=${isProd}, OAUTH_REDIRECT_HOST=${process.env.OAUTH_REDIRECT_HOST}, callbackHost=${callbackHost}, redirect=${redirect}`)
   const verifier = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const state = crypto.randomBytes(8).toString('hex')

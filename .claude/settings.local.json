@@ -10,7 +10,8 @@
       "Bash(node -e ' *)",
       "Bash(curl -s http://localhost:3001/api/health)",
       "Bash(python3 *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(git commit -m 'fix: use dynamic host for OAuth redirects instead of hardcoded domain *)"
     ]
   },
   "enableAllProjectMcpServers": true,

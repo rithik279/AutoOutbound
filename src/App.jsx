@@ -864,6 +864,17 @@ export default function App() {
   // Login local state
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [isSignup, setIsSignup] = useState(false)
+
+  // Signup local state
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupName, setSignupName] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
+  const [signupError, setSignupError] = useState('')
+  const [signupLoading, setSignupLoading] = useState(false)
 
   // Settings local state (for editable fields)
   const [localSenderName, setLocalSenderName] = useState('')

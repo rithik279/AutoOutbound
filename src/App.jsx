@@ -901,8 +901,6 @@ export default function App() {
   // Login local state
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
-  const [loginError, setLoginError] = useState('')
-  const [loginLoading, setLoginLoading] = useState(false)
   const [isSignup, setIsSignup] = useState(false)
 
   // Signup local state

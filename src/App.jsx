@@ -1589,7 +1589,7 @@ export default function App() {
       {(() => {
         const isFriend = currentUser?.userId === 'friend'
         if (isFriend) return (
-          <FriendSettings
+          <SharedSettings
             profile={profile}
             localSenderName={localSenderName}
             setLocalSenderName={setLocalSenderName}

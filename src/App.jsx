@@ -530,6 +530,14 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
                   if (data.ok) { setGmailStatus(data); break }
                 } catch {}
               }
+              // Refresh profile to get updated hasOutlookToken
+              try {
+                const profileRes = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+                if (profileRes.ok) {
+                  const updatedProfile = await profileRes.json()
+                  setProfile(updatedProfile)
+                }
+              } catch {}
               setGmailLoading(false)
             }
           }} disabled={gmailLoading} style={{ ...c.primaryBtn, marginTop: 4 }}>

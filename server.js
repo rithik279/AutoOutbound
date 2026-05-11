@@ -357,7 +357,7 @@ app.get('/api/auth-callback', async (req, res) => {
     return
   }
   oauthVerifiers.delete(state)
-  const { verifier, clientId, clientSecret, redirect } = stored
+  const { verifier, clientId, clientSecret, redirect, userId } = stored
   res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
   try {
     const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
@@ -367,6 +367,14 @@ app.get('/api/auth-callback', async (req, res) => {
     const data = await tokenRes.json()
     if (data.access_token) {
       writeFileSync(TOKENS_PATH, JSON.stringify({ clientId, accessToken: data.access_token, refreshToken: data.refresh_token, expiresAt: Date.now() + data.expires_in * 1000 }, null, 2))
+      // Mark user as having Outlook tokens
+      if (userId) {
+        const users = loadUsers()
+        if (users[userId]) {
+          users[userId].outlookTokens = true
+          saveUsers(users)
+        }
+      }
       console.log('[AUTH] Re-authorized successfully via production callback')
     } else {
       console.error('[AUTH] Token exchange failed:', data)

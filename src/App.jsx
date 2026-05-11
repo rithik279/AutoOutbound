@@ -1529,42 +1529,119 @@ export default function App() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📧</div>
           <h1 style={{ ...c.h1, marginBottom: 6, fontSize: 24 }}>Campaign Pipeline</h1>
-          <p style={{ ...c.muted, fontSize: 13 }}>Sign in to access your campaigns</p>
+          <p style={{ ...c.muted, fontSize: 13 }}>{isSignup ? 'Create account' : 'Sign in to access your campaigns'}</p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={c.label}>Email</label>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={loginEmail || ''}
-              onChange={e => setLoginEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label style={c.label}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={loginPass || ''}
-              onChange={e => setLoginPass(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
-              style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
-          {loginError && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{loginError}</div>
+          {!isSignup ? (
+            <>
+              {/* Login Form */}
+              <div>
+                <label style={c.label}>Email</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={loginEmail || ''}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={c.label}>Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={loginPass || ''}
+                  onChange={e => setLoginPass(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              {loginError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{loginError}</div>
+              )}
+              <button
+                onClick={() => handleLogin(loginEmail, loginPass)}
+                disabled={loginLoading}
+                style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
+              >
+                {loginLoading ? 'Signing in…' : 'Sign in'}
+              </button>
+              <div style={{ textAlign: 'center', fontSize: 13 }}>
+                <span style={{ color: '#666' }}>No account? </span>
+                <button
+                  onClick={() => setIsSignup(true)}
+                  style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                >
+                  Sign up
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Signup Form */}
+              <div>
+                <label style={c.label}>Name</label>
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={signupName || ''}
+                  onChange={e => setSignupName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={c.label}>Email</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={signupEmail || ''}
+                  onChange={e => setSignupEmail(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={c.label}>Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={signupPassword || ''}
+                  onChange={e => setSignupPassword(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={c.label}>Confirm password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={signupPasswordConfirm || ''}
+                  onChange={e => setSignupPasswordConfirm(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
+                />
+              </div>
+              {signupError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{signupError}</div>
+              )}
+              <button
+                onClick={() => handleSignup(signupEmail, signupName, signupPassword, signupPasswordConfirm)}
+                disabled={signupLoading}
+                style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
+              >
+                {signupLoading ? 'Creating…' : 'Create account'}
+              </button>
+              <div style={{ textAlign: 'center', fontSize: 13 }}>
+                <span style={{ color: '#666' }}>Already have account? </span>
+                <button
+                  onClick={() => setIsSignup(false)}
+                  style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                >
+                  Sign in
+                </button>
+              </div>
+            </>
           )}
-          <button
-            onClick={() => handleLogin(loginEmail, loginPass)}
-            disabled={loginLoading}
-            style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
-          >
-            {loginLoading ? 'Signing in…' : 'Sign in'}
-          </button>
         </div>
       </div>
     </div>

@@ -535,11 +535,15 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
           }} disabled={gmailLoading} style={{ ...c.primaryBtn, marginTop: 4 }}>
             {gmailLoading ? 'Opening sign-in…' : `Connect ${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'}`}
           </button>
-          {profile?.hasGmailToken && (
-            <p style={{ fontSize: 13, color: '#16a34a', marginTop: 10 }}>✓ Gmail connected</p>
-          )}
-          {profile?.hasOutlookToken && (
-            <p style={{ fontSize: 13, color: '#16a34a', marginTop: 10 }}>✓ Outlook connected</p>
+          {(profile?.hasGmailToken || profile?.hasOutlookToken) && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {profile?.hasGmailToken && (
+                <p style={{ fontSize: 13, color: '#16a34a', margin: 0 }}>✓ Gmail connected · {gmailStatus?.minutesLeft || '?'}m left</p>
+              )}
+              {profile?.hasOutlookToken && (
+                <p style={{ fontSize: 13, color: '#16a34a', margin: 0 }}>✓ Outlook connected</p>
+              )}
+            </div>
           )}
         </div>
       )}

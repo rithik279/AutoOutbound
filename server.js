@@ -534,7 +534,8 @@ app.get('/api/user/profile', (req, res) => {
     emailProvider: user.emailProvider,
     resumeText: user.resumeText || null,
     prompt: user.prompt || null,
-    hasGmailToken: !!(user.gmailTokens)
+    hasGmailToken: !!(user.gmailTokens),
+    hasOutlookToken: !!(user.outlookTokens)
   })
 })
 

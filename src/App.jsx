@@ -1094,21 +1094,19 @@ export default function App() {
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
-  // Status bar — dynamic for friend (gmail/outlook) vs dad (outlook only)
-  const activeAuthStatus = isFriend
-    ? (emailProvider === 'outlook' ? authStatus : gmailAuthStatus)
-    : authStatus
-  const activeAuthColor = activeAuthStatus?.status === 'ok' ? '#16a34a' : activeAuthStatus?.status === 'warning' ? '#d97706' : activeAuthStatus?.status === 'expired' ? '#dc2626' : '#888'
-  const activeAuthLabel = activeAuthStatus?.status === 'ok'
-    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} connected`
-    : activeAuthStatus?.status === 'warning'
-    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} expires in ${activeAuthStatus?.minutesLeft}m`
-    : activeAuthStatus?.status === 'critical'
-    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} critical — ${activeAuthStatus?.minutesLeft}m left`
-    : activeAuthStatus?.status === 'expired'
-    ? `${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'} expired`
-    : 'Not connected'
-  const activeAuthExpiry = activeAuthStatus?.minutesLeft != null ? ` · ${activeAuthStatus.minutesLeft}m left` : ''
+  // Status bar — show both Gmail and Outlook for friend users
+  const getAuthLabel = (status, provider) => {
+    if (!status) return `${provider} not connected`
+    if (status.status === 'ok') return `${provider} connected`
+    if (status.status === 'warning') return `${provider} expires in ${status.minutesLeft}m`
+    if (status.status === 'critical') return `${provider} critical — ${status.minutesLeft}m left`
+    if (status.status === 'expired') return `${provider} expired`
+    return `${provider} not connected`
+  }
+  const gmailLabel = isFriend ? getAuthLabel(gmailAuthStatus, 'Gmail') : null
+  const outlookLabel = getAuthLabel(authStatus, 'Outlook')
+  const authLabels = isFriend ? [gmailLabel, outlookLabel].filter(Boolean) : [outlookLabel]
+  const activeAuthColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
   const activeProvider = isFriend ? emailProvider : 'outlook'
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
   const hasFailed = scheduleStatus?.failed > 0

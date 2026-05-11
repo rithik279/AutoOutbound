@@ -481,6 +481,43 @@ app.post('/api/user/login', (req, res) => {
   res.json({ ok: true, userId, name: found[1].name, email: found[1].email })
 })
 
+app.post('/api/user/signup', (req, res) => {
+  const { email, name, password } = req.body
+
+  // Validate input
+  if (!email?.trim() || !name?.trim() || !password?.trim()) {
+    return res.status(400).json({ error: 'All fields required' })
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' })
+  }
+
+  const users = loadUsers()
+
+  // Check if email already exists
+  if (Object.values(users).some(u => u.email === email)) {
+    return res.status(409).json({ error: 'Email already in use' })
+  }
+
+  // Generate userId (email-based to ensure uniqueness)
+  const userId = email.split('@')[0] + '-' + Date.now().toString(36)
+
+  // Create new user
+  users[userId] = {
+    name: name.trim(),
+    email: email.trim(),
+    password: password.trim(), // In production, hash this!
+    senderName: name.trim(),
+    senderEmail: email.trim(),
+    modelId: 'gpt-4o-mini',
+    campaignMode: 'startup',
+    emailProvider: 'gmail'
+  }
+
+  saveUsers(users)
+  res.json({ ok: true, userId, name: name.trim(), email: email.trim() })
+})
+
 app.get('/api/user/profile', (req, res) => {
   const userId = req.headers['x-user-id']
   if (!userId) return res.status(401).json({ error: 'Not authenticated' })

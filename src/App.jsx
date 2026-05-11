@@ -521,7 +521,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
               await handleConnectGmail()
             } else {
               setGmailLoading(true)
-              window.open('/api/auth-start', '_blank')
+              window.open(`/api/auth-start?userId=${currentUser.userId}`, '_blank')
               for (let i = 0; i < 30; i++) {
                 await new Promise(r => setTimeout(r, 2000))
                 try {

@@ -822,6 +822,43 @@ export default function App() {
     setLoginLoading(false)
   }
 
+  async function handleSignup(email, name, password, passwordConfirm) {
+    setSignupError('')
+    if (!email.trim() || !name.trim() || !password.trim()) {
+      setSignupError('All fields required')
+      return
+    }
+    if (password !== passwordConfirm) {
+      setSignupError('Passwords do not match')
+      return
+    }
+    if (password.length < 6) {
+      setSignupError('Password must be at least 6 characters')
+      return
+    }
+    setSignupLoading(true)
+    try {
+      const res = await fetch('/api/user/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, password })
+      })
+      const data = await res.json()
+      if (!res.ok) { setSignupError(data.error || 'Signup failed'); return }
+      // Signup successful, show login form
+      setIsSignup(false)
+      setSignupEmail('')
+      setSignupName('')
+      setSignupPassword('')
+      setSignupPasswordConfirm('')
+      setLoginEmail(email) // Pre-fill email in login form
+      setLoginPass('')
+    } catch {
+      setSignupError('Connection error')
+    }
+    setSignupLoading(false)
+  }
+
   function handleLogout() {
     setCurrentUser(null)
     setProfile(null)

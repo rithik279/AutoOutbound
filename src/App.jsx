@@ -1726,6 +1726,13 @@ export default function App() {
         emailProvider={emailProvider}
         setEmailProvider={setEmailProvider}
       />
+
+      {/* Continue button — redirects to entry level selection */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+        <button onClick={() => setPhase('entry')} style={c.primaryBtn}>
+          Continue →
+        </button>
+      </div>
     </div>
   )// ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
   if (phase === 'discover') return (

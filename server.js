@@ -294,6 +294,7 @@ async function sendViaGraph({ to, subject, body }) {
 
 // ── Trigger re-auth via popup ────────────────────────────────────────────
 app.get('/api/auth-start', async (req, res) => {
+  const userId = req.query.userId
   const clientId = process.env.OUTLOOK_CLIENT_ID || 'f923c348-569c-4c61-8734-278ac0d47bee'
   const clientSecret = process.env.OUTLOOK_CLIENT_SECRET
   const port = 3333
@@ -305,7 +306,7 @@ app.get('/api/auth-start', async (req, res) => {
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const state = crypto.randomBytes(8).toString('hex')
   // Store verifier keyed by state
-  oauthVerifiers.set(state, { verifier, clientId, clientSecret, redirect })
+  oauthVerifiers.set(state, { verifier, clientId, clientSecret, redirect, userId })
 
   const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?${new URLSearchParams({
     client_id: clientId, response_type: 'code', redirect_uri: redirect,

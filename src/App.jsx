@@ -1114,7 +1114,7 @@ export default function App() {
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeAuthColor }} />
-        <span style={{ fontSize: 12, color: '#666' }}>{activeAuthLabel}{activeAuthExpiry}</span>
+        <span style={{ fontSize: 12, color: '#666' }}>{authLabels.join(' · ')}</span>
         <button onClick={() => {
           if (isFriend && emailProvider === 'gmail') {
             window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')

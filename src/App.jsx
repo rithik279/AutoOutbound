@@ -212,7 +212,7 @@ function exportCSV(contacts, filename = 'contacts') {
 }
 
 // ── Friend Settings Component ─────────────────────────────────────────────
-function FriendSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser, emailProvider, setEmailProvider }) {
+function SharedSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser, emailProvider, setEmailProvider }) {
   const [tab, setTab] = useState('profile') // profile | resume | prompt | email
   const [resumeFile, setResumeFile] = useState(null)
   const [resumeStatus, setResumeStatus] = useState('')

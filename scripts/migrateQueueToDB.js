@@ -30,9 +30,10 @@ async function migrateQueue() {
 
     for (const emailRecord of queueData) {
       try {
-        const { to, subject, body, sentAt, failedAt, error, company, userId } = emailRecord;
+        const { to, subject, body, sentAt, failedAt, error, company } = emailRecord;
+        const userId = emailRecord.userId || 'system'; // Default to 'system' for old records
 
-        if (!to || !userId) {
+        if (!to) {
           console.warn(`Skipping invalid email record: ${JSON.stringify(emailRecord)}`);
           skipped++;
           continue;

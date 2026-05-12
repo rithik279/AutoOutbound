@@ -2104,11 +2104,9 @@ export default function App() {
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <button
                           onClick={() => {
-                            // Modal to edit subject/body
-                            const newSubj = prompt('Edit subject:', reviewEdits[draft.id]?.subject || draft.subject)
-                            if (newSubj !== null) {
-                              setReviewEdits({ ...reviewEdits, [draft.id]: { ...reviewEdits[draft.id], subject: newSubj } })
-                            }
+                            setReviewEditModal(draft.id)
+                            setReviewEditSubj(reviewEdits[draft.id]?.subject || draft.subject)
+                            setReviewEditBody(reviewEdits[draft.id]?.body || draft.body)
                           }}
                           style={{ ...c.ghostBtn, padding: '4px 8px', fontSize: 11 }}
                         >

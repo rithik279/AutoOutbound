@@ -356,6 +356,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
     { id: 'resume', label: 'Resume', icon: '📄' },
     { id: 'prompt', label: 'AI Prompt', icon: '✏️' },
     { id: 'email', label: 'Email Account', icon: '📧' },
+    { id: 'discovery', label: 'Daily Discovery', icon: '🔄' },
   ]
 
   return (

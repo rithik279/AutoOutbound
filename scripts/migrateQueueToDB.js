@@ -1,7 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const { PrismaClient } = require('@prisma/client');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const prisma = new PrismaClient();
 
 async function migrateQueue() {

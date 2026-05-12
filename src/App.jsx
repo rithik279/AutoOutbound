@@ -1008,8 +1008,12 @@ export default function App() {
   }, [profile, currentUser])
 
   // Config
-  const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history
+  const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history | my_contacts
   const [entryLevel, setEntryLevel] = useState(null)
+
+  // Saved contacts state
+  const [savedContacts, setSavedContacts] = useState([])
+  const [loadingContacts, setLoadingContacts] = useState(false)
 
   // Discovery state
   const [discoverPrompt, setDiscoverPrompt] = useState('')

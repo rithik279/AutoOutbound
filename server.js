@@ -451,22 +451,37 @@ app.post('/api/schedule-retry', async (req, res) => {
   catch (e) { return res.status(503).json({ error: e.message }) }
 
   const userId = req.headers['x-user-id'] || 'friend'
-  const queue = loadQueue()
-  const failed = queue.filter(e => e.failed && e.userId === userId)
-  if (!failed.length) return res.json({ ok: true, count: 0 })
+  try {
+    const failed = await prisma.email.findMany({
+      where: { userId, failedAt: { not: null } }
+    })
+    if (!failed.length) return res.json({ ok: true, count: 0 })
 
-  // Reset failed flag and reschedule — stagger 2 minutes apart
-  failed.forEach(e => { e.failed = false })
-  saveQueue(queue)
-  failed.forEach((email, i) => {
-    const offsetMs = i * 2 * 60 * 1000
-    const originalSendAt = email.sendAt ? new Date(email.sendAt).getTime() : Date.now()
-    email.sendAt = new Date(originalSendAt + offsetMs).toISOString()
-    scheduleEmail(email)
-  })
+    // Reset failed flag and reschedule — stagger 2 minutes apart
+    failed.forEach((email, i) => {
+      const offsetMs = i * 2 * 60 * 1000
+      const sendAt = new Date(Date.now() + offsetMs).toISOString()
+      scheduleEmail({
+        id: email.id,
+        to: email.to,
+        subject: email.subject,
+        body: email.body,
+        sendAt
+      })
+    })
 
-  console.log(`[campaign] retrying ${failed.length} failed emails for user ${userId}`)
-  res.json({ ok: true, count: failed.length })
+    // Clear failed status after scheduling
+    await prisma.email.updateMany({
+      where: { userId, failedAt: { not: null } },
+      data: { failedAt: null, error: null }
+    })
+
+    console.log(`[campaign] retrying ${failed.length} failed emails for user ${userId}`)
+    res.json({ ok: true, count: failed.length })
+  } catch (err) {
+    console.error('POST /api/schedule-retry error:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────

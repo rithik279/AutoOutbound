@@ -1575,6 +1575,10 @@ export default function App() {
   async function scheduleSend() {
     const approvedContacts = contacts.filter(c => approved.has(c.id))
     if (!approvedContacts.length || !sendDate || !sendTime) return
+    if (!selectedProvider) {
+      setScheduleError('Please select a provider (Gmail or Outlook)')
+      return
+    }
     setScheduleSending(true)
     setScheduleError('')
     const baseMs = new Date(`${sendDate}T${sendTime}`).getTime()
@@ -1592,14 +1596,14 @@ export default function App() {
       const res = await fetch('/api/schedule-campaign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails })
+        body: JSON.stringify({ emails, provider: selectedProvider })
       })
       const data = await res.json()
       if (data.ok) {
         setSentCount(emails.length)
         setPhase('sent')
       } else {
-        setScheduleError(data.error || 'Server error — check Outlook credentials in server.js')
+        setScheduleError(data.error || 'Server error')
       }
     } catch (e) {
       setScheduleError(e.message)

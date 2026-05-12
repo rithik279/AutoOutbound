@@ -1853,7 +1853,93 @@ export default function App() {
         </button>
       </div>
     </div>
-  )// ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
+  )
+
+  // ── IMPORT COMPANIES (bulk CSV upload + Apollo validation) ──────────────────
+  if (phase === 'import_companies') return (
+    <div>
+      {statusBar()}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <h1 style={c.h1}>Import & validate companies</h1>
+          <p style={{ ...c.muted, marginTop: 4 }}>CSV: name, domain, industry (opt), size (opt), location (opt)</p>
+        </div>
+        <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Settings</button>
+      </div>
+
+      <div style={{ ...c.card, marginBottom: 14 }}>
+        <label style={c.label}>Paste company list (CSV)</label>
+        <textarea
+          style={{ minHeight: 120, fontFamily: 'monospace', fontSize: 12, marginBottom: 10 }}
+          placeholder="name,domain,industry,size,location&#10;Acme Corp,acme.com,SaaS,101-500,San Francisco&#10;BankCo,bankco.com,Finance,5001-10000,New York"
+          value={importedCompanyText}
+          onChange={e => setImportedCompanyText(e.target.value)}
+        />
+        <button onClick={async () => {
+          try {
+            setImportedValidating(true)
+            const { parseCompanyList } = await import('./lib/csv.js')
+            const parsed = parseCompanyList(importedCompanyText)
+            setImportedCompanies(parsed)
+
+            // Validate via server
+            const res = await fetch(`${API_URL}/api/companies/validate-batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
+              body: JSON.stringify({ companies: parsed, userId: currentUser.userId })
+            })
+            const data = await res.json()
+            setImportedValidated(data.validated || [])
+            setImportedNotFound(data.notFound || [])
+            setImportedValidating(false)
+          } catch (e) {
+            alert(`Error: ${e.message}`)
+            setImportedValidating(false)
+          }
+        }} disabled={importedValidating || !importedCompanyText.trim()} style={c.primaryBtn}>
+          {importedValidating ? 'Validating…' : 'Validate with Apollo →'}
+        </button>
+      </div>
+
+      {importedValidated.length > 0 && (
+        <div style={{ ...c.card, marginBottom: 14, background: '#f0f0ec' }}>
+          <h3 style={{ margin: '0 0 12px 0' }}>✓ Validated: {importedValidated.length}</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 200, overflowY: 'auto', fontSize: 12 }}>
+            {importedValidated.slice(0, 10).map((co, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><strong>{co.name}</strong> {co.industry && `· ${co.industry}`}</span>
+                <span style={c.tag('ready')}>{co.domain}</span>
+              </div>
+            ))}
+            {importedValidated.length > 10 && <span style={c.muted}>+{importedValidated.length - 10} more</span>}
+          </div>
+        </div>
+      )}
+
+      {importedNotFound.length > 0 && (
+        <div style={{ ...c.card, marginBottom: 14, background: '#ffe5e5' }}>
+          <h3 style={{ margin: '0 0 12px 0' }}>✗ Not found: {importedNotFound.length}</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 150, overflowY: 'auto', fontSize: 11 }}>
+            {importedNotFound.slice(0, 5).map((co, i) => (
+              <div key={i}>{co.name || co.domain} — {co.reason}</div>
+            ))}
+            {importedNotFound.length > 5 && <span style={c.muted}>+{importedNotFound.length - 5} more</span>}
+          </div>
+        </div>
+      )}
+
+      {importedValidated.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+          <button onClick={() => setPhase('settings')} style={c.ghostBtn}>Cancel</button>
+          <button onClick={() => setPhase('settings')} style={c.primaryBtn}>
+            Configure discovery → (in settings)
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
+  // ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
   if (phase === 'discover') return (
     <div>
       {statusBar()}

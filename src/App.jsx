@@ -1946,6 +1946,189 @@ export default function App() {
     </div>
   )
 
+  // ── REVIEW BATCH (auto-drafted emails for bulk import) ──────────────────
+  if (phase === 'review_batch') {
+    const filtered = reviewBatch.filter(d => {
+      const passCategory = reviewFilter.category === 'all' || d.category === reviewFilter.category
+      const passScore = reviewFilter.scoreThreshold === 'all'
+        ? true
+        : reviewFilter.scoreThreshold === '>=20' ? d.score >= 20
+        : reviewFilter.scoreThreshold === '>=18' ? d.score >= 18
+        : d.score < 18
+      return passCategory && passScore
+    })
+    const N = reviewBatch.length
+    const appCount = reviewApproved.size
+    const avgScore = N > 0 ? (reviewBatch.reduce((s, d) => s + (d.score || 0), 0) / N).toFixed(1) : 0
+    const lowCount = reviewBatch.filter(d => d.score < 18).length
+    const categories = [...new Set(reviewBatch.map(d => d.category))].sort()
+
+    return (
+      <div>
+        {statusBar()}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h1 style={c.h1}>Review drafted emails</h1>
+            <p style={{ ...c.muted, marginTop: 4 }}>{N} drafted · {appCount} approved · avg score {avgScore}/25</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {lowCount > 0 && <span style={{ ...c.muted, fontSize: 12, color: '#dc2626' }}>⚠️ {lowCount} low-score drafts</span>}
+            <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Back</button>
+            <button
+              onClick={() => {
+                // Move approved drafts to regular drafts for scheduling
+                const approved = reviewBatch.filter(d => reviewApproved.has(d.id))
+                const newDrafts = {}
+                approved.forEach(d => {
+                  newDrafts[d.id] = {
+                    subject: reviewEdits[d.id]?.subject || d.subject,
+                    body: reviewEdits[d.id]?.body || d.body,
+                    status: 'edited',
+                    category: d.category,
+                    score: d.score
+                  }
+                })
+                setDrafts(newDrafts)
+                const approvedContacts = approved.map(d => ({
+                  id: d.id,
+                  name: d.name,
+                  email: d.email,
+                  title: d.title,
+                  company: d.company,
+                  co: d.company
+                }))
+                setContacts(approvedContacts)
+                setSelected(null)
+                setPhase('schedule')
+              }}
+              disabled={appCount === 0}
+              style={c.primaryBtn}
+            >
+              Schedule ({appCount}) →
+            </button>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
+          {[
+            { n: N, l: 'drafted', col: '#0066cc' },
+            { n: appCount, l: 'approved', col: '#16a34a' },
+            { n: `${avgScore}`, l: 'avg score', col: '#d97706' },
+            { n: lowCount, l: 'low-score', col: '#dc2626' },
+          ].map(s => (
+            <div key={s.l} style={c.statBox}>
+              <span style={{ ...c.statNum, color: s.col }}>{s.n}</span>
+              <span style={c.statLbl}>{s.l}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div style={{ ...c.card, marginBottom: 14, display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={c.label}>Category</label>
+            <select
+              value={reviewFilter.category}
+              onChange={e => setReviewFilter({ ...reviewFilter, category: e.target.value })}
+              style={{ width: '100%' }}
+            >
+              <option value="all">All categories</option>
+              {categories.map(cat => <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={c.label}>Score threshold</label>
+            <select
+              value={reviewFilter.scoreThreshold}
+              onChange={e => setReviewFilter({ ...reviewFilter, scoreThreshold: e.target.value })}
+              style={{ width: '100%' }}
+            >
+              <option value="all">All scores</option>
+              <option value=">=20">Score ≥ 20 (high quality)</option>
+              <option value=">=18">Score ≥ 18 (acceptable)</option>
+              <option value="<18">Score &lt; 18 (low quality)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Batch table */}
+        <div style={{ ...c.card, overflowX: 'auto' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+              No emails match the selected filters
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e5e5e0', background: '#f7f7f5' }}>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 40 }}>✓</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Company</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Name</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Title</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Subject</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 50 }}>Score</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 60 }}>Edit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((draft, i) => {
+                  const isApproved = reviewApproved.has(draft.id)
+                  const scoreColor = draft.score >= 20 ? '#16a34a' : draft.score >= 18 ? '#d97706' : '#dc2626'
+                  return (
+                    <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isApproved ? '#f0fdf4' : 'transparent' }}>
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isApproved}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setReviewApproved(new Set([...reviewApproved, draft.id]))
+                            } else {
+                              const updated = new Set(reviewApproved)
+                              updated.delete(draft.id)
+                              setReviewApproved(updated)
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 12px' }}><strong>{draft.company}</strong></td>
+                      <td style={{ padding: '8px 12px' }}>{draft.name}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#666' }}>{draft.title}</td>
+                      <td style={{ padding: '8px 12px', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reviewEdits[draft.id]?.subject || draft.subject}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, color: scoreColor }}>{draft.score}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => {
+                            // Modal to edit subject/body
+                            const newSubj = prompt('Edit subject:', reviewEdits[draft.id]?.subject || draft.subject)
+                            if (newSubj !== null) {
+                              setReviewEdits({ ...reviewEdits, [draft.id]: { ...reviewEdits[draft.id], subject: newSubj } })
+                            }
+                          }}
+                          style={{ ...c.ghostBtn, padding: '4px 8px', fontSize: 11 }}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {lowCount > 0 && (
+          <div style={{ marginTop: 12, background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '10px 14px', color: '#92400e', fontSize: 13 }}>
+            ⚠️ {lowCount} email{lowCount !== 1 ? 's' : ''} have low scores (&lt;18/25). Review and edit before approving.
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
   if (phase === 'discover') return (
     <div>

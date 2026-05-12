@@ -489,15 +489,31 @@ app.post('/api/schedule-retry', async (req, res) => {
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────
 app.post('/api/schedule-campaign', async (req, res) => {
-  const { emails } = req.body  // [{ to, subject, body, sendAt, company, contactId }]
+  const { emails, provider } = req.body  // [{ to, subject, body, sendAt, company, contactId }]
   const userId = req.headers['x-user-id'] || 'friend'
+
   if (!Array.isArray(emails) || !emails.length) {
     return res.status(400).json({ error: 'Missing emails array' })
   }
 
-  // Verify auth before queuing
-  try { await getGraphToken() }
-  catch (e) { return res.status(503).json({ error: e.message }) }
+  if (!provider) {
+    return res.status(400).json({ error: 'Provider selection required. Choose "gmail" or "outlook".' })
+  }
+
+  if (!['gmail', 'outlook'].includes(provider)) {
+    return res.status(400).json({ error: 'Invalid provider. Must be "gmail" or "outlook".' })
+  }
+
+  // Verify selected provider is authenticated
+  try {
+    if (provider === 'gmail') {
+      await getGmailToken(userId)
+    } else {
+      await getGraphToken()
+    }
+  } catch (e) {
+    return res.status(503).json({ error: `${provider} not authenticated. ${e.message}` })
+  }
 
   try {
     const newEntries = await Promise.all(
@@ -524,6 +540,7 @@ app.post('/api/schedule-campaign', async (req, res) => {
             body,
             userId,
             company: company || null,
+            provider,
             contactId: contact.id,
             createdAt: new Date(sendAt)
           }
@@ -537,11 +554,13 @@ app.post('/api/schedule-campaign', async (req, res) => {
       to: email.to,
       subject: email.subject,
       body: email.body,
-      sendAt: email.createdAt.toISOString()
+      sendAt: email.createdAt.toISOString(),
+      provider: email.provider,
+      userId: email.userId
     }))
 
-    console.log(`[campaign] ${newEntries.length} emails scheduled`)
-    res.json({ ok: true, count: newEntries.length })
+    console.log(`[campaign] ${newEntries.length} emails scheduled via ${provider}`)
+    res.json({ ok: true, count: newEntries.length, provider })
   } catch (err) {
     console.error('POST /api/schedule-campaign error:', err)
     res.status(500).json({ error: err.message })

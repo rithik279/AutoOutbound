@@ -1068,6 +1068,7 @@ export default function App() {
   const [sendDate, setSendDate] = useState('')
   const [sendTime, setSendTime] = useState('09:00')
   const [gap, setGap] = useState(5)
+  const [selectedProvider, setSelectedProvider] = useState('')
   const [scheduleSending, setScheduleSending] = useState(false)
   const [scheduleError, setScheduleError] = useState('')
   const [sentCount, setSentCount] = useState(0)

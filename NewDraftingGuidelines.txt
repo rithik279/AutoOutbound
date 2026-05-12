@@ -1,0 +1,857 @@
+# Cold Email Drafting System for Senior ETL / Data Engineering Contract Outreach
+
+## Purpose
+
+This document defines the email-drafting system for outbound outreach to companies that may directly hire a senior ETL / data engineering contractor.
+
+The goal is to generate short, personalized, high-conviction cold emails that connect:
+
+1. The recipient company’s visible business, website, hiring, or data signals
+2. The consultant’s 20+ years of enterprise ETL, Informatica, banking, and data warehousing experience
+3. The consultant’s current modernization focus in Python, Airflow, dbt, Snowflake, Databricks, and cloud data platforms
+4. A simple call to action for a conversation or referral to the right person
+
+The system should avoid generic job-seeker language. The consultant should be positioned as a senior operator who solves enterprise data problems, not as a candidate asking for employment.
+
+---
+
+# 1. Core Positioning
+
+## Primary Positioning Statement
+
+I help companies modernize legacy ETL and data warehouse workflows into reliable Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines, while preserving business logic, data quality, reconciliation, and production reliability.
+
+## Short Version
+
+Senior ETL / Data Engineering contractor helping enterprise teams modernize legacy Informatica-style pipelines into Python, Airflow, dbt, Snowflake, and cloud data workflows.
+
+## Direct Contracting Angle
+
+The consultant is looking for direct contract conversations with operating companies, not subcontracting through large consulting firms or offshore delivery vendors.
+
+## Strongest Differentiator
+
+Many modern data engineers know Python, Airflow, dbt, and Snowflake, but may not understand legacy enterprise ETL logic, banking-grade controls, reconciliation, data lineage, and production support.
+
+Many legacy Informatica specialists understand old ETL systems, but may not be positioned toward modern cloud data stacks.
+
+This consultant bridges both worlds.
+
+---
+
+# 2. Target Buyer Categories
+
+The email system should adapt based on the target company type.
+
+## Category A: Financial Services
+
+Includes:
+
+* Banks
+* Credit unions
+* Wealth management firms
+* Asset managers
+* Payments companies
+* Mortgage companies
+* Lending companies
+* Fintech companies
+* Capital markets companies
+
+Best angle:
+
+Financial institutions need reliable data pipelines, regulatory reporting, reconciliation, data quality, and legacy modernization. The consultant’s banking and enterprise ETL experience is directly relevant.
+
+Best CTA:
+
+Ask if their data engineering, data platform, or reporting team uses contractors for ETL modernization or production pipeline work.
+
+## Category B: Insurance / Claims / Benefits
+
+Includes:
+
+* Insurance carriers
+* Insurtech companies
+* Claims processors
+* Benefits administrators
+* Healthcare payment platforms
+
+Best angle:
+
+These companies usually handle regulated, messy, high-volume operational data. They often need help with warehouse modernization, validation, reconciliation, and data governance.
+
+Best CTA:
+
+Ask if their data or analytics platform team is working on pipeline modernization, claims data workflows, or reporting reliability.
+
+## Category C: Healthcare / Pharma / Clinical Data
+
+Includes:
+
+* Healthtech companies
+* Pharma companies
+* Biotech companies
+* Diagnostics companies
+* Clinical data platforms
+* Healthcare SaaS companies
+
+Best angle:
+
+Healthcare and pharma companies need clean, reliable, compliant data pipelines across clinical, patient, provider, claims, and operational systems.
+
+Best CTA:
+
+Ask if their data team needs senior contract support for migration, validation, or production data engineering.
+
+## Category D: Mid-Market SaaS / Enterprise Software
+
+Includes:
+
+* B2B SaaS
+* Enterprise software
+* Cybersecurity platforms
+* Data-heavy software companies
+* Subscription businesses
+
+Best angle:
+
+As these companies scale, they usually need stronger data infrastructure, warehouse modeling, orchestration, BI, and operational reporting. The consultant can bring mature enterprise patterns without needing heavy ramp-up.
+
+Best CTA:
+
+Ask if they are expanding their data platform, analytics, warehouse, or orchestration layer.
+
+## Category E: Logistics / Retail / Manufacturing / Operations-Heavy Companies
+
+Includes:
+
+* Logistics companies
+* Supply chain platforms
+* Retail technology
+* Manufacturing technology
+* Energy operations platforms
+
+Best angle:
+
+These companies have complex operational data across inventory, customers, transactions, vendors, locations, devices, or fulfillment systems. The value is reliable pipeline architecture and data reconciliation.
+
+Best CTA:
+
+Ask if their team needs support with operational data pipelines, warehouse modernization, or reporting reliability.
+
+## Category F: Mature Startups / Scaleups
+
+Includes:
+
+* Series B+ startups
+* Enterprise-facing startups
+* Fintech, healthtech, insurtech, regtech, logistics, cybersecurity, and B2B SaaS scaleups
+
+Best angle:
+
+These companies may have outgrown early data infrastructure and need adult supervision on production pipelines, data quality, and warehouse design.
+
+Best CTA:
+
+Ask if their data platform or engineering team needs senior contract support during scaling.
+
+## Category G: Recruiters / Contract Placement Firms
+
+Includes:
+
+* IT staffing firms
+* Technical recruiters
+* Contract recruiters
+* Data engineering recruiters
+
+Best angle:
+
+Make the fit instantly scannable. Recruiters need role keywords, availability, work preference, and rate compatibility. Do not over-personalize.
+
+Best CTA:
+
+Ask whether a quick 15-minute conversation would make sense, or whether someone else on their team is the better person to speak with.
+
+---
+
+# 3. Target Contact Titles
+
+## Best Direct Buyer Titles
+
+Prioritize:
+
+* Director of Data Engineering
+* Head of Data
+* VP Data Engineering
+* Director of Data Platform
+* Data Platform Manager
+* Director of Analytics Engineering
+* Director of Business Intelligence
+* Director of Enterprise Data
+* Data Warehouse Manager
+* Data Governance Director
+* Enterprise Architecture Director
+* Technology Program Manager
+* CTO, only for smaller companies
+* VP Engineering, only for smaller or mid-market companies
+
+## Best Recruiter Titles
+
+Prioritize:
+
+* Technical Recruiter
+* Senior Technical Recruiter
+* Data Engineering Recruiter
+* IT Recruiter
+* Contract Recruiter
+* Recruiting Manager
+* Account Manager
+* Client Partner
+* Talent Acquisition Partner, Contract
+
+## Lower Priority Contacts
+
+Avoid or deprioritize:
+
+* Generic HR contacts
+* Campus recruiters
+* Junior engineers
+* Generic support emails
+* General inquiry inboxes
+* Founders of tiny startups with no data infrastructure complexity
+
+---
+
+# 4. Company Signals to Use in Personalization
+
+The email system should extract and use one concrete signal from the company website, careers page, LinkedIn page, job post, engineering blog, or public case study.
+
+## Strong Signals
+
+Use these if available:
+
+* Hiring for data engineering roles
+* Hiring for analytics engineering roles
+* Hiring for BI, data warehouse, or data platform roles
+* Mentions Snowflake
+* Mentions Databricks
+* Mentions dbt
+* Mentions Airflow
+* Mentions AWS, Azure, or GCP
+* Mentions Informatica, IICS, or PowerCenter
+* Mentions data governance
+* Mentions cloud migration
+* Mentions regulatory reporting
+* Mentions enterprise reporting
+* Mentions claims, transactions, payments, accounts, clinical, customer, or operational data
+* Recent funding, expansion, acquisition, new product line, or geographic growth
+* Multiple business systems or business units
+* Public data modernization case study
+
+## Medium Signals
+
+Use these if stronger signals are unavailable:
+
+* Company is in a regulated industry
+* Company has complex operational workflows
+* Company sells to enterprise customers
+* Company has analytics, reporting, dashboard, or intelligence products
+* Company handles high-volume customer or transaction data
+* Company has a large employee count and likely internal systems complexity
+
+## Weak Signals
+
+Avoid building the whole email around these:
+
+* Generic AI language
+* Generic digital transformation language
+* Vague innovation statements
+* Generic “data-driven” marketing copy
+* Small company blog posts with no infrastructure signal
+
+---
+
+# 5. Email Length and Style Rules
+
+## Maximum Length
+
+Cold email body should usually be 120 to 180 words.
+
+Recruiter emails can be slightly more keyword-heavy.
+
+Direct buyer emails should be sharper and more problem-focused.
+
+## Tone
+
+Professional, direct, specific, calm, and senior.
+
+The email should sound like a credible independent consultant, not a desperate job seeker.
+
+## Style Rules
+
+* Use short paragraphs.
+* Do not use hype.
+* Do not over-explain the consultant’s life story.
+* Do not paste the full resume.
+* Include a compressed resume snapshot only when useful.
+* Avoid buzzwords unless they connect to a real company signal.
+* Avoid exaggerated claims.
+* Avoid generic “I was impressed by your company” language.
+* Avoid sounding like mass automation.
+
+---
+
+# 6. Email Structure
+
+## Standard Direct Buyer Structure
+
+1. Greeting
+2. Specific company signal
+3. Link that signal to a likely data problem
+4. Consultant positioning
+5. Relevant resume snapshot
+6. Simple conversation ask
+7. Simple CTA
+
+## Standard Recruiter Structure
+
+1. Greeting
+2. State reason for reaching out
+3. Consultant positioning
+4. Keyword-rich background snapshot
+5. Best-fit roles
+6. Simple conversation ask
+7. Ask if they handle these roles
+
+## Standard Consulting-Avoidant Direct Contract Structure
+
+Use for operating companies where direct contracting is preferred.
+
+1. Greeting
+2. Company signal
+3. Problem area
+4. Direct independent contractor positioning
+5. Relevant experience snapshot
+6. Ask if their internal data team uses contractors
+
+---
+
+# 7. Resume Snapshot Blocks
+
+These are short blocks that can be inserted into emails.
+
+## General Resume Snapshot
+
+Relevant background:
+
+* 20+ years in enterprise ETL and data engineering
+* Deep experience with Informatica PowerCenter / IICS, SQL, and data warehousing
+* Built and supported mission-critical pipelines for banks and large financial institutions
+* Currently focused on Python, Airflow, dbt, Snowflake, Databricks, and cloud data stacks
+* Strong fit for ETL modernization, migration, validation, reconciliation, and production support
+
+## Financial Services Snapshot
+
+Relevant background:
+
+* 20+ years in enterprise ETL and data engineering
+* Strong banking and financial services data pipeline experience
+* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
+* Production support experience for critical reporting and operational workflows
+* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data modernization
+
+## Modernization Snapshot
+
+Relevant background:
+
+* Legacy ETL modernization across Informatica-style workflows
+* Python, SQL, Airflow, dbt, Snowflake, and cloud data stack focus
+* Strong mapping, transformation, reconciliation, and validation experience
+* Enterprise production support background
+* Banking-grade data quality and reliability mindset
+
+## Recruiter Snapshot
+
+Best-fit roles:
+
+* Senior ETL Developer
+* Informatica / IICS Consultant
+* Data Engineering Contractor
+* Snowflake Data Engineer
+* Airflow / dbt Data Engineer
+* ETL Modernization Consultant
+* Data Warehouse / Migration Consultant
+
+---
+
+# 8. Subject Line and Headline Bank
+
+The system should generate 2 to 4 subject line options per email. Use clear, practical subject lines. Avoid clickbait.
+
+## General Subject Lines
+
+* Senior ETL / Data Engineering contractor
+* Senior ETL modernization contractor
+* Remote data engineering contractor
+* ETL modernization support
+* Senior data pipeline contractor
+* Data warehouse modernization support
+* Senior contractor for ETL and data pipelines
+* Legacy ETL modernization help
+* Data engineering support for modernization work
+* Senior ETL consultant for data modernization
+
+## Informatica-to-Modern-Stack Subject Lines
+
+* Informatica to Python / Airflow modernization
+* Informatica / IICS modernization contractor
+* PowerCenter to modern data stack support
+* Legacy Informatica modernization support
+* Senior Informatica + modern data stack contractor
+* ETL migration support, Informatica to cloud
+* Informatica, Airflow, dbt, Snowflake support
+* PowerCenter / IICS contractor available
+
+## Financial Services Subject Lines
+
+* Senior ETL contractor for financial data pipelines
+* Banking data engineering contractor
+* Financial services ETL modernization support
+* Data pipeline reliability for financial teams
+* Senior data contractor for reporting and reconciliation
+* ETL modernization for financial services
+* Data warehouse support for financial systems
+
+## Insurance / Healthcare Subject Lines
+
+* Senior ETL contractor for regulated data workflows
+* Claims data pipeline support
+* Healthcare data engineering contractor
+* ETL modernization for claims and reporting data
+* Data quality and reconciliation support
+* Senior contractor for healthcare data pipelines
+* Data warehouse modernization for regulated data
+
+## SaaS / Enterprise Software Subject Lines
+
+* Senior data engineering contractor for scaling data teams
+* Data platform modernization support
+* Warehouse and pipeline reliability support
+* Airflow / dbt / Snowflake contractor
+* Senior contractor for analytics infrastructure
+* Data pipeline support for growing SaaS teams
+* Modern data stack support
+
+## Recruiter Subject Lines
+
+* Senior ETL / Data Engineering contractor available
+* Informatica / IICS modernization support
+* Senior ETL contractor
+* Senior data engineering contractor available
+* ETL / Snowflake / Airflow contractor
+* Senior Informatica and data warehouse contractor
+* Data engineering contractor
+
+## Consulting-Avoidant Direct Contract Subject Lines
+
+* Independent ETL modernization contractor
+* Direct data engineering contract support
+* Senior independent ETL contractor
+* Direct contractor for data pipeline modernization
+* Independent data engineering consultant
+
+---
+
+# 9. First-Line Personalization Examples
+
+## Financial Services
+
+I noticed {company_name} operates in {specific_financial_area}, where reporting accuracy, reconciliation, and reliable data pipelines are usually critical.
+
+I saw that {company_name} supports {payments/lending/wealth/insurance/banking} workflows, which usually creates real data integration and reporting complexity as the business scales.
+
+I noticed your team is hiring around {data_role_or_stack}, which made me think there may be a fit for senior contract support on pipeline modernization or production data reliability.
+
+## Healthcare / Pharma
+
+I noticed {company_name} works with {clinical/claims/patient/provider/pharma} data, where data quality, validation, and reliable pipeline design are usually major priorities.
+
+I saw that {company_name} supports healthcare workflows across {specific_area}, which likely creates integration needs across operational, reporting, and analytics systems.
+
+## SaaS / Enterprise Software
+
+I noticed {company_name} serves enterprise customers and appears to handle complex operational data across {specific_area}.
+
+I saw that {company_name} is expanding around {product_or_market_signal}, which often creates pressure on data platform, warehouse, and reporting systems.
+
+## Logistics / Operations
+
+I noticed {company_name} works across {logistics/supply_chain/operations}, where operational data reliability and system integration are usually important.
+
+I saw that {company_name} handles workflows involving {inventory/fulfillment/vendors/locations/transactions}, which often creates complex data pipeline and reporting requirements.
+
+## Recruiters
+
+I saw that you work with technology and data engineering roles, so I wanted to reach out directly.
+
+I noticed your team recruits for data engineering and ETL roles, so I wanted to introduce my background in case there is a fit for upcoming contractor needs.
+
+---
+
+# 10. CTA Bank
+
+Use one CTA per email.
+
+## Soft Referral CTA
+
+Would a quick 15-minute conversation make sense, or is there someone else on your team who handles senior data engineering
+
+## Direct Buyer CTA
+
+Would a short conversation make sense if your team is working on ETL modernization, data migration, or production pipeline reliability this year?
+
+## Internal Team CTA
+
+Does your data engineering or data platform team use independent contractors for this type of work?
+
+## Recruiter CTA
+
+Do you handle senior ETL / data engineering contract roles, or would someone else on your team be better to contact?
+
+## Role-Specific CTA
+
+Would this background be relevant for any remote ETL, Informatica, Snowflake, Airflow, or data engineering contract roles you are seeing?
+
+## Lower-Friction CTA
+
+Is this worth a quick conversation?
+
+---
+
+# 11. Email Templates
+
+## Template A: Direct Operating Company
+
+Subject: {subject_line}
+
+Hi {first_name},
+
+I noticed {company_name} {website_signal}. Given that, I thought there may be a fit if your team is working on ETL modernization, data migration, or production data reliability.
+
+I’m a senior ETL / data engineering contractor with 20+ years of experience building and supporting enterprise data pipelines for banks and large financial institutions.
+
+My strongest fit is helping teams translate legacy Informatica-style workflows into Python, SQL, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines, while preserving business logic, validation, reconciliation, and production reliability.
+
+Relevant background:
+
+* Informatica PowerCenter / IICS, SQL, and data warehousing
+* Banking and enterprise ETL production support
+* Data migration, validation, reconciliation, and performance tuning
+* Current focus on Python, Airflow, dbt, Snowflake, and cloud data stacks
+
+Would a quick 15-minute conversation make sense, or is there someone else on your team who handles senior data engineering contractors?
+
+Best,
+{Name}
+
+## Template B: Financial Services Company
+
+Subject: {subject_line}
+
+Hi {first_name},
+
+I noticed {company_name} works in {financial_services_area}, where data reliability, reporting accuracy, and reconciliation are usually critical.
+
+I’m a senior ETL / data engineering contractor with 20+ years of experience across banks, large financial institutions, Informatica, SQL, and enterprise data warehouse environments.
+
+My strongest fit is supporting teams with legacy ETL modernization, production pipeline reliability, data validation, and migration into Python, Airflow, dbt, Snowflake, Databricks, or cloud-based data workflows.
+
+Relevant background:
+
+* Banking and financial services data pipelines
+* Informatica PowerCenter / IICS, SQL, and data warehousing
+* Production support, performance tuning, validation, and reconciliation
+* Current focus on Python, Airflow, dbt, Snowflake, and modern cloud data stacks
+
+Would a quick 15-minute conversation make sense if your data engineering or data platform team uses independent contractors for this type of work?
+
+Best,
+{Name}
+
+## Template C: Healthcare / Pharma / Insurance-Adjacent Company
+
+Subject: {subject_line}
+
+Hi {first_name},
+
+I noticed {company_name} works with {healthcare_or_claims_signal}, where data quality, validation, and reliable reporting pipelines are usually major priorities.
+
+I’m a senior ETL / data engineering contractor with 20+ years of experience building and supporting enterprise data pipelines in complex, high-reliability environments.
+
+My strongest fit is helping teams modernize legacy ETL workflows into Python, SQL, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines while preserving business logic, reconciliation controls, and production reliability.
+
+Relevant background:
+
+* Informatica PowerCenter / IICS, SQL, and data warehousing
+* Enterprise ETL production support and performance tuning
+* Data migration, validation, reconciliation, and data quality
+* Current focus on Python, Airflow, dbt, Snowflake, and modern data stacks
+
+Would a quick 15-minute conversation make sense if your team is working on data pipeline modernization or reporting reliability this year?
+
+Best,
+{Name}
+
+## Template D: SaaS / Enterprise Software Company
+
+Subject: {subject_line}
+
+Hi {first_name},
+
+I noticed {company_name} {website_signal}. As companies scale, data warehouse, reporting, and pipeline reliability often become harder to manage across teams and systems.
+
+I’m a senior ETL / data engineering contractor with 20+ years of experience building and supporting enterprise data pipelines, especially in financial services and large company environments.
+
+My strongest fit is helping teams modernize legacy ETL workflows into Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines with strong validation, reconciliation, and production support practices.
+
+Relevant background:
+
+* Enterprise ETL and data warehousing
+* Informatica PowerCenter / IICS, SQL, and production support
+* Data migration, validation, reconciliation, and performance tuning
+* Current focus on Python, Airflow, dbt, Snowflake, and cloud data stacks
+
+Would a quick 15-minute conversation make sense if your data team is expanding platform, warehouse, or orchestration work this year?
+
+Best,
+{Name}
+
+## Template E: Recruiter
+
+Subject: {subject_line}
+
+Hi {first_name},
+
+I saw that you work with technology and data engineering roles, so I wanted to reach out directly.
+
+I’m a senior ETL / data engineering contractor with 20+ years of experience across banks, large financial institutions, and enterprise data warehouse environments.
+
+Best-fit roles:
+
+* Senior ETL Developer
+* Informatica / IICS Consultant
+* Data Engineering Contractor
+* Snowflake Data Engineer
+* Airflow / dbt Data Engineer
+* ETL Modernization Consultant
+* Data Warehouse / Migration Consultant
+
+Core background includes Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, Python, Airflow, dbt, Snowflake, and cloud data stacks.
+
+Would a quick 15-minute conversation make sense, or would someone else on your team be better to contact?
+
+Best,
+{Name}
+
+---
+
+# 12. Follow-Up Sequence
+
+## Follow-Up 1: 2 to 3 Business Days Later
+
+Subject: Re: {original_subject}
+
+Hi {first_name},
+
+Quick follow-up in case this is relevant.
+
+My strongest fit is helping teams modernize legacy ETL workflows, especially Informatica-style pipelines, into Python, Airflow, dbt, Snowflake, Databricks, and cloud-based data platforms.
+
+I bring 20+ years of enterprise ETL experience, including banking and large financial services environments, with a focus on production reliability, validation, reconciliation, and migration support.
+
+Would it make sense to connect, or should I speak with someone else on your team?
+
+Best,
+{Name}
+
+## Follow-Up 2: 5 to 7 Business Days Later
+
+Subject: Re: {original_subject}
+
+Hi {first_name},
+
+Just checking once more.
+
+Best-fit areas:
+
+* Informatica / IICS / PowerCenter
+* Python / Airflow / dbt
+* Snowflake / Databricks / cloud data platforms
+* Financial services and enterprise data pipelines
+* ETL migration, validation, reconciliation, and production support
+
+Would a quick 15-minute conversation make sense if this type of background is relevant to your team this year?
+
+Best,
+{Name}
+
+## Follow-Up 3: Breakup Email
+
+Subject: Re: {original_subject}
+
+Hi {first_name},
+
+I do not want to clutter your inbox, so I will close the loop here.
+
+I’m a senior ETL / data engineering contractor focused on legacy ETL modernization, Informatica / IICS, Python, Airflow, dbt, Snowflake, data migration, validation, reconciliation, and production pipeline reliability.
+
+If this becomes relevant later, I would be happy to connect.
+
+Best,
+{Name}
+
+---
+
+# 13. Master System Prompt for Email Generation
+
+Use the following prompt in the email automation system.
+
+```text
+You are writing a cold outreach email for a senior ETL / data engineering contractor.
+
+Goal:
+Generate a concise, professional, personalized cold email to a potential buyer, recruiter, hiring manager, data leader, or technology leader.
+
+Candidate positioning:
+The consultant is a senior ETL / data engineering contractor with 20+ years of experience across banks, large financial institutions, and enterprise data environments. They have deep experience with Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, data migration, and enterprise ETL workflows. They are now focused on Python, Airflow, dbt, Snowflake, Databricks, and modern cloud data stacks.
+
+Core offer:
+The consultant helps companies modernize legacy ETL and data warehouse workflows into reliable Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines while preserving business logic, data quality, reconciliation, validation, and production reliability.
+
+Conversation preference:
+The consultant should not lead with availability, rate, or remote USD contract wording. The email should simply ask whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+
+Inputs:
+Company name: {company_name}
+Recipient first name: {first_name}
+Recipient title: {recipient_title}
+Company type: {company_type}
+Industry: {industry}
+Website notes: {website_notes}
+Relevant company signal: {website_signal}
+Likely data problem: {likely_data_problem}
+Relevant stack signal: {relevant_stack_signal}
+Geographic scope: {geographic_scope}
+Contact category: {contact_category}
+
+Contact category options:
+- Direct data leader
+- Engineering leader
+- Recruiter
+- CTO / VP Engineering
+- Financial services company
+- Healthcare / pharma company
+- Insurance / claims company
+- SaaS / enterprise software company
+- Logistics / operations-heavy company
+- Mature startup / scaleup
+
+Instructions:
+1. Generate 2 to 4 subject line options.
+2. Then generate one cold email.
+3. Start with a specific reference to the company’s website, business, hiring, product, industry, or data signal.
+4. Connect that signal to a likely data engineering, ETL, migration, data quality, reconciliation, reporting, or modernization need.
+5. Position the consultant as a senior ETL / data engineering contractor, not as a generic job seeker.
+6. Include a short resume snapshot inside the email body.
+7. Emphasize the bridge between legacy ETL experience and modern data stack execution.
+8. Keep the body between 120 and 180 words unless the contact category is Recruiter, where up to 220 words is acceptable.
+9. Use short paragraphs.
+10. Use a professional, direct, senior tone.
+11. Avoid hype, exaggeration, and generic compliments.
+12. Avoid saying “I was impressed by your company.”
+13. Avoid sounding automated or mass-generated.
+14. Do not mention that an automation tool or AI system was used.
+15. Do not include large consulting firms, offshore IT firms, or subcontracting language unless the target is explicitly a recruiter.
+16. End with one clear CTA asking whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+17. Do not use em dashes.
+
+Output format:
+Subject options:
+1. ...
+2. ...
+3. ...
+
+Email:
+Hi {first_name},
+
+[Email body]
+
+Best,
+{Name}
+```
+
+---
+
+# 14. Quality Rubric
+
+Before sending, score each email from 1 to 5 on the following criteria.
+
+## Personalization
+
+5: Uses a specific, relevant company signal
+3: Uses a broad industry signal
+1: Could be sent to any company
+
+## Commercial Relevance
+
+5: Clearly connects company signal to data pipeline, ETL, migration, reporting, or modernization pain
+3: Mentions a plausible need but not sharply
+1: No clear business reason for the email
+
+## Positioning
+
+5: Consultant sounds like a senior specialist solving a business problem
+3: Consultant sounds qualified but generic
+1: Consultant sounds like a job seeker asking for work
+
+## Resume Snapshot
+
+5: Includes the most relevant experience for that company type
+3: Includes general experience
+1: Too long, too vague, or missing
+
+## CTA
+
+5: Low-friction and easy to answer
+3: Somewhat broad
+1: Too demanding or unclear
+
+Do not send emails scoring below 18 out of 25.
+
+---
+
+# 15. Final Best-Practice Rules
+
+## Do This
+
+* Lead with the company’s likely data problem.
+* Position the consultant as a modernization bridge.
+* Use the 20+ years of experience as proof of reliability.
+* Mention Informatica, but do not make it the only identity.
+* Mention Python, Airflow, dbt, Snowflake, and Databricks as the modern stack direction.
+* Ask for a conversation or referral to the right person.
+* Keep the email short.
+* Track replies by target category and subject line.
+
+## Do Not Do This
+
+* Do not lead with “I am looking for a job.”
+* Do not paste the full resume.
+* Do not over-personalize with fake praise.
+* Do not email tiny startups with no data complexity.
+* Do not target large consulting firms if the goal is direct contracting.
+* Do not sound like a staffing vendor.
+* Do not send one universal email to every company.
+
+## Best One-Sentence Pitch
+
+I help enterprise teams translate legacy Informatica-style ETL workflows into reliable Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines without losing business logic, data quality, reconciliation, or production reliability.

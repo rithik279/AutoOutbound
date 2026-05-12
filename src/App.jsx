@@ -3,6 +3,9 @@ import { searchPeople, bulkEnrich, searchOrgs } from './lib/apollo.js'
 import { draftEmail, fetchSiteContent, promptToApolloParams, promptToApolloOrgParams } from './lib/ai.js'
 import { parseCSV, parseCompanyList, parseResearchCSV } from './lib/csv.js'
 
+// API endpoint (configurable via VITE_API_URL env var)
+const API_URL = import.meta.env.VITE_API_URL || ''
+
 // ── STYLES ─────────────────────────────────────────────────────────────────
 const c = {
   card: { background: '#fff', borderRadius: 12, border: '1px solid #e5e5e0', padding: '20px 24px' },

@@ -150,6 +150,81 @@ app.post('/api/apollo/:path(*)', async (req, res) => {
   }
 })
 
+// ── Company batch validation against Apollo ────────────────────────────────
+app.post('/api/companies/validate-batch', async (req, res) => {
+  const { companies, userId } = req.body
+  if (!companies || !Array.isArray(companies)) return res.status(400).json({ error: 'Missing companies array' })
+  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+  const validated = []
+  const notFound = []
+
+  try {
+    // Batch companies in groups of 10 (Apollo API limit)
+    for (let i = 0; i < companies.length; i += 10) {
+      const batch = companies.slice(i, i + 10)
+
+      for (const co of batch) {
+        if (!co.domain) {
+          notFound.push({ ...co, reason: 'No domain provided' })
+          continue
+        }
+
+        // Search Apollo for org by domain
+        const apolloRes = await fetch('https://api.apollo.io/v1/mixed_companies/api_search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': APOLLO_KEY,
+            'Cache-Control': 'no-cache'
+          },
+          body: JSON.stringify({
+            q_organization_domains_list: [co.domain],
+            per_page: 1
+          })
+        })
+
+        const apolloData = await apolloRes.json()
+        const orgs = apolloData.organizations || []
+
+        if (orgs.length > 0) {
+          const org = orgs[0]
+          const imported = {
+            name: co.name || org.name,
+            domain: co.domain,
+            apolloOrgId: org.id,
+            industry: co.industry || org.industry || '',
+            size: co.size || (org.num_employees_range?.join('-') || ''),
+            location: co.location || org.hq_location || '',
+            userId,
+            status: 'pending'
+          }
+          validated.push(imported)
+
+          // Store in DB
+          await prisma.importedCompany.upsert({
+            where: { domain: co.domain },
+            update: imported,
+            create: imported
+          })
+        } else {
+          notFound.push({ ...co, reason: 'Domain not found in Apollo' })
+        }
+      }
+    }
+
+    res.json({
+      validatedCount: validated.length,
+      notFoundCount: notFound.length,
+      validated,
+      notFound
+    })
+  } catch (e) {
+    console.error('POST /api/companies/validate-batch error:', e)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ── Company website fetcher ────────────────────────────────────────────────
 app.post('/api/fetch-site', async (req, res) => {
   const { url } = req.body

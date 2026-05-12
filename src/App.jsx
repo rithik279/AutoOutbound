@@ -1951,11 +1951,12 @@ export default function App() {
         setEmailProvider={setEmailProvider}
       />
 
-      {/* Continue button — branches to discover/companies/csv based on entryLevel */}
+      {/* Continue button — branches to discover/companies/csv/import based on entryLevel */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
         <button onClick={() => {
           const nextPhase = entryLevel === 'scratch' ? 'discover'
                           : entryLevel === 'companies' ? 'companies'
+                          : entryLevel === 'bulk_import' ? 'import_companies'
                           : 'csv'
           setPhase(nextPhase)
         }} style={c.primaryBtn}>

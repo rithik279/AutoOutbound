@@ -117,85 +117,211 @@ WRITING RULES — follow without exception:
 - The Stranger Test: every sentence must contain information specific to this company. If it could appear in any other email with the nouns swapped, rewrite it.
 `
 
-// ── Build email drafting system prompt ─────────────────────────────────────
-function buildEmailSystem(campaignMode, resumeText) {
-  const isStartup = campaignMode === 'startup'
-  const isRecruiting = campaignMode === 'recruiting'
+// ── Detect company category from industry or company type ──────────────────
+function detectCompanyCategory(company, recipientTitle = '') {
+  const industry = (company.industry || '').toLowerCase()
+  const name = (company.name || '').toLowerCase()
+  const title = recipientTitle.toLowerCase()
 
-  let modeContext
-  if (isRecruiting) {
-    modeContext = `CAMPAIGN TYPE: Recruiting firm outreach.
-You are reaching out to a recruiting firm — NOT to get hired directly. You want them to place Manmit at one of their clients. The goal is to make the recruiter believe Manmit is a high-value, senior operator who can step in and deliver immediately.
-You are Manmit. Write in first person. Never "Manmit Singh is..." or "His experience...".
-Tone: confident, direct, peer-to-peer. Not desperate. Not apologetic. Not mass outreach.`
-  } else if (isStartup) {
-    modeContext = `CAMPAIGN TYPE: AI/tech startup.
-The recipient's company has built fast and now has a production data problem. They moved from prototype to real customers and the data stack didn't keep up. Manmit's 24 years of enterprise ETL discipline is exactly what they're missing — they probably don't have a Head of Data yet.
-Angle: fragile pipelines under load, ad hoc scripts that don't scale, compliance/data quality catching up with them. Position Manmit as someone who has seen this exact transition before and knows what breaks.`
-  } else {
-    modeContext = `CAMPAIGN TYPE: Financial institution.
-The recipient is at a bank, asset manager, insurer, or financial infrastructure company. These organisations run complex, regulation-heavy data pipelines under constant pressure — regulatory deadlines, cloud migrations, data quality problems.
-Angle: reliability, regulatory delivery, Informatica expertise, financial services track record. Manmit's Scotiabank/TD/Finastra background is directly relevant.`
+  // Recruiter detection
+  if (title.includes('recruiter') || title.includes('talent') || title.includes('staffing')) {
+    return 'recruiter'
   }
 
-  let structure
-  if (isRecruiting) {
-    structure = `STRUCTURE — follow exactly, no labels:
-1. Subject: max 7 words. Direct value prop for the recruiter — not a question. Examples: "Senior ETL contractor — available now", "Data engineering contract, Scotiabank background"
-2. Greeting: "Hi [first name]," on its own line.
-3. Observe paragraph: Describe what the firm does — no "I see", no "aligned with", just state what they do. 1-2 sentences. Blank line before this paragraph.
-4. Problem paragraph: Surface one challenge this type of firm faces as they scale. 1-2 sentences. Blank line before this paragraph.
-5. Background paragraph: Describe your background — specific companies (Scotiabank, TD, Rogers, The Co-operators, ParkLand), specific work, what you built or delivered. Vary sentence structure. Mix it up. Blank line before this paragraph.
-6. CTA paragraph: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
-7. Sign-off: blank line, then "Best,\\nManmit"`
-  } else {
-    structure = `STRUCTURE — follow exactly, no labels:
-1. Subject: max 7 words. Specific to their actual product or infrastructure. Not a question. Not generic.
-2. Greeting: "Hi [first name]," on its own line. Always "Hi Name," — never just "Name,".
-3. Hook paragraph: ONE specific, non-obvious detail from the company website about what they're building or how their system works. Not their funding round. Not their headcount. Something about the actual product or technical approach. 1-2 sentences max.
-4. Problem paragraph: What data engineering problem does that create? Say what actually breaks or slows down. 1-2 sentences. Blank line before this paragraph.
-5. Credential paragraph: Pick ONE engagement from the resume that is most relevant to this company's situation. Name the client and what was built. Then offer: "I can step in as senior contract capacity if timing works. Worth a quick call?" Blank line before this paragraph.
-6. Sign-off: blank line, then "Best,\\nManmit"`
+  // Financial Services
+  if (industry.includes('bank') || industry.includes('fintech') || industry.includes('payment') ||
+      industry.includes('finance') || industry.includes('credit') || industry.includes('lending') ||
+      industry.includes('wealth') || industry.includes('capital markets') || industry.includes('asset manager')) {
+    return 'financial_services'
   }
 
-  let constraints
-  if (isRecruiting) {
-    constraints = `CONSTRAINTS:
-- Body is max 140 words (not counting subject or sign-off).
-- Every paragraph is separated by a blank line. No wall of text.
-- No em dashes.
-- No buzzwords, fluff, or promotional language.
-- No "I saw your job posting", no applying language, no desperation tone.
-- No apologies, no time constraint mentions, no summaries.
-- You are Manmit. Write in first person. NEVER say "Manmit Singh is...", "His experience...", "Manmit is a strong candidate..." — write "I've", "I worked at", "I can step in".
-- No "I see that...", "I notice...", "This aligns well with..."
-- No "reduce your search time", "easy to place", "strong candidate"
-- No "I typically work through recruiting partners" — just say "I can step in..."
-- The tone must be: senior operator, immediate impact, peer-to-peer.`
-  } else {
-    constraints = `CONSTRAINTS:
-- Body is max 130 words (not counting subject or sign-off).
-- Every paragraph is separated by a blank line. No wall of text.
-- No job posting references. No "I saw you're hiring". No applying language whatsoever.
-- Manmit is not a candidate. He's a senior operator offering to solve a problem faster than a hire would.
-- Never list more than one client credential — pick the most relevant one from the resume.
-- The hook must be specific enough that it cannot appear in any other company's email.`
+  // Insurance
+  if (industry.includes('insurance') || industry.includes('insurtech') || industry.includes('claims') ||
+      industry.includes('benefits') || industry.includes('health insurance')) {
+    return 'insurance'
   }
 
-  return `You draft cold outreach emails for Manmit Singh, a senior data engineering contractor.
+  // Healthcare / Pharma
+  if (industry.includes('healthcare') || industry.includes('pharma') || industry.includes('biotech') ||
+      industry.includes('clinical') || industry.includes('healthtech') || industry.includes('diagnostic')) {
+    return 'healthcare'
+  }
 
-MANMIT'S RESUME (use this as context — pick the most relevant experience for this specific company):
-${resumeText}
+  // SaaS / Enterprise Software
+  if (industry.includes('saas') || industry.includes('software') || industry.includes('enterprise') ||
+      industry.includes('cybersecurity') || industry.includes('subscription') || industry.includes('platform')) {
+    return 'saas'
+  }
 
-${modeContext}
+  // Logistics / Operations
+  if (industry.includes('logistics') || industry.includes('supply chain') || industry.includes('retail') ||
+      industry.includes('manufacturing') || industry.includes('operations') || industry.includes('fulfillment')) {
+    return 'logistics'
+  }
 
-${structure}
+  // Default: assume direct buyer
+  return 'direct_buyer'
+}
 
-${constraints}
+// ── Get resume snapshot based on company category ────────────────────────────
+function getResumeSnapshot(category) {
+  const snapshots = {
+    financial_services: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Strong banking and financial services data pipeline experience
+* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
+* Production support experience for critical reporting and operational workflows
+* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data modernization`,
+
+    insurance: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Deep experience with regulated, high-volume operational data
+* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
+* Claims and transaction data pipeline expertise
+* Strong data quality, governance, and production support background`,
+
+    healthcare: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Experience building reliable, compliant data pipelines in high-regulation environments
+* Informatica PowerCenter / IICS, SQL, data warehousing, and validation expertise
+* Strong focus on data quality, reconciliation, and production support
+* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data stacks`,
+
+    saas: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Experience helping scaling teams mature data infrastructure and warehouse design
+* Informatica PowerCenter / IICS, SQL, data warehousing, production support, and performance tuning
+* Data migration, validation, reconciliation expertise
+* Current focus on Python, Airflow, dbt, Snowflake, and cloud data platforms`,
+
+    logistics: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Deep experience with operational data across inventory, transactions, and fulfillment systems
+* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
+* Strong focus on data reliability and integration across complex systems
+* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data stacks`,
+
+    recruiter: `Best-fit roles:
+* Senior ETL Developer
+* Informatica / IICS Consultant
+* Data Engineering Contractor
+* Snowflake Data Engineer
+* Airflow / dbt Data Engineer
+* ETL Modernization Consultant
+* Data Warehouse / Migration Consultant
+
+Core background: 20+ years enterprise ETL, Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, Python, Airflow, dbt, Snowflake, cloud data stacks.`,
+
+    direct_buyer: `Relevant background:
+* 20+ years in enterprise ETL and data engineering
+* Deep experience with Informatica PowerCenter / IICS, SQL, and data warehousing
+* Built and supported mission-critical pipelines for banks and large financial institutions
+* Currently focused on Python, Airflow, dbt, Snowflake, Databricks, and cloud data stacks
+* Strong fit for ETL modernization, migration, validation, reconciliation, and production support`
+  }
+
+  return snapshots[category] || snapshots.direct_buyer
+}
+
+// ── Score email quality based on rubric ────────────────────────────────────
+export function scoreEmail(subject, body, category = 'direct_buyer') {
+  const emailText = `${subject}\n${body}`
+  const wordCount = emailText.split(/\s+/).length
+  const bodyWordCount = body.split(/\s+/).length
+
+  let score = 0
+
+  // Personalization (5 max)
+  if (emailText.includes('{') || emailText.includes('undefined')) {
+    score += 0 // Template not filled
+  } else if (emailText.match(/specific|signal|notice|noticed|saw|found/i)) {
+    score += 5 // High personalization
+  } else if (emailText.match(/company|team|industry/i)) {
+    score += 3 // Generic but has company ref
+  } else {
+    score += 1 // Low personalization
+  }
+
+  // Commercial Relevance (5 max)
+  if (emailText.match(/ETL|modernization|migration|pipeline|data|warehouse|transformation/i)) {
+    score += 5 // Clear business case
+  } else if (emailText.match(/technical|engineering/i)) {
+    score += 3 // Somewhat relevant
+  } else {
+    score += 1 // Low relevance
+  }
+
+  // Positioning (5 max)
+  if (emailText.match(/senior|contractor|specialist|operator/i) && !emailText.match(/job|candidate|seek|looking for|apply/i)) {
+    score += 5 // Senior operator tone
+  } else if (emailText.match(/experience|background/i)) {
+    score += 3 // Qualified but generic
+  } else {
+    score += 1 // Job-seeker tone
+  }
+
+  // Resume Snapshot (5 max)
+  const hasResumeSnapshot = /background|experience|expertise/i.test(body) && wordCount > 50
+  score += hasResumeSnapshot ? 5 : (wordCount > 40 ? 3 : 1)
+
+  // CTA (5 max)
+  if (emailText.match(/conversation|call|chat|discuss|connect/i) && !emailText.match(/available|rate|contract|hire|employ/i)) {
+    score += 5 // Low-friction CTA
+  } else if (emailText.match(/reach out|contact/i)) {
+    score += 3 // Mild CTA
+  } else {
+    score += 1 // No clear CTA
+  }
+
+  // Constraint checks
+  const maxWords = category === 'recruiter' ? 220 : 180
+  if (bodyWordCount > maxWords) score -= 2
+  if (emailText.includes('---') || emailText.includes('—')) score -= 1 // em dashes
+  if (emailText.match(/buzzword|innovative|cutting-edge|industry-leading/i)) score -= 1
+
+  return Math.max(0, Math.min(25, score))
+}
+
+// ── Build email system prompt using guidelines ────────────────────────────────
+function buildEmailSystem(category, resumeSnapshot) {
+  return `You are writing a cold outreach email for a senior ETL / data engineering contractor.
+
+Goal:
+Generate a concise, professional, personalized cold email to a potential buyer, recruiter, hiring manager, data leader, or technology leader.
+
+Candidate positioning:
+The consultant is a senior ETL / data engineering contractor with 20+ years of experience across banks, large financial institutions, and enterprise data environments. They have deep experience with Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, data migration, and enterprise ETL workflows. They are now focused on Python, Airflow, dbt, Snowflake, Databricks, and modern cloud data stacks.
+
+Core offer:
+The consultant helps companies modernize legacy ETL and data warehouse workflows into reliable Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines while preserving business logic, data quality, reconciliation, validation, and production reliability.
+
+Conversation preference:
+The consultant should not lead with availability, rate, or remote USD contract wording. The email should simply ask whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+
+Instructions:
+1. Start with a specific reference to the company's website, business, hiring, product, industry, or data signal.
+2. Connect that signal to a likely data engineering, ETL, migration, data quality, reconciliation, reporting, or modernization need.
+3. Position the consultant as a senior ETL / data engineering contractor, not as a generic job seeker.
+4. Include the relevant resume snapshot inside the email body.
+5. Emphasize the bridge between legacy ETL experience and modern data stack execution.
+6. Keep the body between 120 and 180 words unless the contact category is Recruiter, where up to 220 words is acceptable.
+7. Use short paragraphs.
+8. Use a professional, direct, senior tone.
+9. Avoid hype, exaggeration, and generic compliments.
+10. Avoid saying "I was impressed by your company."
+11. Avoid sounding automated or mass-generated.
+12. Do not mention that an automation tool or AI system was used.
+13. Do not include large consulting firms, offshore IT firms, or subcontracting language unless the target is explicitly a recruiter.
+14. End with one clear CTA asking whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+15. Do not use em dashes.
 
 ${WRITING_RULES}
 
-Return ONLY valid JSON, no markdown: {"subject":"...","body":"..."}`
+Resume snapshot:
+${resumeSnapshot}
+
+Output format — return ONLY valid JSON, no markdown:
+{"subjects":["Subject 1","Subject 2","Subject 3"],"body":"Email body here"}`
 }
 
 // ── Fetch company website via server proxy ─────────────────────────────────

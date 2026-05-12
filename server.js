@@ -564,6 +564,27 @@ app.put('/api/user/profile', (req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/api/prompts/templates', (req, res) => {
+  const templates = []
+  const templateFiles = [
+    { name: 'Financial', filename: 'DraftingPrompt.txt' },
+    { name: 'Recruiters', filename: 'RecruitersDraftingPrompt.txt' },
+    { name: 'Research', filename: 'Research Prompt.txt' }
+  ]
+
+  for (const { name, filename } of templateFiles) {
+    try {
+      const filepath = join(__dirname, filename)
+      const content = readFileSync(filepath, 'utf8')
+      templates.push({ name, filename, content })
+    } catch (err) {
+      console.warn(`Template file not found: ${filename}`)
+    }
+  }
+
+  res.json(templates)
+})
+
 // ── Gmail OAuth ─────────────────────────────────────────────────────────────
 const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || ''
 const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || ''

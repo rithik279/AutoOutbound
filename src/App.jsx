@@ -1072,6 +1072,9 @@ export default function App() {
   const [reviewEdits, setReviewEdits] = useState({})
   const [reviewStats, setReviewStats] = useState({ total: 0, approved: 0, avgScore: 0, lowScore: 0 })
   const [reviewFilter, setReviewFilter] = useState({ category: 'all', scoreThreshold: 'all' })
+  const [reviewEditModal, setReviewEditModal] = useState(null) // {id, subject, body}
+  const [reviewEditSubj, setReviewEditSubj] = useState('')
+  const [reviewEditBody, setReviewEditBody] = useState('')
 
   // Contacts / draft state
   const [contacts, setContacts] = useState([])

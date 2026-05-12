@@ -261,7 +261,7 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
       // For .docx files, use mammoth; for text just use content
       let resumeText = text
       if (file.name.endsWith('.docx')) {
-        const res = await fetch('/api/resume-text-upload', {
+        const res = await fetch(`${API_URL}/api/resume-text-upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
           body: text
@@ -286,7 +286,7 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
     setPromptInput('')
     setPromptLoading(true)
     try {
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch(`${API_URL}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -334,12 +334,12 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
 
   async function handleConnectGmail() {
     setGmailLoading(true)
-    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, `_blank')
     // Poll for token
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
-        const res = await fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
+        const res = await fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
         const data = await res.json()
         if (data.ok) { setGmailStatus(data); break }
       } catch {}
@@ -589,18 +589,18 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
               await handleConnectGmail()
             } else {
               setGmailLoading(true)
-              window.open(`/api/auth-start?userId=${currentUser.userId}`, '_blank')
+              window.open(`/api/auth-start?userId=${currentUser.userId}`, `_blank')
               for (let i = 0; i < 30; i++) {
                 await new Promise(r => setTimeout(r, 2000))
                 try {
-                  const res = await fetch('/api/token-health')
+                  const res = await fetch(`${API_URL}/api/token-health`)
                   const data = await res.json()
                   if (data.ok) { setGmailStatus(data); break }
                 } catch {}
               }
               // Refresh profile to get updated hasOutlookToken
               try {
-                const profileRes = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+                const profileRes = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
                 if (profileRes.ok) {
                   const updatedProfile = await profileRes.json()
                   setProfile(updatedProfile)
@@ -641,7 +641,7 @@ function SetupWizard({ currentUser, onComplete }) {
   const STEPS = ['Account', 'Email Provider', 'Authorize', 'Done']
 
   async function saveProfileAndProvider() {
-    await fetch('/api/user/profile', {
+    await fetch(`${API_URL}/api/user/profile`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
       body: JSON.stringify({
@@ -658,12 +658,12 @@ function SetupWizard({ currentUser, onComplete }) {
     setAuthLoading(true)
     const authUrl = provider === 'gmail'
       ? `/api/gmail/auth-start?userId=${currentUser.userId}`
-      : '/api/auth-start'
+      : '/api/auth-start`
     window.open(authUrl, '_blank')
     // Poll until token is ready
     const checkHealth = provider === 'gmail'
       ? `/api/gmail/token-health`
-      : '/api/token-health'
+      : '/api/token-health`
     const headers = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
     for (let i = 0; i < 40; i++) {
       await new Promise(r => setTimeout(r, 2000))
@@ -875,7 +875,7 @@ export default function App() {
     async function loadProfile() {
       if (!currentUser) return
       try {
-        const res = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+        const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
         if (res.ok) setProfile(await res.json())
       } catch {}
     }
@@ -886,7 +886,7 @@ export default function App() {
     setLoginLoading(true)
     setLoginError('')
     try {
-      const res = await fetch('/api/user/login', {
+      const res = await fetch(`${API_URL}/api/user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -921,7 +921,7 @@ export default function App() {
     }
     setSignupLoading(true)
     try {
-      const res = await fetch('/api/user/signup', {
+      const res = await fetch(`${API_URL}/api/user/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, password })
@@ -963,12 +963,12 @@ export default function App() {
   async function updateProfile(updates) {
     if (!currentUser) return
     try {
-      await fetch('/api/user/profile', {
+      await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
         body: JSON.stringify(updates)
       })
-      const res = await fetch('/api/user/profile', { headers: { 'x-user-id': currentUser.userId } })
+      const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
       if (res.ok) setProfile(await res.json())
     } catch {}
   }
@@ -1101,9 +1101,9 @@ export default function App() {
     async function fetchStatus() {
       try {
         const [authRes, schedRes, gmailRes] = await Promise.all([
-          fetch('/api/token-health'),
-          fetch('/api/schedule-status'),
-          fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
+          fetch(`${API_URL}/api/token-health`),
+          fetch(`${API_URL}/api/schedule-status`),
+          fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
         ])
         const auth = await authRes.json()
         const sched = await schedRes.json()
@@ -1120,7 +1120,7 @@ export default function App() {
 
   async function runReAuth() {
     setReAuthLoading(true)
-    window.open('/api/auth-start', '_blank')
+    window.open('/api/auth-start`, '_blank')
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
@@ -1140,10 +1140,10 @@ export default function App() {
   async function runRetryFailed() {
     setRetryLoading(true)
     try {
-      const res = await fetch('/api/schedule-retry', { method: 'POST' })
+      const res = await fetch(`${API_URL}/api/schedule-retry`, { method: 'POST' })
       const data = await res.json()
       if (data.ok) {
-        const schedRes = await fetch('/api/schedule-status')
+        const schedRes = await fetch(`${API_URL}/api/schedule-status`)
         setScheduleStatus(await schedRes.json())
       }
     } catch {}
@@ -1152,7 +1152,7 @@ export default function App() {
 
   async function loadSentHistory() {
     try {
-      const res = await fetch('/api/sent-emails', { headers: { 'x-user-id': currentUser?.userId || 'friend' } })
+      const res = await fetch(`${API_URL}/api/sent-emails`, { headers: { 'x-user-id': currentUser?.userId || 'friend' } })
       const data = await res.json()
       setSentHistory(data.emails || [])
       setPhase('sent_history')
@@ -1185,7 +1185,7 @@ export default function App() {
         <span style={{ fontSize: 12, color: '#666' }}>{authLabels.join(' · ')}</span>
         <button onClick={() => {
           if (isFriend && emailProvider === 'gmail') {
-            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, `_blank')
           } else {
             runReAuth()
           }
@@ -1565,7 +1565,7 @@ export default function App() {
   async function loadSavedContacts() {
     setLoadingContacts(true)
     try {
-      const res = await fetch('/api/contacts')
+      const res = await fetch(`${API_URL}/api/contacts`)
       const data = await res.json()
       setSavedContacts(data.contacts || [])
     } catch (e) {
@@ -1596,7 +1596,7 @@ export default function App() {
       }
     })
     try {
-      const res = await fetch('/api/schedule-campaign', {
+      const res = await fetch(`${API_URL}/api/schedule-campaign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emails, provider: selectedProvider })
@@ -2604,8 +2604,8 @@ export default function App() {
               setDraftConfirmError('')
               try {
                 const healthUrl = emailProvider === 'gmail'
-                  ? '/api/gmail/token-health'
-                  : '/api/token-health'
+                  ? '/api/gmail/token-health`
+                  : '/api/token-health`
                 const headers = emailProvider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
                 const res = await fetch(healthUrl, { headers })
                 const data = await res.json()

@@ -222,6 +222,8 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
   const [promptLoading, setPromptLoading] = useState(false)
   const [editPrompt, setEditPrompt] = useState('')
   const [pendingPrompt, setPendingPrompt] = useState(null)
+  const [templates, setTemplates] = useState([])
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [gmailStatus, setGmailStatus] = useState(null)
   const [gmailLoading, setGmailLoading] = useState(false)
 
@@ -229,6 +231,22 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
   useEffect(() => {
     if (profile?.prompt) setEditPrompt(profile.prompt)
   }, [profile])
+
+  // Fetch templates on mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await fetch('/api/prompts/templates')
+        if (res.ok) {
+          const data = await res.json()
+          setTemplates(data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch templates:', err)
+      }
+    }
+    fetchTemplates()
+  }, [])
 
   async function handleResumeUpload(e) {
     const file = e.target.files?.[0]

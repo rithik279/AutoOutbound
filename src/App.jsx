@@ -1066,6 +1066,13 @@ export default function App() {
   const [discoveryConfiguring, setDiscoveryConfiguring] = useState(false)
   const [discoveryStatus, setDiscoveryStatus] = useState(null)
 
+  // Batch review state (for batch-drafted emails)
+  const [reviewBatch, setReviewBatch] = useState([])
+  const [reviewApproved, setReviewApproved] = useState(new Set())
+  const [reviewEdits, setReviewEdits] = useState({})
+  const [reviewStats, setReviewStats] = useState({ total: 0, approved: 0, avgScore: 0, lowScore: 0 })
+  const [reviewFilter, setReviewFilter] = useState({ category: 'all', scoreThreshold: 'all' })
+
   // Contacts / draft state
   const [contacts, setContacts] = useState([])
   const [drafts, setDrafts] = useState({})

@@ -1017,6 +1017,168 @@ async function sendViaGmail({ to, subject, body }, userId) {
   }
 }
 
+// ── Discovery scheduler & endpoints ───────────────────────────────────────
+const discoveryJobs = new Map() // userId -> { interval, lastRun, status }
+
+async function runDiscovery(userId, limit = 50) {
+  try {
+    // Get scheduled discovery config
+    const config = await prisma.scheduledDiscovery.findUnique({
+      where: { userId }
+    })
+    if (!config) throw new Error('No discovery config found')
+
+    // Get pending companies (status = 'pending' or 'discovered')
+    const companies = await prisma.importedCompany.findMany({
+      where: { userId, status: { in: ['pending', 'discovered'] } },
+      take: limit
+    })
+    if (companies.length === 0) {
+      return { found: 0, contacted: 0, skipped: 0 }
+    }
+
+    // Get already-contacted emails (dedup)
+    const contacted = await prisma.contact.findMany({
+      where: { source: 'discovery' },
+      select: { email: true }
+    })
+    const contactedEmails = new Set(contacted.map(c => c.email))
+
+    let found = 0
+    let skipped = 0
+
+    // For each company, search for people
+    for (const co of companies) {
+      if (!co.apolloOrgId) continue // Skip if no Apollo ID
+
+      // Search for directors/managers/VPs in this company
+      const apolloRes = await fetch('https://api.apollo.io/api/v1/mixed_people/api_search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': APOLLO_KEY,
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({
+          q_organization_ids: [co.apolloOrgId],
+          person_titles: [
+            'Director of Data Engineering', 'Head of Data', 'VP Data Engineering',
+            'Director of Data Platform', 'Data Platform Manager', 'CTO', 'VP Engineering'
+          ],
+          person_seniorities: ['director', 'manager', 'vp', 'c_suite'],
+          per_page: 10
+        })
+      })
+
+      if (apolloRes.ok) {
+        const data = await apolloRes.json()
+        const people = data.people || []
+
+        for (const person of people) {
+          if (!person.email || contactedEmails.has(person.email)) {
+            skipped++
+            continue
+          }
+
+          // Create contact
+          await prisma.contact.create({
+            data: {
+              email: person.email,
+              name: `${person.first_name || ''} ${person.last_name || ''}`.trim(),
+              title: person.title || '',
+              company: co.name,
+              domain: co.domain,
+              linkedin: person.linkedin_url || '',
+              source: 'discovery'
+            }
+          })
+          found++
+          contactedEmails.add(person.email)
+        }
+      }
+
+      // Update company status
+      await prisma.importedCompany.update({
+        where: { id: co.id },
+        data: { status: 'discovered' }
+      })
+    }
+
+    // Update last run
+    await prisma.scheduledDiscovery.update({
+      where: { userId },
+      data: { lastRunAt: new Date() }
+    })
+
+    console.log(`[discovery] user=${userId} found=${found} skipped=${skipped} contacted=${contactedEmails.size}`)
+    return { found, skipped, contacted: contactedEmails.size }
+  } catch (err) {
+    console.error(`[discovery] error for user=${userId}:`, err.message)
+    throw err
+  }
+}
+
+// Trigger discovery manually
+app.post('/api/discovery/run', async (req, res) => {
+  const userId = req.headers['x-user-id'] || req.body.userId
+  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+  try {
+    const result = await runDiscovery(userId, 50)
+    res.json({ success: true, ...result })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Get discovery status
+app.get('/api/discovery/status', async (req, res) => {
+  const userId = req.headers['x-user-id']
+  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+  try {
+    const config = await prisma.scheduledDiscovery.findUnique({
+      where: { userId }
+    })
+    const companies = await prisma.importedCompany.count({
+      where: { userId, status: { in: ['pending', 'discovered'] } }
+    })
+    const contacts = await prisma.contact.count({
+      where: { source: 'discovery' }
+    })
+
+    res.json({
+      configured: !!config,
+      runTime: config?.runTime,
+      dailyQuota: config?.dailyQuota,
+      enabled: config?.enabled,
+      lastRunAt: config?.lastRunAt,
+      pendingCompanies: companies,
+      discoveredContacts: contacts
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// Configure discovery
+app.post('/api/discovery/config', async (req, res) => {
+  const userId = req.headers['x-user-id']
+  const { runTime, dailyQuota, enabled } = req.body
+  if (!userId) return res.status(400).json({ error: 'Missing userId' })
+
+  try {
+    const config = await prisma.scheduledDiscovery.upsert({
+      where: { userId },
+      update: { runTime, dailyQuota, enabled },
+      create: { userId, runTime, dailyQuota, enabled }
+    })
+    res.json({ success: true, config })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ── Health check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ ok: true }))
 

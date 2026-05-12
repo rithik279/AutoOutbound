@@ -428,14 +428,20 @@ app.get('/api/sent-emails', async (req, res) => {
 })
 
 // ── Schedule queue status ─────────────────────────────────────────────────
-app.get('/api/schedule-status', (req, res) => {
+app.get('/api/schedule-status', async (req, res) => {
   const userId = req.headers['x-user-id'] || 'friend'
-  const queue = loadQueue().filter(e => e.userId === userId)
-  const sent = queue.filter(e => e.sent).length
-  const pending = queue.filter(e => !e.sent).length
-  const failed = queue.filter(e => e.failed).length
-  const total = queue.length
-  res.json({ total, sent, pending, failed })
+  try {
+    const [sent, pending, failed, total] = await Promise.all([
+      prisma.email.count({ where: { userId, sentAt: { not: null } } }),
+      prisma.email.count({ where: { userId, sentAt: null, failedAt: null } }),
+      prisma.email.count({ where: { userId, failedAt: { not: null } } }),
+      prisma.email.count({ where: { userId } })
+    ])
+    res.json({ total, sent, pending, failed })
+  } catch (err) {
+    console.error('GET /api/schedule-status error:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ── Retry failed emails ───────────────────────────────────────────────────

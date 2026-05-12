@@ -1089,7 +1089,7 @@ export default function App() {
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
-  // Status bar — show both Gmail and Outlook for friend users
+  // Status bar — show both Gmail and Outlook
   const getAuthLabel = (status, provider) => {
     if (!status) return `${provider} not connected`
     if (status.status === 'ok') return `${provider} connected`
@@ -1098,9 +1098,9 @@ export default function App() {
     if (status.status === 'expired') return `${provider} expired`
     return `${provider} not connected`
   }
-  const gmailLabel = isFriend ? getAuthLabel(gmailAuthStatus, 'Gmail') : null
+  const gmailLabel = getAuthLabel(gmailAuthStatus, 'Gmail')
   const outlookLabel = getAuthLabel(authStatus, 'Outlook')
-  const authLabels = isFriend ? [gmailLabel, outlookLabel].filter(Boolean) : [outlookLabel]
+  const authLabels = [gmailLabel, outlookLabel].filter(l => !l.includes('not connected'))
   const activeAuthColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
   const activeProvider = isFriend ? emailProvider : 'outlook'
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'

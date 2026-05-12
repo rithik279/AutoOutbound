@@ -315,6 +315,20 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
     await onUpdateProfile({ prompt: editPrompt })
   }
 
+  function handleTemplateSelect(e) {
+    const templateName = e.target.value
+    if (!templateName) {
+      setSelectedTemplate(null)
+      setEditPrompt('')
+    } else {
+      const selected = templates.find(t => t.name === templateName)
+      if (selected) {
+        setSelectedTemplate(selected)
+        setEditPrompt(selected.content)
+      }
+    }
+  }
+
   async function handleConnectGmail() {
     setGmailLoading(true)
     window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')

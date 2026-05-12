@@ -341,20 +341,61 @@ export async function fetchSiteContent(domain) {
   }
 }
 
-// ── Draft one email ────────────────────────────────────────────────────────
-export async function draftEmail(contact, aiConfig, campaignMode, siteContent) {
-  const resumeText = await getResume()
-  const system = buildEmailSystem(campaignMode, resumeText)
+// ── Draft one email with category detection and scoring ────────────────────
+export async function draftEmail(contact, aiConfig, companyData = {}) {
+  const category = detectCompanyCategory(companyData, contact.title)
+  const resumeSnapshot = getResumeSnapshot(category)
+  const system = buildEmailSystem(category, resumeSnapshot)
 
   const firstName = contact.first || contact.name?.split(' ')[0] || contact.name
   const title = contact.title ? `, ${contact.title}` : ''
-  const siteSection = siteContent
-    ? `\n\nCOMPANY WEBSITE CONTENT (use this for the hook — find one specific technical or product detail):\n${siteContent.slice(0, 3500)}`
-    : '\n\n(No website content available — use the company name and domain to infer a plausible specific hook, but keep it conservative.)'
+  const company = contact.co || contact.company || 'their company'
+  const domain = contact.domain || 'unknown domain'
 
-  const user = `Draft a cold email to ${firstName}${title} at ${contact.co || contact.company} (${contact.domain || 'unknown domain'}).${siteSection}`
+  let userMessage = `Draft a cold email to ${firstName}${title} at ${company} (${domain}).`
 
-  const { text, tokens } = await callAI({ ...aiConfig, systemPrompt: system, userMessage: user })
-  const parsed = parseJSON(text)
-  return { ...parsed, tokens }
+  // Add company context if available
+  if (companyData.industry) {
+    userMessage += ` Industry: ${companyData.industry}.`
+  }
+
+  // Add website signal if available
+  let siteSection = ''
+  const siteContent = companyData.siteContent || ''
+  if (siteContent) {
+    siteSection = `\n\nCOMPANY WEBSITE CONTENT (extract one specific technical or product detail for personalization):\n${siteContent.slice(0, 3500)}`
+    userMessage += siteSection
+  }
+
+  const { text, tokens } = await callAI({ ...aiConfig, systemPrompt: system, userMessage })
+
+  try {
+    const parsed = parseJSON(text)
+    const body = parsed.body || ''
+    const subjects = parsed.subjects || [parsed.subject] || ['Senior ETL Contractor']
+
+    // Score the draft
+    const mainSubject = subjects[0] || ''
+    const score = scoreEmail(mainSubject, body, category)
+
+    return {
+      subjects,
+      body,
+      tokens,
+      score,
+      category,
+      passed: score >= 18
+    }
+  } catch (e) {
+    console.error('Failed to parse email draft:', e)
+    return {
+      subjects: ['Draft failed'],
+      body: text || 'Failed to generate email',
+      tokens,
+      score: 0,
+      category,
+      passed: false,
+      error: e.message
+    }
+  }
 }

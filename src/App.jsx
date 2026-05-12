@@ -239,7 +239,7 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const res = await fetch('/api/prompts/templates')
+        const res = await fetch(`${API_URL}/api/prompts/templates`)
         if (res.ok) {
           const data = await res.json()
           setTemplates(data)

@@ -545,6 +545,89 @@ app.post('/api/schedule-campaign', async (req, res) => {
   }
 })
 
+// ── Contact management ────────────────────────────────────────────────────
+app.get('/api/contacts', async (req, res) => {
+  try {
+    const contacts = await prisma.contact.findMany({
+      include: { emails: true },
+      orderBy: { updatedAt: 'desc' }
+    })
+    res.json({ contacts })
+  } catch (err) {
+    console.error('GET /api/contacts error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/contacts', async (req, res) => {
+  const { email, name, title, company, domain, linkedin, source } = req.body
+  if (!email || !name) {
+    return res.status(400).json({ error: 'Missing email or name' })
+  }
+
+  try {
+    // Check for duplicates
+    const existing = await prisma.contact.findUnique({ where: { email } })
+    if (existing) {
+      return res.status(409).json({
+        error: 'Contact already exists',
+        contact: existing
+      })
+    }
+
+    const contact = await prisma.contact.create({
+      data: {
+        email,
+        name,
+        title: title || null,
+        company: company || 'Unknown',
+        domain: domain || null,
+        linkedin: linkedin || null,
+        state: 'new',
+        source: source || 'manual'
+      }
+    })
+    res.status(201).json({ contact })
+  } catch (err) {
+    console.error('POST /api/contacts error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.put('/api/contacts/:id', async (req, res) => {
+  const { id } = req.params
+  const { state, title, company } = req.body
+
+  try {
+    const contact = await prisma.contact.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...(state && { state }),
+        ...(title && { title }),
+        ...(company && { company })
+      }
+    })
+    res.json({ contact })
+  } catch (err) {
+    console.error(`PUT /api/contacts/${id} error:`, err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/contacts/:id/emails', async (req, res) => {
+  const { id } = req.params
+  try {
+    const emails = await prisma.email.findMany({
+      where: { contactId: parseInt(id) },
+      orderBy: { createdAt: 'desc' }
+    })
+    res.json({ emails })
+  } catch (err) {
+    console.error(`GET /api/contacts/${id}/emails error:`, err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ── User management ───────────────────────────────────────────────────────
 const USERS_PATH = join(__dirname, 'users.json')
 

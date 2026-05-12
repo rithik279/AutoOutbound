@@ -216,7 +216,7 @@ function exportCSV(contacts, filename = 'contacts') {
 
 // ── Friend Settings Component ─────────────────────────────────────────────
 function SharedSettings({ profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail, onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId, currentUser, emailProvider, setEmailProvider }) {
-  const [tab, setTab] = useState('profile') // profile | resume | prompt | email
+  const [tab, setTab] = useState('profile') // profile | resume | prompt | email | discovery
   const [resumeFile, setResumeFile] = useState(null)
   const [resumeStatus, setResumeStatus] = useState('')
   const [promptTab, setPromptTab] = useState('chat') // chat | edit
@@ -229,6 +229,10 @@ function SharedSettings({ profile, localSenderName, setLocalSenderName, localSen
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [gmailStatus, setGmailStatus] = useState(null)
   const [gmailLoading, setGmailLoading] = useState(false)
+  const [discoveryTime, setDiscoveryTime] = useState('09:00')
+  const [discoveryQuota, setDiscoveryQuota] = useState(50)
+  const [discoverySaving, setDiscoverySaving] = useState(false)
+  const [discoveryStatus, setDiscoveryStatus] = useState(null)
 
   // Sync edit prompt when profile loads
   useEffect(() => {

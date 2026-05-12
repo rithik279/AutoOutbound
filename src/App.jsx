@@ -493,6 +493,39 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
 
             {promptTab === 'edit' && (
               <div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={c.label}>Load template</label>
+                  <select
+                    value={selectedTemplate?.name || ''}
+                    onChange={handleTemplateSelect}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: 14, border: '1px solid #ddd', borderRadius: 8, cursor: 'pointer' }}
+                  >
+                    <option value="">— Select Template —</option>
+                    {templates.map(t => (
+                      <option key={t.name} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedTemplate && (
+                  <div style={{
+                    border: '1px solid #ddd',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 14,
+                    maxHeight: 200,
+                    overflowY: 'auto',
+                    background: '#f9f9f7',
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word'
+                  }}>
+                    {selectedTemplate.content}
+                  </div>
+                )}
+
                 <textarea
                   style={{ width: '100%', minHeight: 200, fontFamily: 'monospace', fontSize: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8 }}
                   value={editPrompt}

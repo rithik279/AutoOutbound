@@ -130,17 +130,42 @@ export function parseResearchCSV(text) {
   return companies
 }
 
-// Parse a list of "Company Name | domain.com" or just company names
+// Parse a list of "Company Name | domain.com | industry | size | location" or just company names
+// Handles both simple pipe-delimited and full CSV format
 export function parseCompanyList(text) {
-  return text.trim().split('\n')
-    .map(l => l.trim()).filter(Boolean)
-    .map((line, i) => {
-      const parts = line.split(/[|,\t]/).map(p => p.trim())
-      const name = parts[0]
-      const domain = normalizeDomain(parts[1] || (looksLikeDomain(name) ? name : ''))
-      const linkedin = parts.find(p => p.includes('linkedin.com')) || ''
-      return { id: i + 1, co: name, company: name, domain, linkedin, source: 'company_list' }
-    })
+  const lines = text.trim().split('\n').filter(l => l.trim())
+  if (lines.length === 0) return []
+
+  // Detect if first line is header
+  const firstLine = lines[0].toLowerCase()
+  const isHeader = /name|domain|industry|size|location|company/i.test(firstLine) &&
+                   (firstLine.includes('|') || firstLine.includes(',') || firstLine.includes('\t'))
+  const startIdx = isHeader ? 1 : 0
+
+  return lines.slice(startIdx).map((line, origIdx) => {
+    const i = origIdx + startIdx
+    const parts = line.split(/[|,\t]/).map(p => p.trim())
+    const name = parts[0]
+    if (!name) return null
+
+    const domain = normalizeDomain(parts[1] || (looksLikeDomain(name) ? name : ''))
+    const industry = parts[2] || ''
+    const size = parts[3] || ''
+    const location = parts[4] || ''
+    const linkedin = parts.find(p => p.includes('linkedin.com')) || ''
+
+    return {
+      id: i + 1,
+      co: name,
+      company: name,
+      domain,
+      industry,
+      size,
+      location,
+      linkedin,
+      source: 'company_list'
+    }
+  }).filter(Boolean)
 }
 
 function looksLikeDomain(value) {

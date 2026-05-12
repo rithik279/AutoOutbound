@@ -1557,6 +1557,19 @@ export default function App() {
     setEditing(null)
   }
 
+  // ── LOAD SAVED CONTACTS ────────────────────────────────────────────────────
+  async function loadSavedContacts() {
+    setLoadingContacts(true)
+    try {
+      const res = await fetch('/api/contacts')
+      const data = await res.json()
+      setSavedContacts(data.contacts || [])
+    } catch (e) {
+      console.error('Failed to load contacts:', e)
+    }
+    setLoadingContacts(false)
+  }
+
   // ── SCHEDULE SEND ───────────────────────────────────────────────────────
   async function scheduleSend() {
     const approvedContacts = contacts.filter(c => approved.has(c.id))

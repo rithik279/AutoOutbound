@@ -1027,22 +1027,17 @@ export default function App() {
   useEffect(() => {
     async function fetchStatus() {
       try {
-        const [authRes, schedRes] = await Promise.all([
+        const [authRes, schedRes, gmailRes] = await Promise.all([
           fetch('/api/token-health'),
-          fetch('/api/schedule-status')
+          fetch('/api/schedule-status'),
+          fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
         ])
         const auth = await authRes.json()
         const sched = await schedRes.json()
+        const gmail = await gmailRes.json()
         setAuthStatus(auth)
         setScheduleStatus(sched)
-        // Also poll Gmail status for friend
-        if (isFriend) {
-          try {
-            const gmailRes = await fetch('/api/gmail/token-health', { headers: { 'x-user-id': currentUser.userId } })
-            const gmail = await gmailRes.json()
-            setGmailAuthStatus(gmail)
-          } catch {}
-        }
+        setGmailAuthStatus(gmail)
       } catch {}
     }
     fetchStatus()

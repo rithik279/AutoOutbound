@@ -628,6 +628,100 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
           )}
         </div>
       )}
+
+      {/* Daily Discovery tab */}
+      {tab === 'discovery' && (
+        <div>
+          <div style={{ ...c.card, marginBottom: 14 }}>
+            <h2 style={c.h2}>Automated daily discovery</h2>
+            <p style={{ ...c.muted, marginBottom: 16 }}>After you upload companies, the system will automatically find decision-makers each day.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={c.label}>Run discovery at (HH:MM)</label>
+                <input
+                  type="time"
+                  value={discoveryTime}
+                  onChange={e => setDiscoveryTime(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+                <p style={{ ...c.small, marginTop: 6 }}>Time when discovery task runs daily (your local timezone)</p>
+              </div>
+
+              <div>
+                <label style={c.label}>Find up to N people per day</label>
+                <input
+                  type="number"
+                  value={discoveryQuota}
+                  onChange={e => setDiscoveryQuota(Math.max(1, Number(e.target.value)))}
+                  min="1"
+                  max="500"
+                  style={{ width: '100%' }}
+                />
+                <p style={{ ...c.small, marginTop: 6 }}>Recommended: 30–100. Higher = more API costs.</p>
+              </div>
+
+              <button
+                onClick={async () => {
+                  setDiscoverySaving(true)
+                  try {
+                    const res = await fetch(`${API_URL}/api/discovery/config`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
+                      body: JSON.stringify({
+                        runTime: discoveryTime,
+                        dailyQuota: discoveryQuota,
+                        enabled: true
+                      })
+                    })
+                    if (res.ok) {
+                      const data = await res.json()
+                      setDiscoveryStatus({ success: true, message: 'Discovery configured! Will run daily.' })
+                      setTimeout(() => setDiscoveryStatus(null), 4000)
+                    } else {
+                      setDiscoveryStatus({ success: false, message: 'Failed to save configuration.' })
+                    }
+                  } catch (e) {
+                    setDiscoveryStatus({ success: false, message: `Error: ${e.message}` })
+                  }
+                  setDiscoverySaving(false)
+                }}
+                disabled={discoverySaving}
+                style={c.primaryBtn}
+              >
+                {discoverySaving ? 'Saving…' : '✓ Save discovery schedule'}
+              </button>
+
+              {discoveryStatus && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    background: discoveryStatus.success ? '#d1fae5' : '#fee2e2',
+                    color: discoveryStatus.success ? '#065f46' : '#991b1b',
+                    fontSize: 13,
+                    textAlign: 'center'
+                  }}
+                >
+                  {discoveryStatus.message}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ ...c.card }}>
+            <h2 style={c.h2}>How it works</h2>
+            <ul style={{ margin: '0 0 0 20px', fontSize: 13, color: '#666', lineHeight: 1.8 }}>
+              <li>You upload a CSV of 500 companies with domains</li>
+              <li>Daily at your scheduled time, the system searches Apollo for decision-makers (Directors, VPs, CTOs, etc.)</li>
+              <li>New people are added to your Contact list</li>
+              <li>Emails are auto-drafted using your AI prompt + company data</li>
+              <li>You review & approve the batch before sending</li>
+              <li>System sends ~50 emails/day on your schedule</li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

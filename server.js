@@ -405,18 +405,26 @@ app.get('/api/token-health', async (req, res) => {
 })
 
 // ── Sent emails list ─────────────────────────────────────────────────────
-app.get('/api/sent-emails', (req, res) => {
+app.get('/api/sent-emails', async (req, res) => {
   const userId = req.headers['x-user-id'] || 'friend'
-  const queue = loadQueue()
-  const sent = queue.filter(e => e.sent && e.userId === userId)
-  res.json({ emails: sent.map(e => ({
-    to: e.to,
-    subject: e.subject,
-    company: e.company || '',
-    sentAt: e.sentAt || null,
-    failed: e.failed || false,
-    error: e.error || null
-  })) })
+  try {
+    const emails = await prisma.email.findMany({
+      where: { userId, sentAt: { not: null } },
+      orderBy: { sentAt: 'desc' }
+    })
+    res.json({ emails: emails.map(e => ({
+      id: e.id,
+      to: e.to,
+      subject: e.subject,
+      company: e.company || '',
+      sentAt: e.sentAt,
+      failed: e.failedAt !== null,
+      error: e.error || null
+    })) })
+  } catch (err) {
+    console.error('GET /api/sent-emails error:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ── Schedule queue status ─────────────────────────────────────────────────

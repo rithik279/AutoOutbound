@@ -1673,6 +1673,56 @@ export default function App() {
     setPhase('review')
   }
 
+  // ── BATCH DRAFT FOR BULK IMPORT ────────────────────────────────────────────
+  async function runBatchDrafts(contactList, companyDataMap = {}) {
+    const batch = []
+    for (let i = 0; i < contactList.length; i++) {
+      if (abortRef.current) break
+      const contact = contactList[i]
+      const companyData = companyDataMap[contact.id] || {}
+      setDraftProgress(i)
+      try {
+        // Use new draftEmail signature with companyData for category detection
+        const siteContent = await fetchSiteContent(contact.domain || contact.co)
+        const { subject, body, tokens, category, score, passed } = await draftEmail(contact, aiConfig, companyData, siteContent)
+        tokRef.current += tokens || 0
+        batch.push({
+          id: contact.id,
+          name: contact.name,
+          email: contact.email,
+          title: contact.title,
+          company: contact.company,
+          subject,
+          body,
+          category,
+          score: score || 0,
+          passed: passed !== false
+        })
+      } catch (e) {
+        // Fallback: create low-score draft
+        batch.push({
+          id: contact.id,
+          name: contact.name,
+          email: contact.email,
+          title: contact.title,
+          company: contact.company,
+          subject: `Data engineering opportunity at ${contact.company}`,
+          body: `Hi ${contact.name?.split(' ')[0]},\n\nI'm reaching out regarding a potential fit. Would you be open to a brief conversation?\n\nBest regards`,
+          category: 'unknown',
+          score: 10,
+          passed: false
+        })
+      }
+      setTotalTokens(tokRef.current)
+    }
+    setReviewBatch(batch)
+    setReviewApproved(new Set())
+    setReviewEdits({})
+    setDraftProgress(contactList.length)
+    setDraftCurrent(null)
+    setPhase('review_batch')
+  }
+
   // ── REVIEW HELPERS ──────────────────────────────────────────────────────
   const toggleFlag = id => setFlagged(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleApprove = id => setApproved(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })

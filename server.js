@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.use(express.json({ limit: '10mb' }))
+const prisma = new PrismaClient()
 
 // In-memory store for OAuth verifiers (ephemeral — good enough for one-time auth flows)
 const oauthVerifiers = new Map()

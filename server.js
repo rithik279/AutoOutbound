@@ -74,7 +74,9 @@ function scheduleEmail({ id, to, subject, body, sendAt, provider = 'outlook', us
       to: email.to,
       subject: email.subject,
       body: email.body,
-      sendAt: email.createdAt
+      sendAt: email.createdAt,
+      provider: email.provider,
+      userId: email.userId
     }))
   } catch (err) {
     console.error('[campaign] rehydration failed:', err.message)

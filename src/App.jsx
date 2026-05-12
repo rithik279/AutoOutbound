@@ -2406,9 +2406,48 @@ export default function App() {
             {scheduleError}
           </div>
         )}
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#333' }}>Send via:</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setSelectedProvider('gmail')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: selectedProvider === 'gmail' ? '2px solid #2563eb' : '1px solid #d1d5db',
+                background: selectedProvider === 'gmail' ? '#eff6ff' : '#fff',
+                color: selectedProvider === 'gmail' ? '#1e40af' : '#666',
+                fontWeight: selectedProvider === 'gmail' ? 600 : 500,
+                cursor: 'pointer',
+                fontSize: 13,
+                transition: 'all 0.2s'
+              }}
+            >
+              📧 Gmail
+            </button>
+            <button
+              onClick={() => setSelectedProvider('outlook')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: selectedProvider === 'outlook' ? '2px solid #2563eb' : '1px solid #d1d5db',
+                background: selectedProvider === 'outlook' ? '#eff6ff' : '#fff',
+                color: selectedProvider === 'outlook' ? '#1e40af' : '#666',
+                fontWeight: selectedProvider === 'outlook' ? 600 : 500,
+                cursor: 'pointer',
+                fontSize: 13,
+                transition: 'all 0.2s'
+              }}
+            >
+              📬 Outlook
+            </button>
+          </div>
+        </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={c.small}>Total spread: {Math.floor(total / 60)}h {total % 60}m · Sent via Outlook SMTP</p>
-          <button onClick={scheduleSend} disabled={!canSend} style={c.primaryBtn}>
+          <p style={c.small}>Total spread: {Math.floor(total / 60)}h {total % 60}m {selectedProvider && `· Sending via ${selectedProvider === 'gmail' ? 'Gmail' : 'Outlook'}`}</p>
+          <button onClick={scheduleSend} disabled={!canSend || !selectedProvider} style={c.primaryBtn}>
             {scheduleSending ? 'Scheduling…' : `Schedule ${N} email${N !== 1 ? 's' : ''} →`}
           </button>
         </div>

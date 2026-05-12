@@ -1049,6 +1049,23 @@ export default function App() {
   const [manualContacts, setManualContacts] = useState([])
   const [manualErr, setManualErr] = useState('')
 
+  // Import companies state
+  const [importedCompanyText, setImportedCompanyText] = useState('')
+  const [importedCompanies, setImportedCompanies] = useState([])
+  const [importedValidating, setImportedValidating] = useState(false)
+  const [importedValidated, setImportedValidated] = useState([])
+  const [importedNotFound, setImportedNotFound] = useState([])
+
+  // Batch review state (for auto-discovery emails)
+  const [batchDrafts, setBatchDrafts] = useState({})
+  const [batchApproved, setBatchApproved] = useState(new Set())
+
+  // Discovery config state
+  const [discoveryTime, setDiscoveryTime] = useState('09:00')
+  const [discoveryQuota, setDiscoveryQuota] = useState(50)
+  const [discoveryConfiguring, setDiscoveryConfiguring] = useState(false)
+  const [discoveryStatus, setDiscoveryStatus] = useState(null)
+
   // Contacts / draft state
   const [contacts, setContacts] = useState([])
   const [drafts, setDrafts] = useState({})

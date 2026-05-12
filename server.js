@@ -486,7 +486,7 @@ app.post('/api/schedule-retry', async (req, res) => {
 
 // ── Schedule campaign emails (Microsoft Graph, server-side timers) ─────────
 app.post('/api/schedule-campaign', async (req, res) => {
-  const { emails } = req.body  // [{ to, subject, body, sendAt }]
+  const { emails } = req.body  // [{ to, subject, body, sendAt, company, contactId }]
   const userId = req.headers['x-user-id'] || 'friend'
   if (!Array.isArray(emails) || !emails.length) {
     return res.status(400).json({ error: 'Missing emails array' })
@@ -496,16 +496,53 @@ app.post('/api/schedule-campaign', async (req, res) => {
   try { await getGraphToken() }
   catch (e) { return res.status(503).json({ error: e.message }) }
 
-  const queue = loadQueue()
-  const newEntries = emails.map(({ to, subject, body, sendAt, company }) => ({
-    id: crypto.randomUUID(),
-    to, subject, body, sendAt, sent: false, company: company || '', userId
-  }))
-  saveQueue([...queue, ...newEntries])
-  newEntries.forEach(scheduleEmail)
+  try {
+    const newEntries = await Promise.all(
+      emails.map(async ({ to, subject, body, sendAt, company, contactId }) => {
+        // Find or create contact
+        let contact = await prisma.contact.findUnique({ where: { email: to } })
+        if (!contact) {
+          contact = await prisma.contact.create({
+            data: {
+              email: to,
+              name: to.split('@')[0],
+              company: company || 'Unknown',
+              state: 'new',
+              source: 'campaign'
+            }
+          })
+        }
 
-  console.log(`[campaign] ${newEntries.length} emails scheduled`)
-  res.json({ ok: true, count: newEntries.length })
+        // Create email record
+        return await prisma.email.create({
+          data: {
+            to,
+            subject,
+            body,
+            userId,
+            company: company || null,
+            contactId: contact.id,
+            createdAt: new Date(sendAt)
+          }
+        })
+      })
+    )
+
+    // Schedule all emails
+    newEntries.forEach(email => scheduleEmail({
+      id: email.id,
+      to: email.to,
+      subject: email.subject,
+      body: email.body,
+      sendAt: email.createdAt.toISOString()
+    }))
+
+    console.log(`[campaign] ${newEntries.length} emails scheduled`)
+    res.json({ ok: true, count: newEntries.length })
+  } catch (err) {
+    console.error('POST /api/schedule-campaign error:', err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ── User management ───────────────────────────────────────────────────────

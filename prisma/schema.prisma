@@ -35,6 +35,7 @@ model Email {
   error     String?
   userId    String
   company   String?
+  provider  String  @default("outlook")
   contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
   contactId Int
   createdAt DateTime @default(now())

@@ -31,23 +31,19 @@ const SENDER_EMAIL  = process.env.OUTLOOK_USER || 'manmit.singh@live.com'
 const TOKENS_PATH   = join(__dirname, '.tokens.json')
 const QUEUE_PATH    = join(__dirname, '.queue.json')
 
-// ── Persistent queue helpers ───────────────────────────────────────────────
-function loadQueue() {
-  try { return existsSync(QUEUE_PATH) ? JSON.parse(readFileSync(QUEUE_PATH, 'utf8')) : [] }
-  catch { return [] }
+// ── Email scheduling with Prisma ──────────────────────────────────────────
+async function markSent(emailId) {
+  await prisma.email.update({
+    where: { id: emailId },
+    data: { sentAt: new Date(), failedAt: null }
+  })
 }
-function saveQueue(queue) {
-  writeFileSync(QUEUE_PATH, JSON.stringify(queue, null, 2))
-}
-function markSent(id) {
-  const queue = loadQueue()
-  const item = queue.find(e => e.id === id)
-  if (item) { item.sent = true; item.failed = false; item.sentAt = new Date().toISOString(); saveQueue(queue) }
-}
-function markFailed(id, error) {
-  const queue = loadQueue()
-  const item = queue.find(e => e.id === id)
-  if (item) { item.failed = true; item.error = error; saveQueue(queue) }
+
+async function markFailed(emailId, error) {
+  await prisma.email.update({
+    where: { id: emailId },
+    data: { failedAt: new Date(), error }
+  })
 }
 
 function scheduleEmail({ id, to, subject, body, sendAt }) {
@@ -55,22 +51,33 @@ function scheduleEmail({ id, to, subject, body, sendAt }) {
   setTimeout(async () => {
     try {
       await sendViaGraph({ to, subject, body })
-      markSent(id)
+      await markSent(id)
       console.log(`[campaign] sent to ${to}`)
     } catch (e) {
-      markFailed(id, e.message)
+      await markFailed(id, e.message)
       console.error(`[campaign] failed to ${to}: ${e.message}`)
     }
   }, delay)
 }
 
 // On startup, re-queue any unsent emails from a previous run
-;(function rehydrateQueue() {
-  const queue = loadQueue()
-  const pending = queue.filter(e => !e.sent)
-  if (!pending.length) return
-  console.log(`[campaign] rehydrating ${pending.length} unsent email(s) from queue`)
-  pending.forEach(scheduleEmail)
+;(async function rehydrateQueue() {
+  try {
+    const pending = await prisma.email.findMany({
+      where: { sentAt: null, failedAt: null }
+    })
+    if (!pending.length) return
+    console.log(`[campaign] rehydrating ${pending.length} unsent email(s) from database`)
+    pending.forEach(email => scheduleEmail({
+      id: email.id,
+      to: email.to,
+      subject: email.subject,
+      body: email.body,
+      sendAt: email.createdAt
+    }))
+  } catch (err) {
+    console.error('[campaign] rehydration failed:', err.message)
+  }
 })()
 
 // ── CORS for Vite dev ──────────────────────────────────────────────────────

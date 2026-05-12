@@ -2126,6 +2126,45 @@ export default function App() {
             ⚠️ {lowCount} email{lowCount !== 1 ? 's' : ''} have low scores (&lt;18/25). Review and edit before approving.
           </div>
         )}
+
+        {/* Edit modal for batch review */}
+        {reviewEditModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 600, maxHeight: '80vh', overflowY: 'auto', width: '90%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 16 }}>Edit email</h2>
+              <label style={c.label}>Subject</label>
+              <input
+                value={reviewEditSubj}
+                onChange={e => setReviewEditSubj(e.target.value)}
+                style={{ width: '100%', marginBottom: 14 }}
+              />
+              <label style={c.label}>Body</label>
+              <textarea
+                value={reviewEditBody}
+                onChange={e => setReviewEditBody(e.target.value)}
+                style={{ width: '100%', minHeight: 240, marginBottom: 14, fontFamily: 'inherit' }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={() => setReviewEditModal(null)} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={() => {
+                    setReviewEdits({
+                      ...reviewEdits,
+                      [reviewEditModal]: {
+                        subject: reviewEditSubj,
+                        body: reviewEditBody
+                      }
+                    })
+                    setReviewEditModal(null)
+                  }}
+                  style={c.primaryBtn}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }

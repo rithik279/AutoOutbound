@@ -2463,7 +2463,7 @@ export default function App() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
         <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
         <p style={{ ...c.muted, marginBottom: 32 }}>
-          Sending via Outlook SMTP starting {sendDate} at {sendTime}, every {gap} min.
+          Sending via {selectedProvider === 'gmail' ? 'Gmail' : 'Outlook'} starting {sendDate} at {sendTime}, every {gap} min.
           The server handles delivery — you can close this tab.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, maxWidth: 400, margin: '0 auto 32px' }}>

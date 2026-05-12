@@ -46,13 +46,14 @@ async function markFailed(emailId, error) {
   })
 }
 
-function scheduleEmail({ id, to, subject, body, sendAt }) {
+function scheduleEmail({ id, to, subject, body, sendAt, provider = 'outlook', userId = 'friend' }) {
   const delay = Math.max(0, new Date(sendAt).getTime() - Date.now())
   setTimeout(async () => {
     try {
-      await sendViaGraph({ to, subject, body })
+      const sendFn = provider === 'gmail' ? sendViaGmail : sendViaGraph
+      await sendFn({ to, subject, body }, userId)
       await markSent(id)
-      console.log(`[campaign] sent to ${to}`)
+      console.log(`[campaign] sent to ${to} via ${provider}`)
     } catch (e) {
       await markFailed(id, e.message)
       console.error(`[campaign] failed to ${to}: ${e.message}`)

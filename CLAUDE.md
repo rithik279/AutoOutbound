@@ -36,3 +36,14 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
+
+---
+
+## Deployment
+
+Hosted on custom domain. CI/CD pipeline:
+- Push to `main` branch triggers auto-deploy
+- **Vercel**: Handles frontend build + deploy
+- **Render**: Handles backend Node.js server
+
+No manual deployment needed — changes go live automatically on push.

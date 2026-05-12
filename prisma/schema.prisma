@@ -48,3 +48,28 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ImportedCompany {
+  id        Int     @id @default(autoincrement())
+  apolloOrgId String?
+  name      String
+  domain    String  @unique
+  industry  String?
+  size      String?
+  location  String?
+  status    String  @default("pending") // pending, validating, discovered, drafting, approved, sent
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ScheduledDiscovery {
+  id        Int     @id @default(autoincrement())
+  userId    String  @unique
+  runTime   String  // "09:00" HH:MM format
+  dailyQuota Int
+  enabled   Boolean @default(true)
+  lastRunAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

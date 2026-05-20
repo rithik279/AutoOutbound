@@ -3088,8 +3088,8 @@ export default function App() {
               setDraftConfirmError('')
               try {
                 const healthUrl = emailProvider === 'gmail'
-                  ? '/api/gmail/token-health`
-                  : '/api/token-health`
+                  ? '/api/gmail/token-health'
+                  : '/api/token-health'
                 const headers = emailProvider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
                 const res = await fetch(healthUrl, { headers })
                 const data = await res.json()

@@ -758,12 +758,12 @@ function SetupWizard({ currentUser, onComplete }) {
     setAuthLoading(true)
     const authUrl = provider === 'gmail'
       ? `/api/gmail/auth-start?userId=${currentUser.userId}`
-      : '/api/auth-start`
+      : '/api/auth-start'
     window.open(authUrl, '_blank')
     // Poll until token is ready
     const checkHealth = provider === 'gmail'
       ? `/api/gmail/token-health`
-      : '/api/token-health`
+      : '/api/token-health'
     const headers = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
     for (let i = 0; i < 40; i++) {
       await new Promise(r => setTimeout(r, 2000))

@@ -1247,7 +1247,7 @@ export default function App() {
 
   async function runReAuth() {
     setReAuthLoading(true)
-    window.open('/api/auth-start`, '_blank')
+    window.open('/api/auth-start', '_blank')
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {

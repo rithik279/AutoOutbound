@@ -339,7 +339,7 @@ Current prompt:\n${current}\n\nRespond ONLY with the full modified prompt (no co
 
   async function handleConnectGmail() {
     setGmailLoading(true)
-    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, `_blank')
+    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
     // Poll for token
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))

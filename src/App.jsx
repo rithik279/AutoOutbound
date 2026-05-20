@@ -1312,7 +1312,7 @@ export default function App() {
         <span style={{ fontSize: 12, color: '#666' }}>{authLabels.join(' · ')}</span>
         <button onClick={() => {
           if (isFriend && emailProvider === 'gmail') {
-            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, `_blank')
+            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
           } else {
             runReAuth()
           }

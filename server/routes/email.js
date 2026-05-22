@@ -47,7 +47,7 @@ const router = Router()
  */
 router.post('/schedule-campaign', async (req, res) => {
   const { emails, provider } = req.body
-  const userId = req.headers['x-user-id'] || 'friend'
+  const userId = req.userId || req.headers['x-user-id'] || 'friend'
 
   if (!Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({ error: 'Missing or empty emails array' })
@@ -68,36 +68,48 @@ router.post('/schedule-campaign', async (req, res) => {
   }
 
   try {
-    const newEntries = await Promise.all(
-      emails.map(async ({ to, subject, body, sendAt, company, contactId }) => {
-        // Find or create the contact record so every email has a linked contact
-        let contact = await prisma.contact.findUnique({ where: { email: to } })
-        if (!contact) {
-          contact = await prisma.contact.create({
+    // Concurrency-limited batch — max 10 parallel Prisma writes to avoid pool exhaustion
+    const CONCURRENCY = 10
+    const newEntries  = []
+    for (let i = 0; i < emails.length; i += CONCURRENCY) {
+      const chunk = emails.slice(i, i + CONCURRENCY)
+      const results = await Promise.all(
+        chunk.map(async ({ to, subject, body, sendAt, company, contactId }) => {
+          const scheduledAt = new Date(sendAt)
+          if (isNaN(scheduledAt.getTime())) {
+            throw new Error(`Invalid sendAt for email to ${to}: ${sendAt}`)
+          }
+
+          // Find or create the contact record so every email has a linked contact
+          let contact = await prisma.contact.findUnique({ where: { email: to } })
+          if (!contact) {
+            contact = await prisma.contact.create({
+              data: {
+                email:   to,
+                name:    to.split('@')[0],
+                company: company || 'Unknown',
+                state:   'new',
+                source:  'campaign',
+              },
+            })
+          }
+
+          return prisma.email.create({
             data: {
-              email:   to,
-              name:    to.split('@')[0],
-              company: company || 'Unknown',
-              state:   'new',
-              source:  'campaign',
+              to,
+              subject,
+              body,
+              userId,
+              company:     company || null,
+              provider,
+              contactId:   contact.id,
+              scheduledAt, // dedicated column — no longer abusing createdAt
             },
           })
-        }
-
-        return prisma.email.create({
-          data: {
-            to,
-            subject,
-            body,
-            userId,
-            company:   company   || null,
-            provider,
-            contactId: contact.id,
-            createdAt: new Date(sendAt), // createdAt doubles as the scheduled send time
-          },
         })
-      })
-    )
+      )
+      newEntries.push(...results)
+    }
 
     // Register each email with the in-process scheduler
     for (const email of newEntries) {
@@ -106,7 +118,7 @@ router.post('/schedule-campaign', async (req, res) => {
         to:       email.to,
         subject:  email.subject,
         body:     email.body,
-        sendAt:   email.createdAt.toISOString(),
+        sendAt:   email.scheduledAt.toISOString(),
         provider: email.provider,
         userId:   email.userId,
       })
@@ -131,7 +143,7 @@ router.post('/schedule-campaign', async (req, res) => {
  * Response: { total, sent, pending, failed }
  */
 router.get('/schedule-status', async (req, res) => {
-  const userId = req.headers['x-user-id'] || 'friend'
+  const userId = req.userId || req.headers['x-user-id'] || 'friend'
   try {
     const [sent, pending, failed, total] = await Promise.all([
       prisma.email.count({ where: { userId, sentAt:   { not: null } } }),
@@ -157,7 +169,7 @@ router.get('/schedule-status', async (req, res) => {
  * Response: { emails: [{ id, to, subject, company, sentAt, failed, error }] }
  */
 router.get('/sent-emails', async (req, res) => {
-  const userId = req.headers['x-user-id'] || 'friend'
+  const userId = req.userId || req.headers['x-user-id'] || 'friend'
   try {
     const emails = await prisma.email.findMany({
       where:   { userId, sentAt: { not: null } },

@@ -24,6 +24,7 @@ import { readFileSync }                     from 'fs'
 import { join }                             from 'path'
 import { loadUsers, saveUsers, hashPassword, verifyPassword } from '../lib/users.js'
 import { ROOT }                             from '../lib/config.js'
+import { loginLimiter, requireAuth }        from '../lib/middleware.js'
 
 const router = Router()
 
@@ -39,7 +40,7 @@ const router = Router()
  * Body:     { email, password }
  * Response: { ok: true, userId, name, email }
  */
-router.post('/user/login', async (req, res) => {
+router.post('/user/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body
   if (!email || !password) {
     return res.status(400).json({ error: 'email and password required' })
@@ -69,7 +70,7 @@ router.post('/user/login', async (req, res) => {
  *
  * Body: { email, name, password }
  */
-router.post('/user/signup', async (req, res) => {
+router.post('/user/signup', loginLimiter, async (req, res) => {
   const { email, name, password } = req.body
 
   if (!email?.trim() || !name?.trim() || !password?.trim()) {
@@ -116,9 +117,8 @@ router.post('/user/signup', async (req, res) => {
  * Response: { name, email, senderName, modelId, campaignMode, emailProvider,
  *             resumeText, prompt, hasGmailToken, hasOutlookToken }
  */
-router.get('/user/profile', (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+router.get('/user/profile', requireAuth, (req, res) => {
+  const userId = req.userId // set by requireAuth
 
   const users = loadUsers()
   const user  = users[userId]

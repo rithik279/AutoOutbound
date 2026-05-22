@@ -113,7 +113,7 @@ export async function rehydrateQueue() {
         to:       email.to,
         subject:  email.subject,
         body:     email.body,
-        sendAt:   email.createdAt.toISOString(),
+        sendAt:   (email.scheduledAt || email.createdAt).toISOString(), // fallback for old rows
         provider: email.provider || 'outlook',
         userId:   email.userId   || 'friend',
       })

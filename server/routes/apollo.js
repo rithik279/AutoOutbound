@@ -21,12 +21,31 @@ import fetch        from 'node-fetch'
 import mammoth      from 'mammoth'
 import { APOLLO_KEY, RESUME_PATH } from '../lib/config.js'
 import { prisma }   from '../lib/prisma.js'
+import { validateOutboundUrl, apolloLimiter } from '../lib/middleware.js'
 
 const router = Router()
 
 // ── Apollo generic proxy ──────────────────────────────────────────────────────
 
-router.post('/apollo/:path(*)', async (req, res) => {
+// Allowlist of Apollo API paths this proxy is permitted to forward.
+// Prevents callers from hitting arbitrary Apollo endpoints (e.g. billing, API key management).
+const APOLLO_PATH_ALLOWLIST = [
+  'mixed_people/api_search',
+  'organizations/enrich',
+  'organizations/bulk_enrich',
+  'people/match',
+  'people/bulk_match',
+  'contacts/search',
+  'mixed_companies/search',
+  'emailer_campaigns/search',
+]
+
+router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
+  const reqPath = req.params.path
+  const allowed = APOLLO_PATH_ALLOWLIST.some(p => reqPath.startsWith(p))
+  if (!allowed) {
+    return res.status(403).json({ error: `Apollo path not allowed: ${reqPath}` })
+  }
   // Per-request key override allows users to supply their own Apollo key
   const apolloKey = req.headers['x-apollo-key'] || APOLLO_KEY
   if (!apolloKey) {
@@ -157,7 +176,12 @@ router.post('/companies/validate-batch', async (req, res) => {
  */
 router.post('/fetch-site', async (req, res) => {
   const { url } = req.body
-  if (!url) return res.status(400).json({ error: 'Missing url' })
+
+  // SSRF protection — block private/loopback IPs and invalid URLs
+  const check = validateOutboundUrl(url)
+  if (!check.safe) {
+    return res.status(400).json({ error: `Invalid URL: ${check.reason}` })
+  }
 
   /** Fetch with an 8-second timeout. */
   const tryFetch = async (target) => {

@@ -44,6 +44,7 @@ import { migratePasswordsIfNeeded } from './server/lib/users.js'
 import { rehydrateQueue }           from './server/lib/scheduler.js'
 import { logTokenHealth }           from './server/lib/tokens.js'
 import { PORT }                     from './server/lib/config.js'
+import { requireAuth }              from './server/lib/middleware.js'
 
 import aiRouter        from './server/routes/ai.js'
 import apolloRouter    from './server/routes/apollo.js'
@@ -57,25 +58,48 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const app       = express()
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }))
+app.use(express.json({ limit: '2mb' })) // Reduced from 10mb — no legitimate use case needs more
 
-// CORS — allow the Vite dev server and production frontend to call the API
+// CORS — lock to known origins in production; allow all in dev
+const ALLOWED_ORIGINS = new Set([
+  'https://auto-outbound.rithiksingh.com',
+  'https://firstshot.rithiksingh.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+])
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin',  '*')
+  const origin = req.headers.origin
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.header('Access-Control-Allow-Origin', origin)
+  } else if (!origin) {
+    // Server-to-server or same-origin — allow
+    res.header('Access-Control-Allow-Origin', '*')
+  }
   res.header('Access-Control-Allow-Headers', 'Content-Type, x-apollo-key, x-user-id')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   if (req.method === 'OPTIONS') return res.sendStatus(200)
   next()
 })
 
+// Global 30s request timeout — prevents hanging on slow upstreams
+app.use((req, res, next) => {
+  res.setTimeout(30_000, () => {
+    res.status(503).json({ error: 'Request timed out' })
+  })
+  next()
+})
+
 // ── Routes ─────────────────────────────────────────────────────────────────────
-app.use('/api', aiRouter)
-app.use('/api', apolloRouter)
-app.use('/api', authRouter)
-app.use('/api', emailRouter)
-app.use('/api', contactsRouter)
-app.use('/api', userRouter)
-app.use('/api', discoveryRouter)
+// Public: login, signup, OAuth callbacks, health
+app.use('/api', userRouter)    // login + signup are unauthenticated; profile routes check auth internally
+app.use('/api', authRouter)    // OAuth callbacks don't carry x-user-id
+
+// Protected: everything else requires a valid x-user-id
+app.use('/api', requireAuth, aiRouter)
+app.use('/api', requireAuth, apolloRouter)
+app.use('/api', requireAuth, emailRouter)
+app.use('/api', requireAuth, contactsRouter)
+app.use('/api', requireAuth, discoveryRouter)
 
 // Simple liveness probe used by Render and monitoring tools
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }))

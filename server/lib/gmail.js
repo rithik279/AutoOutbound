@@ -35,7 +35,9 @@ import { ROOT, GMAIL } from './config.js'
  * @returns {string}
  */
 export function getGmailTokensPath(userId) {
-  return join(ROOT, `gmail_tokens_${userId}.json`)
+  // Sanitize userId to prevent path traversal — only allow alphanumeric, hyphen, underscore, dot
+  const safeId = String(userId).replace(/[^a-zA-Z0-9_\-.]/g, '_')
+  return join(ROOT, `gmail_tokens_${safeId}.json`)
 }
 
 /**

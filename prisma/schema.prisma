@@ -26,19 +26,24 @@ model Contact {
 }
 
 model Email {
-  id        Int     @id @default(autoincrement())
-  to        String
-  subject   String
-  body      String
-  sentAt    DateTime?
-  failedAt  DateTime?
-  error     String?
-  userId    String
-  company   String?
-  provider  String  @default("outlook")
-  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  contactId Int
-  createdAt DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+  to          String
+  subject     String
+  body        String
+  sentAt      DateTime?
+  failedAt    DateTime?
+  error       String?
+  userId      String
+  company     String?
+  provider    String    @default("outlook")
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId   Int
+  scheduledAt DateTime  // when this email should be sent
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([sentAt])
 }
 
 model User {
@@ -50,17 +55,20 @@ model User {
 }
 
 model ImportedCompany {
-  id        Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   apolloOrgId String?
-  name      String
-  domain    String  @unique
-  industry  String?
-  size      String?
-  location  String?
-  status    String  @default("pending") // pending, validating, discovered, drafting, approved, sent
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name        String
+  domain      String   @unique
+  industry    String?
+  size        String?
+  location    String?
+  status      String   @default("pending") // pending, validating, discovered, drafting, approved, sent
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }
 
 model ScheduledDiscovery {

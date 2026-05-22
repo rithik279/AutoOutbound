@@ -19,11 +19,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export const ROOT = join(__dirname, '..', '..')
 
 // ── AI provider keys ──────────────────────────────────────────────────────────
-export const OPENAI_KEY    = process.env.VITE_OPENAI_KEY    || ''
-export const ANTHROPIC_KEY = process.env.VITE_ANTHROPIC_KEY || ''
+// NOTE: Never use VITE_ prefix for server-only secrets — Vite inlines VITE_* vars
+// into the browser bundle at build time, exposing them publicly.
+export const OPENAI_KEY    = process.env.OPENAI_KEY    || process.env.VITE_OPENAI_KEY    || ''
+export const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY || process.env.VITE_ANTHROPIC_KEY || ''
 
 // ── Apollo.io ─────────────────────────────────────────────────────────────────
-export const APOLLO_KEY = process.env.VITE_APOLLO_KEY || ''
+export const APOLLO_KEY = process.env.APOLLO_KEY || process.env.VITE_APOLLO_KEY || ''
 
 // ── Outlook / Microsoft Graph ─────────────────────────────────────────────────
 export const OUTLOOK = {

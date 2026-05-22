@@ -20,11 +20,20 @@
 import { Router } from 'express'
 import fetch from 'node-fetch'
 import { OPENAI_KEY, ANTHROPIC_KEY } from '../lib/config.js'
+import { aiLimiter } from '../lib/middleware.js'
 
 const router = Router()
 
-router.post('/ai/chat', async (req, res) => {
+// Hard cap on max_tokens to prevent runaway spend
+const MAX_TOKENS_CAP = 4096
+
+router.post('/ai/chat', aiLimiter, async (req, res) => {
   const { model, messages, max_tokens, temperature, system } = req.body
+
+  // Validate input sizes — prevent 10MB payloads going to OpenAI
+  if (!Array.isArray(messages) || messages.length > 50) {
+    return res.status(400).json({ error: 'Invalid messages array' })
+  }
   const isAnthropic = model?.startsWith('claude')
 
   try {
@@ -39,7 +48,7 @@ router.post('/ai/chat', async (req, res) => {
         },
         body: JSON.stringify({
           model,
-          max_tokens: max_tokens || 1000,
+          max_tokens: Math.min(max_tokens || 1000, MAX_TOKENS_CAP),
           system,
           messages,
         }),
@@ -56,7 +65,7 @@ router.post('/ai/chat', async (req, res) => {
         },
         body: JSON.stringify({
           model,
-          max_tokens:  max_tokens  || 1000,
+          max_tokens:  Math.min(max_tokens || 1000, MAX_TOKENS_CAP),
           temperature: temperature ?? 0.85,
           messages,
         }),

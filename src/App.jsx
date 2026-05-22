@@ -44,7 +44,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           setCurrentUser(u)
           onUserChange?.(u)
         }
-      } catch {}
+      } catch { }
     }
   }, [])
 
@@ -55,7 +55,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       try {
         const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
         if (res.ok) setProfile(await res.json())
-      } catch {}
+      } catch { }
     }
     loadProfile()
   }, [currentUser])
@@ -150,7 +150,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       })
       const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
       if (res.ok) setProfile(await res.json())
-    } catch {}
+    } catch { }
   }
   const setCampaignModeFn = useCallback(v => {
     setProfile(p => p ? { ...p, campaignMode: v } : p)
@@ -327,7 +327,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         setAuthStatus(auth)
         setScheduleStatus(sched)
         setGmailAuthStatus(gmail)
-      } catch {}
+      } catch { }
     }
     fetchStatus()
     const id = setInterval(fetchStatus, 30000)
@@ -362,7 +362,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         const schedRes = await fetch(`${API_URL}/api/schedule-status`)
         setScheduleStatus(await schedRes.json())
       }
-    } catch {}
+    } catch { }
     setRetryLoading(false)
   }
 
@@ -372,7 +372,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const data = await res.json()
       setSentHistory(data.emails || [])
       setPhase('sent_history')
-    } catch {}
+    } catch { }
   }
 
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
@@ -544,30 +544,30 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         // Build tiers based on roleHint from research CSV, falling back to standard mode titles.
         const roleHint = (co.roleHint || '').toLowerCase()
         const isFounderHint = roleHint.includes('founder')
-        const isDataHint    = roleHint.includes('data')
-        const isEngHint     = roleHint.includes('engineer') || roleHint.includes('head of eng') || roleHint.includes('cto')
+        const isDataHint = roleHint.includes('data')
+        const isEngHint = roleHint.includes('engineer') || roleHint.includes('head of eng') || roleHint.includes('cto')
 
         const tierFounder = { label: 'Founder', params: { person_titles: ['Co-Founder', 'Founder', 'Founding Partner'], person_seniorities: ['c_suite', 'founder', 'owner', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierCTO     = { label: 'CTO / VP Eng', params: { person_titles: ['CTO', 'Chief Technology Officer', 'VP of Engineering', 'VP Engineering', 'Head of Engineering'], person_seniorities: ['c_suite', 'vp', 'head'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierCEO     = { label: 'CEO', params: { person_titles: ['CEO', 'Chief Executive Officer'], person_seniorities: ['c_suite'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierMode    = { label: 'mode titles', params: { person_titles: mode.titles, person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
-        const tierBroad   = { label: 'broad seniority', params: { person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
+        const tierCTO = { label: 'CTO / VP Eng', params: { person_titles: ['CTO', 'Chief Technology Officer', 'VP of Engineering', 'VP Engineering', 'Head of Engineering'], person_seniorities: ['c_suite', 'vp', 'head'], per_page: 3, ...orgFilter }, useFilter: false }
+        const tierCEO = { label: 'CEO', params: { person_titles: ['CEO', 'Chief Executive Officer'], person_seniorities: ['c_suite'], per_page: 3, ...orgFilter }, useFilter: false }
+        const tierMode = { label: 'mode titles', params: { person_titles: mode.titles, person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
+        const tierBroad = { label: 'broad seniority', params: { person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
 
         // Recruiter mode: add a relaxed fallback that skips title filter entirely (company context is enough)
         const isRecruiting = campaignMode === 'recruiting'
-        const tierRelaxed  = isRecruiting
+        const tierRelaxed = isRecruiting
           ? { label: 'recruiter relaxed', params: { person_titles: ['Recruiter', 'Consultant', 'Account Manager', 'Director', 'VP', 'Manager', 'Senior Associate', 'Lead', 'Partner'], person_seniorities: ['senior', 'manager', 'director', 'vp', 'head', 'c_suite', 'founder', 'partner'], per_page: 8, ...orgFilter }, useFilter: false }
           : null
 
         // C-suite catch-all — separate from other tiers, always searched last
-        const tierCSuite  = { label: 'any C-suite', params: { person_seniorities: ['c_suite', 'owner', 'founder', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
+        const tierCSuite = { label: 'any C-suite', params: { person_seniorities: ['c_suite', 'owner', 'founder', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
 
         // Order: hint-specific first, then standard tiers, then recruiter relaxed, then C-suite
         let tiers
-        if (isFounderHint)      tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierRelaxed, tierCEO, tierCSuite].filter(Boolean)
-        else if (isEngHint)     tiers = [tierCTO, tierMode, tierBroad, tierRelaxed, tierFounder, tierCEO, tierCSuite].filter(Boolean)
-        else if (isDataHint)    tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
-        else                    tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
+        if (isFounderHint) tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierRelaxed, tierCEO, tierCSuite].filter(Boolean)
+        else if (isEngHint) tiers = [tierCTO, tierMode, tierBroad, tierRelaxed, tierFounder, tierCEO, tierCSuite].filter(Boolean)
+        else if (isDataHint) tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
+        else tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
 
         let topPeople = []
         for (const tier of tiers) {
@@ -904,7 +904,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-6">
             <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
             </div>
             <span className="text-xl font-bold text-white tracking-tight">FirstShot</span>
           </div>
@@ -1085,9 +1085,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
         <button onClick={() => {
           const nextPhase = entryLevel === 'scratch' ? 'discover'
-                          : entryLevel === 'companies' ? 'companies'
-                          : entryLevel === 'bulk_import' ? 'import_companies'
-                          : 'csv'
+            : entryLevel === 'companies' ? 'companies'
+              : entryLevel === 'bulk_import' ? 'import_companies'
+                : 'csv'
           setPhase(nextPhase)
         }} style={c.primaryBtn}>
           Continue →
@@ -1187,8 +1187,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const passScore = reviewFilter.scoreThreshold === 'all'
         ? true
         : reviewFilter.scoreThreshold === '>=20' ? d.score >= 20
-        : reviewFilter.scoreThreshold === '>=18' ? d.score >= 18
-        : d.score < 18
+          : reviewFilter.scoreThreshold === '>=18' ? d.score >= 18
+            : d.score < 18
       return passCategory && passScore
     })
     const N = reviewBatch.length

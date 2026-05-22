@@ -8,7 +8,7 @@
  *   - isPrivateIP    — block SSRF to private/loopback ranges
  */
 
-import { loadUsers } from './users.js'
+import { getUser } from './users.js'
 
 // ── Simple in-memory rate limiter ────────────────────────────────────────────
 // Keyed by `${ip}:${route}`. Good enough for single-process; replace with
@@ -80,14 +80,14 @@ export const apolloLimiter = makeRateLimiter({
  *
  * Skips auth for /api/user/login and /api/user/signup (handled separately).
  */
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const userId = req.headers['x-user-id']
   if (!userId) {
     return res.status(401).json({ error: 'Missing x-user-id header' })
   }
 
-  const users = loadUsers()
-  if (!users[userId]) {
+  const user = await getUser(userId)
+  if (!user) {
     return res.status(401).json({ error: 'Unknown user — please log in again.' })
   }
 

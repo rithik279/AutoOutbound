@@ -33,8 +33,8 @@ import { RESUME_PATH } from './config.js'
  * @param {{ to: string, subject: string, body: string }} opts
  * @throws {Error} if Graph API returns a non-2xx status
  */
-export async function sendViaGraph({ to, subject, body }) {
-  const token = await getGraphToken()
+export async function sendViaGraph({ to, subject, body }, userId) {
+  const token = await getGraphToken(userId)
 
   // Attach resume if present on disk
   const attachments = []

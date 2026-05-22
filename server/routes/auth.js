@@ -2,53 +2,29 @@
  * server/routes/auth.js
  *
  * OAuth 2.0 authorization flows for Outlook (Microsoft Graph) and Gmail (Google).
- * Both flows use PKCE (Proof Key for Code Exchange) for added security.
- *
- * PKCE flow overview:
- *   1. Server generates a random `verifier` and its SHA-256 `challenge`.
- *   2. Browser redirects to provider with the `challenge` (never the verifier).
- *   3. Provider redirects back with an authorization `code`.
- *   4. Server exchanges code + verifier for access/refresh tokens.
- *   5. verifier is deleted from memory after use (prevents replay).
- *
- * Dev vs Production:
- *   In development (NODE_ENV !== 'production'), auth-start spawns a mini
- *   HTTP server on localhost:3333 (Outlook) or localhost:3334 (Gmail) to
- *   receive the OAuth callback without needing a public URL.
- *   In production, the provider calls back to /api/auth-callback directly.
+ * Uses PKCE. Tokens are stored in the User record in PostgreSQL — no file I/O.
  *
  * Routes:
  *   GET  /api/auth-start           — Start Outlook OAuth
  *   GET  /api/auth-callback        — Outlook OAuth callback (production)
- *   GET  /api/token-health         — Outlook token status
+ *   GET  /api/token-health         — Outlook token status for a user
  *   GET  /api/gmail/auth-start     — Start Gmail OAuth
  *   GET  /api/gmail/auth-callback  — Gmail OAuth callback (production)
- *   GET  /api/gmail/token-health   — Gmail token status
+ *   GET  /api/gmail/token-health   — Gmail token status for a user
  */
 
-import { Router }                                       from 'express'
-import crypto                                           from 'crypto'
-import { writeFileSync }                                from 'fs'
-import fetch                                            from 'node-fetch'
-import { oauthVerifiers }                               from '../lib/oauth-state.js'
-import { getTokenHealth }                               from '../lib/tokens.js'
-import { getGmailTokenHealth, getGmailTokensPath }      from '../lib/gmail.js'
-import { loadUsers, saveUsers }                         from '../lib/users.js'
-import { TOKENS_PATH, OUTLOOK, GMAIL }                  from '../lib/config.js'
+import { Router }        from 'express'
+import crypto            from 'crypto'
+import fetch             from 'node-fetch'
+import { oauthVerifiers }        from '../lib/oauth-state.js'
+import { getOutlookTokenHealth, saveOutlookTokens } from '../lib/tokens.js'
+import { getGmailTokenHealth, saveGmailTokens }     from '../lib/gmail.js'
+import { OUTLOOK, GMAIL }        from '../lib/config.js'
 
 const router = Router()
 
 // ── Outlook / Microsoft Graph ─────────────────────────────────────────────────
 
-/**
- * GET /api/auth-start
- *
- * Initiates the Outlook PKCE OAuth flow. In production, redirects the browser
- * to Microsoft's authorization page. In development, spawns a local callback
- * server on port 3333 to handle the redirect without a public URL.
- *
- * Query: ?userId=<string>
- */
 router.get('/auth-start', async (req, res) => {
   const userId       = req.query.userId
   const clientId     = OUTLOOK.clientId
@@ -60,7 +36,6 @@ router.get('/auth-start', async (req, res) => {
     : `http://localhost:${port}`
   const redirect = `${callbackHost}/api/auth-callback`
 
-  // PKCE: generate verifier (random) and challenge (SHA-256 of verifier)
   const verifier  = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const state     = crypto.randomBytes(8).toString('hex')
@@ -79,10 +54,8 @@ router.get('/auth-start', async (req, res) => {
   })}`
 
   if (isProd) {
-    // Production: Microsoft calls /api/auth-callback directly
     res.redirect(authUrl)
   } else {
-    // Development: spin up a local HTTP server to catch the callback
     const { createServer } = await import('http')
     const server = createServer((req, res) => {
       const url  = new URL(req.url, `http://localhost:${port}`)
@@ -97,16 +70,16 @@ router.get('/auth-start', async (req, res) => {
           body:    new URLSearchParams({ client_id: clientId, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier }),
         })
           .then(r => r.json())
-          .then(data => {
-            if (data.access_token) {
-              writeFileSync(TOKENS_PATH, JSON.stringify({
+          .then(async data => {
+            if (data.access_token && userId) {
+              await saveOutlookTokens(userId, {
                 clientId, accessToken: data.access_token, refreshToken: data.refresh_token,
                 expiresAt: Date.now() + data.expires_in * 1000,
-              }, null, 2))
-              console.log('[auth] Outlook authorized successfully (dev)')
+              })
+              console.log(`[auth] Outlook authorized for ${userId} (dev)`)
             }
           })
-          .catch(e => console.error('[auth] Dev token exchange failed:', e.message))
+          .catch(e => console.error('[auth] Dev Outlook token exchange failed:', e.message))
       }
     })
     server.on('error', e => console.error(`[auth] Dev callback server error: ${e.message}`))
@@ -115,28 +88,17 @@ router.get('/auth-start', async (req, res) => {
   }
 })
 
-/**
- * GET /api/auth-callback
- *
- * Production OAuth callback — Microsoft redirects here after the user
- * authorizes. Exchanges the authorization code for tokens and writes them
- * to .tokens.json. Also marks the user's outlookTokens flag in users.json.
- *
- * Query: ?code=<string>&state=<string>
- */
 router.get('/auth-callback', async (req, res) => {
   const { code, state } = req.query
   res.writeHead(200, { 'Content-Type': 'text/html' })
 
   if (!code || !state) {
-    res.end('<html><body><h2>Auth failed: missing code or state.</h2><p>Close and try again.</p></body></html>')
-    return
+    return res.end('<html><body><h2>Auth failed: missing code or state.</h2></body></html>')
   }
 
   const stored = oauthVerifiers.get(state)
   if (!stored) {
-    res.end('<html><body><h2>Auth failed: expired or invalid state.</h2><p>Close and try again.</p></body></html>')
-    return
+    return res.end('<html><body><h2>Auth failed: expired or invalid state.</h2><p>Close and try again.</p></body></html>')
   }
 
   oauthVerifiers.delete(state)
@@ -151,21 +113,12 @@ router.get('/auth-callback', async (req, res) => {
       body:    new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier }),
     })
     const data = await tokenRes.json()
-    if (data.access_token) {
-      writeFileSync(TOKENS_PATH, JSON.stringify({
+    if (data.access_token && userId) {
+      await saveOutlookTokens(userId, {
         clientId, accessToken: data.access_token, refreshToken: data.refresh_token,
         expiresAt: Date.now() + data.expires_in * 1000,
-      }, null, 2))
-
-      // Mark user as having Outlook tokens (used by the frontend to show "Connected")
-      if (userId) {
-        const users = loadUsers()
-        if (users[userId]) {
-          users[userId].outlookTokens = true
-          saveUsers(users)
-        }
-      }
-      console.log('[auth] Outlook authorized successfully (production)')
+      })
+      console.log(`[auth] Outlook authorized for ${userId} (production)`)
     } else {
       console.error('[auth] Outlook token exchange failed:', data)
     }
@@ -174,30 +127,14 @@ router.get('/auth-callback', async (req, res) => {
   }
 })
 
-/**
- * GET /api/token-health
- *
- * Returns the current status of the stored Outlook access token.
- * Used by the frontend status bar to show connection health.
- *
- * Response: { ok: boolean, status: string, minutesLeft: number }
- */
-router.get('/token-health', (req, res) => {
-  const h = getTokenHealth()
-  const ok = h.status === 'ok' || h.status === 'warning'
-  res.json({ ok, ...h })
+router.get('/token-health', async (req, res) => {
+  const userId = req.headers['x-user-id'] || req.query.userId || 'friend'
+  const h = await getOutlookTokenHealth(userId)
+  res.json({ ok: h.status === 'ok' || h.status === 'warning', ...h })
 })
 
 // ── Gmail / Google OAuth ──────────────────────────────────────────────────────
 
-/**
- * GET /api/gmail/auth-start
- *
- * Initiates the Gmail PKCE OAuth flow. Same pattern as Outlook above.
- * State encodes userId so the callback knows which user to update.
- *
- * Query: ?userId=<string>
- */
 router.get('/gmail/auth-start', async (req, res) => {
   const clientId = GMAIL.clientId
   const redirect = GMAIL.redirectUri
@@ -209,7 +146,6 @@ router.get('/gmail/auth-start', async (req, res) => {
   const userId    = req.query.userId || 'friend'
   const verifier  = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
-  // Encode userId in state so the callback can identify the user
   const state     = `${userId}:${crypto.randomBytes(8).toString('hex')}`
 
   oauthVerifiers.set(state, { verifier, clientId, userId, redirect })
@@ -222,7 +158,7 @@ router.get('/gmail/auth-start', async (req, res) => {
     access_type:           'offline',
     code_challenge:        challenge,
     code_challenge_method: 'S256',
-    prompt:                'consent', // Force refresh_token issuance
+    prompt:                'consent',
     state,
   })}`
 
@@ -246,16 +182,12 @@ router.get('/gmail/auth-start', async (req, res) => {
           body:    new URLSearchParams({ client_id: clientId, client_secret: GMAIL.clientSecret, code, redirect_uri: redirect, grant_type: 'authorization_code', code_verifier: verifier }),
         })
           .then(r => r.json())
-          .then(data => {
+          .then(async data => {
             if (data.access_token) {
-              writeFileSync(getGmailTokensPath(userId), JSON.stringify({
+              await saveGmailTokens(userId, {
                 clientId, accessToken: data.access_token, refreshToken: data.refresh_token,
                 expiresAt: Date.now() + data.expires_in * 1000,
-              }, null, 2))
-              const users = loadUsers()
-              users[userId] = users[userId] || {}
-              users[userId].gmailTokens = true
-              saveUsers(users)
+              })
               console.log(`[auth] Gmail authorized for ${userId} (dev)`)
             }
           })
@@ -268,25 +200,17 @@ router.get('/gmail/auth-start', async (req, res) => {
   }
 })
 
-/**
- * GET /api/gmail/auth-callback
- *
- * Production Gmail OAuth callback. Exchanges code for tokens and writes them
- * to gmail_tokens_<userId>.json. Marks user's gmailTokens flag in users.json.
- */
 router.get('/gmail/auth-callback', async (req, res) => {
   const { code, state } = req.query
   res.writeHead(200, { 'Content-Type': 'text/html' })
 
   if (!code || !state) {
-    res.end('<html><body><h2>Gmail auth failed: missing code or state.</h2><p>Close and try again.</p></body></html>')
-    return
+    return res.end('<html><body><h2>Gmail auth failed: missing code or state.</h2></body></html>')
   }
 
   const stored = oauthVerifiers.get(state)
   if (!stored) {
-    res.end('<html><body><h2>Gmail auth failed: expired or invalid state.</h2><p>Close and try again.</p></body></html>')
-    return
+    return res.end('<html><body><h2>Gmail auth failed: expired or invalid state.</h2><p>Close and try again.</p></body></html>')
   }
 
   oauthVerifiers.delete(state)
@@ -302,14 +226,10 @@ router.get('/gmail/auth-callback', async (req, res) => {
     })
     const data = await tokenRes.json()
     if (data.access_token) {
-      writeFileSync(getGmailTokensPath(userId), JSON.stringify({
+      await saveGmailTokens(userId, {
         clientId, accessToken: data.access_token, refreshToken: data.refresh_token,
         expiresAt: Date.now() + data.expires_in * 1000,
-      }, null, 2))
-      const users = loadUsers()
-      users[userId] = users[userId] || {}
-      users[userId].gmailTokens = true
-      saveUsers(users)
+      })
       console.log(`[auth] Gmail authorized for ${userId} (production)`)
     } else {
       console.error('[auth] Gmail token exchange failed:', data)
@@ -319,17 +239,10 @@ router.get('/gmail/auth-callback', async (req, res) => {
   }
 })
 
-/**
- * GET /api/gmail/token-health
- *
- * Returns the Gmail token status for a user.
- * Query / header: x-user-id or defaults to 'friend'.
- */
-router.get('/gmail/token-health', (req, res) => {
+router.get('/gmail/token-health', async (req, res) => {
   const userId = req.headers['x-user-id'] || 'friend'
-  const h      = getGmailTokenHealth(userId)
-  const ok     = h.status === 'ok' || h.status === 'warning'
-  res.json({ ok, ...h })
+  const h      = await getGmailTokenHealth(userId)
+  res.json({ ok: h.status === 'ok' || h.status === 'warning', ...h })
 })
 
 export default router

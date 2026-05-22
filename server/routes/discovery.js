@@ -44,7 +44,7 @@ const router = Router()
  * @param {number} [limit=50]  max companies to process per run
  * @returns {Promise<{ found: number, skipped: number, contacted: number }>}
  */
-async function runDiscovery(userId, limit = 50) {
+export async function runDiscovery(userId, limit = 50) {
   // Load discovery configuration — throws if not configured yet
   const config = await prisma.scheduledDiscovery.findUnique({ where: { userId } })
   if (!config) throw new Error('Discovery not configured — set up a schedule first')

@@ -1,102 +1,134 @@
 /**
  * server/lib/users.js
  *
- * User account management backed by a local JSON file (users.json).
- * Passwords are stored as bcrypt hashes — never plaintext.
+ * User account management backed by PostgreSQL via Prisma.
+ * Replaces the previous users.json flat-file store.
  *
- * Why JSON file instead of Prisma?
- *   The app was originally built with a flat-file store and migrating
- *   auth to the database is a larger task. The file is gitignored and
- *   only exists on the server. For multi-server deployments, migrate to
- *   a database-backed store using the Prisma User model.
+ * Passwords are stored as bcrypt hashes — never plaintext.
+ * OAuth tokens (Gmail, Outlook) are stored as JSON in the User record,
+ * so they survive server restarts and Render deploys.
  *
  * Exports:
- *   loadUsers()                  → { [userId]: UserRecord }
- *   saveUsers(users)             → void
- *   hashPassword(plain)          → Promise<string>   (bcrypt hash, cost=10)
+ *   getUser(userId)              → Promise<User | null>
+ *   getUserByEmail(email)        → Promise<User | null>
+ *   createUser(data)             → Promise<User>
+ *   updateUser(userId, data)     → Promise<User>
+ *   hashPassword(plain)          → Promise<string>
  *   verifyPassword(plain, hash)  → Promise<boolean>
- *   migratePasswordsIfNeeded()   → Promise<void>    (run once at startup)
+ *   migratePasswordsIfNeeded()   → Promise<void>  (no-op — kept for compat)
+ *
+ * Legacy compat shims (drop after full migration):
+ *   loadUsers()                  → object  (loads all users as { [id]: User })
+ *   saveUsers(users)             → void    (no-op — writes go through updateUser)
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs'
 import bcrypt from 'bcryptjs'
-import { USERS_PATH } from './config.js'
+import { prisma } from './prisma.js'
 
 const BCRYPT_ROUNDS = 10
 
-// ── Raw file I/O ──────────────────────────────────────────────────────────────
-
-/**
- * Load all users from disk. Returns an empty object if the file doesn't exist
- * or is corrupted — never throws.
- *
- * @returns {{ [userId: string]: object }}
- */
-export function loadUsers() {
-  try {
-    return existsSync(USERS_PATH) ? JSON.parse(readFileSync(USERS_PATH, 'utf8')) : {}
-  } catch {
-    return {}
-  }
-}
-
-/**
- * Persist the full users map to disk (synchronous write, fine for low traffic).
- *
- * @param {{ [userId: string]: object }} users
- */
-export function saveUsers(users) {
-  writeFileSync(USERS_PATH, JSON.stringify(users, null, 2))
-}
-
 // ── Password helpers ──────────────────────────────────────────────────────────
 
-/**
- * Hash a plaintext password with bcrypt.
- *
- * @param {string} plain
- * @returns {Promise<string>} bcrypt hash
- */
 export async function hashPassword(plain) {
   return bcrypt.hash(plain, BCRYPT_ROUNDS)
 }
 
-/**
- * Compare a plaintext candidate against a stored bcrypt hash.
- *
- * @param {string} plain
- * @param {string} hash
- * @returns {Promise<boolean>}
- */
 export async function verifyPassword(plain, hash) {
   return bcrypt.compare(plain, hash)
 }
 
-// ── One-time startup migration ────────────────────────────────────────────────
+// ── CRUD ──────────────────────────────────────────────────────────────────────
+
+export async function getUser(userId) {
+  return prisma.user.findUnique({ where: { id: userId } })
+}
+
+export async function getUserByEmail(email) {
+  return prisma.user.findUnique({ where: { email } })
+}
+
+export async function createUser(data) {
+  return prisma.user.create({ data })
+}
+
+export async function updateUser(userId, data) {
+  return prisma.user.upsert({
+    where:  { id: userId },
+    update: data,
+    create: { id: userId, email: data.email || '', ...data },
+  })
+}
+
+// ── Legacy shims — used by routes that haven't been fully migrated ─────────────
+// These block-read all users from DB and return the old { [id]: obj } shape.
+// They are synchronous-looking but actually async — callers must await.
+
+export async function loadUsers() {
+  const rows = await prisma.user.findMany()
+  const map  = {}
+  for (const u of rows) map[u.id] = u
+  return map
+}
+
+// saveUsers is a no-op — individual saves go through updateUser()
+// Kept so any call sites don't crash during migration.
+export function saveUsers(_users) {
+  // intentional no-op
+}
+
+// ── Startup migration ─────────────────────────────────────────────────────────
 
 /**
- * Migrate any plaintext passwords to bcrypt hashes.
- *
- * Called once at server startup. Bcrypt hashes always start with '$2b$', so
- * any password that doesn't have that prefix is assumed to be plaintext.
- * After migration, the file is written back to disk.
- *
- * Safe to call multiple times — already-hashed passwords are left unchanged.
+ * Kept for compatibility — previously migrated plaintext passwords in users.json.
+ * Now a no-op since all passwords are stored as bcrypt hashes in the DB from creation.
+ * Also seeds any accounts from the legacy users.json file if it still exists.
  */
 export async function migratePasswordsIfNeeded() {
-  const users = loadUsers()
-  let changed = false
+  // Try to seed from users.json if it exists (one-time migration)
+  try {
+    const { existsSync, readFileSync } = await import('fs')
+    const { USERS_PATH } = await import('./config.js')
+    if (!existsSync(USERS_PATH)) return
 
-  for (const [id, user] of Object.entries(users)) {
-    if (user.password && !user.password.startsWith('$2b$') && !user.password.startsWith('$2a$')) {
-      console.log(`[users] Migrating password for user ${id} to bcrypt hash`)
-      users[id].password = await hashPassword(user.password)
-      changed = true
+    const raw = JSON.parse(readFileSync(USERS_PATH, 'utf8'))
+    const ids = Object.keys(raw)
+    if (ids.length === 0) return
+
+    let migrated = 0
+    for (const [id, u] of Object.entries(raw)) {
+      const exists = await prisma.user.findUnique({ where: { id } })
+      if (exists) continue
+
+      let password = u.password || ''
+      // Migrate plaintext passwords to bcrypt if needed
+      if (password && !password.startsWith('$2b$') && !password.startsWith('$2a$')) {
+        password = await hashPassword(password)
+      }
+
+      await prisma.user.create({
+        data: {
+          id,
+          email:         u.email         || '',
+          name:          u.name          || '',
+          password,
+          senderName:    u.senderName    || u.name || '',
+          senderEmail:   u.senderEmail   || u.email || '',
+          modelId:       u.modelId       || 'gpt-4o-mini',
+          campaignMode:  u.campaignMode  || 'startup',
+          emailProvider: u.emailProvider || 'gmail',
+          resumeText:    u.resumeText    || null,
+          prompt:        u.prompt        || null,
+        },
+      })
+      migrated++
     }
-  }
-
-  if (changed) {
-    saveUsers(users)
-    console.log('[users] Password migration complete')
+    if (migrated > 0) {
+      console.log(`[users] Migrated ${migrated} user(s) from users.json → database`)
+    }
+  } catch (e) {
+    // Non-fatal — if users.json doesn't exist or parse fails, just continue
+    if (!e.message?.includes('ENOENT')) {
+      console.error('[users] Migration from users.json failed:', e.message)
+    }
   }
 }

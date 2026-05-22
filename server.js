@@ -40,11 +40,11 @@ import { join } from 'path'
 import { fileURLToPath } from 'url'
 import { dirname }       from 'path'
 
-import { migratePasswordsIfNeeded } from './server/lib/users.js'
-import { rehydrateQueue }           from './server/lib/scheduler.js'
-import { logTokenHealth }           from './server/lib/tokens.js'
-import { PORT }                     from './server/lib/config.js'
-import { requireAuth }              from './server/lib/middleware.js'
+import { migratePasswordsIfNeeded }        from './server/lib/users.js'
+import { rehydrateQueue, startWorkers }    from './server/lib/queue.js'
+import { logTokenHealth }                  from './server/lib/tokens.js'
+import { PORT }                            from './server/lib/config.js'
+import { requireAuth }                     from './server/lib/middleware.js'
 
 import aiRouter        from './server/routes/ai.js'
 import apolloRouter    from './server/routes/apollo.js'
@@ -114,13 +114,17 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ── Startup tasks ──────────────────────────────────────────────────────────────
-// Migrate plaintext passwords to bcrypt hashes (safe to run on every boot)
+// Migrate users from users.json → Postgres (one-time, no-op if already done)
 await migratePasswordsIfNeeded()
 
-// Re-schedule any emails that were pending when the server last shut down
+// Start pg-boss job queue workers (send-email + run-discovery)
+// and wire the daily discovery cron
+await startWorkers()
+
+// Rehydrate any emails that were pending before last shutdown into pg-boss
 await rehydrateQueue()
 
-// Log Outlook token health every 10 minutes so expiry is visible in logs
+// Log Outlook token health every 10 minutes
 setInterval(logTokenHealth, 10 * 60_000)
 
 // ── Start server ───────────────────────────────────────────────────────────────

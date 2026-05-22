@@ -77,7 +77,7 @@ export function scheduleEmail({ id, to, subject, body, sendAt, provider = 'outlo
   setTimeout(async () => {
     try {
       const sendFn = provider === 'gmail' ? sendViaGmail : sendViaGraph
-      await sendFn({ to, subject, body }, userId)
+      await sendFn({ to, subject, body }, userId) // userId passed to both — Graph needs it for DB token lookup
       await markSent(id)
       console.log(`[scheduler] Sent to ${to} via ${provider}`)
     } catch (e) {

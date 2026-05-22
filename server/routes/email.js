@@ -22,11 +22,11 @@
  *   transaction would require Prisma's interactive transactions which add latency.
  */
 
-import { Router }         from 'express'
-import { prisma }         from '../lib/prisma.js'
-import { scheduleEmail }  from '../lib/scheduler.js'
-import { getGraphToken }  from '../lib/tokens.js'
-import { getGmailToken }  from '../lib/gmail.js'
+import { Router }              from 'express'
+import { prisma }              from '../lib/prisma.js'
+import { scheduleEmailJob }    from '../lib/queue.js'
+import { getGraphToken }       from '../lib/tokens.js'
+import { getGmailToken }       from '../lib/gmail.js'
 
 const router = Router()
 
@@ -111,9 +111,9 @@ router.post('/schedule-campaign', async (req, res) => {
       newEntries.push(...results)
     }
 
-    // Register each email with the in-process scheduler
+    // Register each email with pg-boss (idempotent — safe to call multiple times)
     for (const email of newEntries) {
-      scheduleEmail({
+      await scheduleEmailJob({
         id:       email.id,
         to:       email.to,
         subject:  email.subject,
@@ -203,27 +203,27 @@ router.get('/sent-emails', async (req, res) => {
  * Response: { ok: true, count: number }
  */
 router.post('/schedule-retry', async (req, res) => {
+  const userId = req.userId || req.headers['x-user-id'] || 'friend'
   // Verify auth before retrying — if the token is still expired retries will fail again
-  try { await getGraphToken() }
+  try { await getGraphToken(userId) }
   catch (e) { return res.status(503).json({ error: e.message }) }
-
-  const userId = req.headers['x-user-id'] || 'friend'
   try {
     const failed = await prisma.email.findMany({
       where: { userId, failedAt: { not: null } },
     })
     if (!failed.length) return res.json({ ok: true, count: 0 })
 
-    // Stagger retries 2 minutes apart to avoid hitting rate limits
+    // Stagger retries 2 minutes apart, clear failedAt so pg-boss will accept the job
     for (const [i, email] of failed.entries()) {
       const sendAt = new Date(Date.now() + i * 2 * 60_000).toISOString()
-      scheduleEmail({
+      await prisma.email.update({ where: { id: email.id }, data: { failedAt: null, error: null } })
+      await scheduleEmailJob({
         id:       email.id,
         to:       email.to,
         subject:  email.subject,
         body:     email.body,
         sendAt,
-        provider: email.provider || 'outlook',
+        provider: email.provider || 'gmail',
         userId:   email.userId   || 'friend',
       })
     }

@@ -200,13 +200,13 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/app')}
+              onClick={() => navigate('/app?login')}
               className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
             >
               Sign in
             </button>
             <button
-              onClick={() => navigate('/app')}
+              onClick={() => navigate('/app?login')}
               className="text-sm font-semibold bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg transition-all duration-200"
             >
               Get started free →
@@ -257,7 +257,7 @@ export default function Landing() {
               className="flex items-center gap-3 justify-center lg:justify-start"
             >
               <button
-                onClick={() => navigate('/app')}
+                onClick={() => navigate('/app?login')}
                 className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 hover:shadow-glow hover:-translate-y-px text-sm"
               >
                 Take your first shot <ArrowRight size={15} />
@@ -436,7 +436,7 @@ export default function Landing() {
                 No catch. We want you to land the interview first — everything else can wait.
               </p>
               <button
-                onClick={() => navigate('/app')}
+                onClick={() => navigate('/app?login')}
                 className="inline-flex items-center gap-2 bg-white text-navy-900 font-bold px-8 py-3.5 rounded-xl hover:bg-gray-100 transition-all duration-200 hover:-translate-y-px shadow-lg text-sm"
               >
                 Take your first shot <ArrowRight size={15} />
@@ -485,7 +485,7 @@ export default function Landing() {
             Built by a first-year who took the shot. © 2025 FirstShot.
           </div>
           <div className="flex gap-5 text-[11px] text-gray-600">
-            <button onClick={() => navigate('/app')} className="hover:text-white transition-colors">Sign in</button>
+            <button onClick={() => navigate('/app?login')} className="hover:text-white transition-colors">Sign in</button>
             <a href="mailto:Singh.Manmit@gmail.com" className="hover:text-white transition-colors">Contact</a>
           </div>
         </div>

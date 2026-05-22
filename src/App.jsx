@@ -28,8 +28,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [loginError, setLoginError] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // Load session from localStorage on mount
+  // Load session from localStorage on mount (skip if ?login param forces login screen)
   useEffect(() => {
+    const forceLogin = new URLSearchParams(window.location.search).has('login')
+    if (forceLogin) {
+      localStorage.removeItem('session')
+      return
+    }
     const raw = localStorage.getItem('session')
     if (raw) {
       try {

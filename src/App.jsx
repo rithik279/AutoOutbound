@@ -1024,7 +1024,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
 
         <p className="text-center text-xs text-gray-500 mt-5">
-          Free during beta · Unlimited sends · No credit card
+          Free unlimited sends · First month · No credit card
         </p>
       </div>
     </div>

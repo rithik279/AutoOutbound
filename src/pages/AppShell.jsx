@@ -38,9 +38,10 @@ export default function AppShell() {
       )}
 
       {/* SIDEBAR — only when logged in */}
+      {currentUser && (
       <aside className={cn(
         'fixed lg:relative inset-y-0 left-0 z-30 w-56 bg-white border-r border-surface-200 flex flex-col transition-transform duration-200',
-        !currentUser ? 'hidden' : (sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
         {/* Logo */}
         <div className="h-14 flex items-center gap-2.5 px-4 border-b border-surface-100">
@@ -100,6 +101,7 @@ export default function AppShell() {
           </div>
         )}
       </aside>
+      )}
 
       {/* MAIN */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

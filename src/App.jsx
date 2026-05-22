@@ -390,24 +390,32 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
   const hasFailed = scheduleStatus?.failed > 0
   const statusBar = (wide = false) => (
-    <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '8px 14px', background: '#f7f7f5', borderRadius: 10, marginBottom: 18, border: '1px solid #eee' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: activeAuthColor }} />
-        <span style={{ fontSize: 12, color: '#666' }}>{authLabels.join(' · ')}</span>
-        <button onClick={() => {
-          if (isFriend && emailProvider === 'gmail') {
-            window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
-          } else {
-            runReAuth()
-          }
-        }} disabled={reAuthLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#111', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+    <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-100 rounded-xl mb-5 shadow-sm text-xs flex-wrap">
+      <div className="flex items-center gap-2">
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: activeAuthColor, flexShrink: 0 }} />
+        <span className="text-gray-500 font-medium">{authLabels.join(' · ')}</span>
+        <button
+          onClick={() => {
+            if (isFriend && emailProvider === 'gmail') {
+              window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+            } else {
+              runReAuth()
+            }
+          }}
+          disabled={reAuthLoading}
+          className="px-2 py-0.5 bg-gray-900 text-white rounded-md text-[11px] font-medium hover:bg-gray-700 transition-colors disabled:opacity-40"
+        >
           {reAuthLoading ? 'Opening…' : 'Re-authorize'}
         </button>
       </div>
-      <div style={{ width: 1, height: 16, background: '#ddd' }} />
-      <span style={{ fontSize: 12, color: '#666' }}>Jobs: {schedLabel}</span>
+      <div className="w-px h-3.5 bg-gray-200" />
+      <span className="text-gray-400">Queue: <span className="text-gray-600 font-medium">{schedLabel}</span></span>
       {hasFailed && (
-        <button onClick={runRetryFailed} disabled={retryLoading} style={{ fontSize: 11, padding: '2px 8px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+        <button
+          onClick={runRetryFailed}
+          disabled={retryLoading}
+          className="px-2 py-0.5 bg-red-500 text-white rounded-md text-[11px] font-medium hover:bg-red-600 transition-colors disabled:opacity-40"
+        >
           {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
         </button>
       )}
@@ -1017,8 +1025,15 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     </div>
   )
 
+  // Wrap all authenticated pages in consistent layout container
+  const wrap = (children) => (
+    <div className="px-6 py-6 max-w-5xl mx-auto min-h-full">
+      {children}
+    </div>
+  )
+
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
-  if (phase === 'entry') return (
+  if (phase === 'entry') return wrap(
     <EntryPage
       entryLevel={entryLevel}
       setEntryLevel={setEntryLevel}
@@ -1032,7 +1047,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── SETTINGS ────────────────────────────────────────────────────────────
-  if (phase === 'settings') return (
+  if (phase === 'settings') return wrap(
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
@@ -1077,7 +1092,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── IMPORT COMPANIES (bulk CSV upload + Apollo validation) ──────────────────
-  if (phase === 'import_companies') return (
+  if (phase === 'import_companies') return wrap(
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1177,7 +1192,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     const lowCount = reviewBatch.filter(d => d.score < 18).length
     const categories = [...new Set(reviewBatch.map(d => d.category))].sort()
 
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1289,7 +1304,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                 {filtered.map((draft, i) => {
                   const isApproved = reviewApproved.has(draft.id)
                   const scoreColor = draft.score >= 20 ? '#16a34a' : draft.score >= 18 ? '#d97706' : '#dc2626'
-                  return (
+                  return wrap(
                     <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isApproved ? '#f0fdf4' : 'transparent' }}>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <input
@@ -1381,7 +1396,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   }
 
   // ── LEVEL 0: PROMPT DISCOVERY ───────────────────────────────────────────
-  if (phase === 'discover') return (
+  if (phase === 'discover') return wrap(
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1451,7 +1466,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── LEVEL 1: COMPANY LIST → APOLLO ──────────────────────────────────────
-  if (phase === 'companies') return (
+  if (phase === 'companies') return wrap(
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1631,7 +1646,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── LEVEL 2: CSV ────────────────────────────────────────────────────────
-  else if (phase === 'csv') return (
+  else if (phase === 'csv') return wrap(
     <div>
       {statusBar()}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1699,7 +1714,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
   // ── LEVEL 3: MANUAL CONTACTS INPUT ──────────────────────────────────────
   if (phase === 'contacts_input')
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1739,7 +1754,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   // ── DRAFTING ─────────────────────────────────────────────────────────────
   if (phase === 'drafting') {
     const N = contacts.length
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1760,7 +1775,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
           {contacts.slice(0, draftProgress + 1).reverse().map(ct => {
             const d = drafts[ct.id]
-            return (
+            return wrap(
               <div key={ct.id} style={{ ...c.card, padding: '9px 14px', display: 'flex', gap: 10, alignItems: 'center', opacity: d ? 1 : 0.5 }}>
                 <Avatar name={ct.name} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1790,7 +1805,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     const editedCount = Object.values(drafts).filter(d => d?.status === 'edited').length
     const fallbackCount = Object.values(drafts).filter(d => d?.status === 'fallback').length
 
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -1830,7 +1845,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             {contacts.map(ct => {
               const d = drafts[ct.id]
               const isSel = sel?.id === ct.id
-              return (
+              return wrap(
                 <div key={ct.id} onClick={() => { setSelected(ct); setEditing(null) }} style={c.sideItem(isSel)}>
                   <Avatar name={ct.name} size={26} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1906,7 +1921,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     const endM = (sh * 60 + sm + total) % 60
     const canSend = N > 0 && sendDate && sendTime && !scheduleSending
 
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1936,7 +1951,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               const tm = sh * 60 + sm + i * gap
               const hh = Math.floor(tm / 60) % 24, mm = tm % 60
               const d = drafts[ct.id]
-              return (
+              return wrap(
                 <div key={ct.id} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, padding: '6px 0', borderBottom: '1px solid #f0f0ec' }}>
                   <span style={{ ...c.muted, minWidth: 40, fontFamily: 'monospace', fontSize: 11 }}>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</span>
                   <Avatar name={ct.name} size={20} />
@@ -2003,7 +2018,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   }
 
   // ── SENT ──────────────────────────────────────────────────────────────────
-  if (phase === 'sent') return (
+  if (phase === 'sent') return wrap(
     <SentPage
       sentCount={sentCount}
       selectedProvider={selectedProvider}
@@ -2016,7 +2031,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── MY CONTACTS ───────────────────────────────────────────────────────────
-  if (phase === 'my_contacts') return (
+  if (phase === 'my_contacts') return wrap(
     <MyContactsPage
       savedContacts={savedContacts}
       loadingContacts={loadingContacts}
@@ -2027,7 +2042,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   )
 
   // ── SENT HISTORY ──────────────────────────────────────────────────────────
-  if (phase === 'sent_history') return (
+  if (phase === 'sent_history') return wrap(
     <SentHistoryPage
       sentHistory={sentHistory}
       setPhase={setPhase}
@@ -2038,7 +2053,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   // ── DRAFT CONFIRMATION (friend: use existing or edit before drafting) ──
   if (draftConfirmContacts) {
     const contacts = draftConfirmContacts
-    return (
+    return wrap(
       <div>
         {statusBar()}
         <div style={{ ...c.card, maxWidth: 560, margin: '40px auto' }}>

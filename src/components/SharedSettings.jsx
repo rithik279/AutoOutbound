@@ -1,40 +1,20 @@
 import { useState, useEffect } from 'react'
 import c from '../styles.js'
 import { MODELS, CAMPAIGN_MODES } from '../constants.js'
+import { User, FileText, Zap, Mail, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-/**
- * Settings panel shown inside the main app (not the first-run wizard).
- *
- * Props:
- *   profile            — full profile object from server
- *   localSenderName    — controlled input state (lifted to App)
- *   setLocalSenderName
- *   localSenderEmail
- *   setLocalSenderEmail
- *   onUpdateProfile    — async fn({ field: value }) → saves and reloads profile
- *   setCampaignModeFn  — saves campaign mode to server + updates local state
- *   setModelIdFn       — saves model id to server + updates local state
- *   campaignMode       — current mode string
- *   modelId            — current model id string
- *   currentUser        — { userId, name, email }
- *   emailProvider      — 'gmail' | 'outlook'
- *   setEmailProvider   — updates provider in App state
- *   setProfile         — allows this component to push a refreshed profile up
- */
 export default function SharedSettings({
   profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail,
   onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId,
   currentUser, emailProvider, setEmailProvider, setProfile,
 }) {
-  const [tab, setTab] = useState('profile') // profile | resume | prompt | email | discovery
+  const [tab, setTab] = useState('profile')
 
-  // Resume tab
   const [resumeStatus, setResumeStatus] = useState('')
 
-  // Prompt tab
-  const [promptTab, setPromptTab]         = useState('chat') // chat | edit
+  const [promptTab, setPromptTab]         = useState('chat')
   const [promptChat, setPromptChat]       = useState([])
   const [promptInput, setPromptInput]     = useState('')
   const [promptLoading, setPromptLoading] = useState(false)
@@ -43,11 +23,9 @@ export default function SharedSettings({
   const [templates, setTemplates]         = useState([])
   const [selectedTemplate, setSelectedTemplate] = useState(null)
 
-  // Email tab
   const [gmailStatus, setGmailStatus]   = useState(null)
   const [gmailLoading, setGmailLoading] = useState(false)
 
-  // Discovery tab
   const [discoveryTime, setDiscoveryTime]     = useState('09:00')
   const [discoveryQuota, setDiscoveryQuota]   = useState(50)
   const [discoverySaving, setDiscoverySaving] = useState(false)
@@ -140,25 +118,27 @@ export default function SharedSettings({
   }
 
   const tabs = [
-    { id: 'profile',   label: 'Profile',         icon: '👤' },
-    { id: 'resume',    label: 'Resume',           icon: '📄' },
-    { id: 'prompt',    label: 'AI Prompt',        icon: '✏️' },
-    { id: 'email',     label: 'Email Account',    icon: '📧' },
-    { id: 'discovery', label: 'Daily Discovery',  icon: '🔄' },
+    { id: 'profile',   label: 'Profile',        icon: <User size={14} /> },
+    { id: 'resume',    label: 'Resume',          icon: <FileText size={14} /> },
+    { id: 'prompt',    label: 'AI Prompt',       icon: <Zap size={14} /> },
+    { id: 'email',     label: 'Email Account',   icon: <Mail size={14} /> },
+    { id: 'discovery', label: 'Daily Discovery', icon: <RefreshCw size={14} /> },
   ]
 
   return (
     <div>
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl">
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8,
-            cursor: 'pointer',
-            background: tab === t.id ? '#111' : '#fff',
-            color:      tab === t.id ? '#fff' : '#555',
-            border:     tab === t.id ? 'none' : '1px solid #ddd',
-          }}>
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 justify-center ${
+              tab === t.id
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
             {t.icon} {t.label}
           </button>
         ))}
@@ -166,58 +146,72 @@ export default function SharedSettings({
 
       {/* ── Profile ── */}
       {tab === 'profile' && (
-        <div>
-          <div style={{ ...c.card, marginBottom: 14 }}>
-            <h2 style={c.h2}>Your details</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Your details</h2>
+            <div className="space-y-3">
               <div>
-                <label style={c.label}>Your name (for email sign-off)</label>
-                <input value={localSenderName} onChange={e => setLocalSenderName(e.target.value)} placeholder="e.g. James O'Brien" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Your name (for email sign-off)</label>
+                <input
+                  value={localSenderName}
+                  onChange={e => setLocalSenderName(e.target.value)}
+                  placeholder="e.g. James O'Brien"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
               </div>
               <div>
-                <label style={c.label}>Your email (Gmail sends from this)</label>
-                <input type="email" value={localSenderEmail} onChange={e => setLocalSenderEmail(e.target.value)} placeholder="you@gmail.com" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Your email (Gmail sends from this)</label>
+                <input
+                  type="email"
+                  value={localSenderEmail}
+                  onChange={e => setLocalSenderEmail(e.target.value)}
+                  placeholder="you@gmail.com"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
               </div>
-              <button onClick={() => onUpdateProfile({ senderName: localSenderName, senderEmail: localSenderEmail })} style={c.primaryBtn}>
+              <button
+                onClick={() => onUpdateProfile({ senderName: localSenderName, senderEmail: localSenderEmail })}
+                className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+              >
                 Save profile
               </button>
             </div>
           </div>
 
-          <div style={{ ...c.card, marginBottom: 14 }}>
-            <h2 style={c.h2}>Campaign type</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Campaign type</h2>
+            <div className="grid grid-cols-2 gap-3">
               {Object.values(CAMPAIGN_MODES).map(mode => {
                 const sel = campaignMode === mode.id
                 return (
-                  <div key={mode.id} onClick={() => setCampaignModeFn(mode.id)} style={{
-                    border: sel ? `2px solid ${mode.color}` : '1px solid #e5e5e0',
-                    borderRadius: 10, padding: 14, cursor: 'pointer',
-                    background: sel ? mode.color + '0a' : '#fafaf8',
-                  }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: sel ? mode.color : '#111' }}>{mode.label}</div>
-                    <div style={{ fontSize: 12, color: '#666', lineHeight: 1.4 }}>{mode.desc}</div>
-                  </div>
+                  <button
+                    key={mode.id}
+                    onClick={() => setCampaignModeFn(mode.id)}
+                    className={`text-left p-3.5 rounded-xl border-2 transition-all ${sel ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'}`}
+                  >
+                    <div className={`font-bold text-xs mb-1 ${sel ? 'text-brand-600' : 'text-gray-700'}`}>{mode.label}</div>
+                    <div className="text-xs text-gray-400 leading-relaxed">{mode.desc}</div>
+                  </button>
                 )
               })}
             </div>
           </div>
 
-          <div style={{ ...c.card, marginBottom: 14 }}>
-            <h2 style={c.h2}>AI model</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">AI model</h2>
+            <div className="grid grid-cols-3 gap-3">
               {MODELS.map(m => {
                 const sel = modelId === m.id
                 return (
-                  <div key={m.id} onClick={() => setModelIdFn(m.id)} style={{
-                    border: sel ? `2px solid ${m.color}` : '1px solid #e5e5e0',
-                    borderRadius: 10, padding: 14, cursor: 'pointer',
-                    background: sel ? m.color + '0a' : '#fafaf8',
-                  }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>{m.label}</div>
-                    <div style={{ ...c.pill(m.color), marginBottom: 8 }}>{m.note}</div>
-                    <div style={{ fontSize: 11, color: '#666' }}>Est. 26 emails: {m.cost}</div>
-                  </div>
+                  <button
+                    key={m.id}
+                    onClick={() => setModelIdFn(m.id)}
+                    className={`text-left p-3.5 rounded-xl border-2 transition-all ${sel ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'}`}
+                  >
+                    <div className={`font-bold text-xs mb-1 ${sel ? 'text-brand-600' : 'text-gray-700'}`}>{m.label}</div>
+                    <div className="text-[10px] text-gray-400">{m.note}</div>
+                    <div className="text-[10px] text-gray-300 mt-1">Est. 26 emails: {m.cost}</div>
+                  </button>
                 )
               })}
             </div>
@@ -227,21 +221,24 @@ export default function SharedSettings({
 
       {/* ── Resume ── */}
       {tab === 'resume' && (
-        <div style={c.card}>
-          <h2 style={c.h2}>Upload your resume</h2>
-          <p style={c.muted}>The resume text is used by AI to personalize cold emails. Upload a .docx or .txt file.</p>
-          <div style={{ marginTop: 14, marginBottom: 14 }}>
-            <input type="file" accept=".docx,.txt,.pdf" onChange={handleResumeUpload} />
-          </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <h2 className="text-sm font-bold text-gray-900 mb-1">Upload your resume</h2>
+          <p className="text-xs text-gray-400 mb-4">AI uses your resume to personalize cold emails. Upload .docx or .txt.</p>
+          <input
+            type="file"
+            accept=".docx,.txt,.pdf"
+            onChange={handleResumeUpload}
+            className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 mb-3"
+          />
           {resumeStatus && (
-            <p style={{ fontSize: 13, color: resumeStatus.includes('Failed') ? '#dc2626' : '#16a34a', marginBottom: 12 }}>
+            <p className={`text-xs font-medium mb-3 ${resumeStatus.includes('Failed') ? 'text-red-500' : 'text-green-600'}`}>
               {resumeStatus}
             </p>
           )}
           {profile?.resumeText && (
             <div>
-              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Current resume text:</p>
-              <pre style={{ fontSize: 12, background: '#f7f7f5', padding: 14, borderRadius: 8, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+              <p className="text-xs font-semibold text-gray-700 mb-2">Current resume text:</p>
+              <pre className="text-xs bg-gray-50 border border-gray-100 p-3 rounded-lg max-h-48 overflow-y-auto whitespace-pre-wrap text-gray-600 font-mono">
                 {profile.resumeText.slice(0, 800)}{profile.resumeText.length > 800 ? '…' : ''}
               </pre>
             </div>
@@ -251,70 +248,80 @@ export default function SharedSettings({
 
       {/* ── AI Prompt ── */}
       {tab === 'prompt' && (
-        <div>
-          <div style={{ ...c.card, marginBottom: 14 }}>
-            <h2 style={c.h2}>Edit your email prompt</h2>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setPromptTab('chat')} style={{ ...c.ghostBtn, background: promptTab === 'chat' ? '#111' : undefined, color: promptTab === 'chat' ? '#fff' : undefined }}>
-                💬 AI Chat
-              </button>
-              <button onClick={() => setPromptTab('edit')} style={{ ...c.ghostBtn, background: promptTab === 'edit' ? '#111' : undefined, color: promptTab === 'edit' ? '#fff' : undefined }}>
-                ✏️ Manual Edit
-              </button>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-4">Edit your email prompt</h2>
+            <div className="flex gap-2 mb-4">
+              {[{ id: 'chat', label: '💬 AI Chat' }, { id: 'edit', label: '✏️ Manual Edit' }].map(pt => (
+                <button
+                  key={pt.id}
+                  onClick={() => setPromptTab(pt.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    promptTab === pt.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {pt.label}
+                </button>
+              ))}
             </div>
 
             {promptTab === 'chat' && (
               <div>
-                <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 14 }}>
+                <div className="max-h-64 overflow-y-auto mb-3 space-y-2">
                   {promptChat.map((msg, i) => (
-                    <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0ec' }}>
-                      <span style={{ fontWeight: 700, fontSize: 11, color: msg.role === 'user' ? '#0066cc' : '#16a34a' }}>
-                        {msg.role === 'user' ? 'You: ' : 'AI: '}
-                      </span>
-                      <span style={{ fontSize: 13 }}>{msg.content}</span>
+                    <div key={i} className={`text-xs p-2.5 rounded-lg ${msg.role === 'user' ? 'bg-brand-50 text-brand-700' : 'bg-gray-50 text-gray-600'}`}>
+                      <span className="font-semibold">{msg.role === 'user' ? 'You' : 'AI'}: </span>
+                      {msg.content}
                     </div>
                   ))}
-                  {promptLoading && <p style={{ fontSize: 13, color: '#888' }}>Thinking…</p>}
+                  {promptLoading && <p className="text-xs text-gray-400 italic">Thinking…</p>}
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <input
-                    style={{ flex: 1 }}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                     placeholder="e.g. make it shorter, use more formal tone, focus on fintech"
                     value={promptInput}
                     onChange={e => setPromptInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handlePromptChat()}
                   />
-                  <button onClick={handlePromptChat} disabled={promptLoading || !promptInput.trim()} style={c.primaryBtn}>Send</button>
+                  <button
+                    onClick={handlePromptChat}
+                    disabled={promptLoading || !promptInput.trim()}
+                    className="bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+                  >
+                    Send
+                  </button>
                 </div>
               </div>
             )}
 
             {promptTab === 'edit' && (
               <div>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={c.label}>Load template</label>
+                <div className="mb-3">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Load template</label>
                   <select
                     value={selectedTemplate?.name || ''}
                     onChange={handleTemplateSelect}
-                    style={{ width: '100%', padding: '8px 12px', fontSize: 14, border: '1px solid #ddd', borderRadius: 8, cursor: 'pointer' }}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <option value="">— Select Template —</option>
                     {templates.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                   </select>
                 </div>
-
                 {selectedTemplate && (
-                  <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 14, maxHeight: 200, overflowY: 'auto', background: '#f9f9f7', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                  <pre className="text-xs bg-gray-50 border border-gray-100 p-3 rounded-lg mb-3 max-h-40 overflow-y-auto whitespace-pre-wrap font-mono text-gray-600">
                     {selectedTemplate.content}
-                  </div>
+                  </pre>
                 )}
-
                 <textarea
-                  style={{ width: '100%', minHeight: 200, fontFamily: 'monospace', fontSize: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8 }}
+                  className="w-full min-h-[160px] px-3 py-2.5 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                   value={editPrompt}
                   onChange={e => setEditPrompt(e.target.value)}
                 />
-                <button onClick={() => onUpdateProfile({ prompt: editPrompt })} style={{ ...c.primaryBtn, marginTop: 10 }}>
+                <button
+                  onClick={() => onUpdateProfile({ prompt: editPrompt })}
+                  className="mt-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+                >
                   Save prompt
                 </button>
               </div>
@@ -322,14 +329,18 @@ export default function SharedSettings({
           </div>
 
           {pendingPrompt && (
-            <div style={{ ...c.card, marginBottom: 14, border: '2px solid #d97706' }}>
-              <h2 style={c.h2}>Preview — review before saving</h2>
-              <pre style={{ fontSize: 12, background: '#fef3c7', padding: 14, borderRadius: 8, maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+            <div className="bg-white border-2 border-amber-400 rounded-xl p-5">
+              <h2 className="text-sm font-bold text-gray-900 mb-3">Preview — review before saving</h2>
+              <pre className="text-xs bg-amber-50 p-3 rounded-lg max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-gray-700 mb-3">
                 {pendingPrompt}
               </pre>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button onClick={acceptPrompt} style={c.successBtn}>✓ Accept changes</button>
-                <button onClick={() => setPendingPrompt(null)} style={c.ghostBtn}>Discard</button>
+              <div className="flex gap-2">
+                <button onClick={acceptPrompt} className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all">
+                  ✓ Accept changes
+                </button>
+                <button onClick={() => setPendingPrompt(null)} className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition-all">
+                  Discard
+                </button>
               </div>
             </div>
           )}
@@ -338,27 +349,34 @@ export default function SharedSettings({
 
       {/* ── Email Account ── */}
       {tab === 'email' && (
-        <div style={c.card}>
-          <h2 style={c.h2}>Email Account</h2>
-          <p style={c.muted}>Choose your email provider and connect your account.</p>
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <h2 className="text-sm font-bold text-gray-900 mb-1">Email Account</h2>
+          <p className="text-xs text-gray-400 mb-4">Choose your email provider and connect your account.</p>
 
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <div className="grid grid-cols-2 gap-3 mb-4">
             {[
-              { id: 'gmail',   label: 'Gmail',   icon: '📧' },
-              { id: 'outlook', label: 'Outlook', icon: '📬' },
+              { id: 'gmail',   label: 'Gmail',   desc: 'Google account',    icon: '📧' },
+              { id: 'outlook', label: 'Outlook', desc: 'Microsoft account', icon: '📬' },
             ].map(opt => {
               const isActive    = emailProvider === opt.id
               const isConnected = opt.id === 'gmail' ? profile?.hasGmailToken : profile?.hasOutlookToken
               return (
-                <div key={opt.id} onClick={() => setEmailProvider(opt.id)} style={{
-                  flex: 1, padding: '12px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
-                  background: isActive ? '#11111110' : '#f7f7f5',
-                  border:     isActive ? '2px solid #111' : '2px solid #e5e5e0',
-                }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{opt.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{opt.label}</div>
-                  {isConnected && <div style={{ fontSize: 10, color: '#16a34a', marginTop: 2 }}>Connected</div>}
-                </div>
+                <button
+                  key={opt.id}
+                  onClick={() => setEmailProvider(opt.id)}
+                  className={`p-4 rounded-xl border-2 text-center transition-all ${
+                    isActive ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{opt.icon}</div>
+                  <div className="font-bold text-sm text-gray-900">{opt.label}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  {isConnected && (
+                    <div className="flex items-center justify-center gap-1 mt-1.5 text-[10px] text-green-600 font-semibold">
+                      <CheckCircle size={10} /> Connected
+                    </div>
+                  )}
+                </button>
               )
             })}
           </div>
@@ -385,15 +403,23 @@ export default function SharedSettings({
               }
             }}
             disabled={gmailLoading}
-            style={{ ...c.primaryBtn, marginTop: 4 }}
+            className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm transition-all"
           >
             {gmailLoading ? 'Opening sign-in…' : `Connect ${emailProvider === 'gmail' ? 'Gmail' : 'Outlook'}`}
           </button>
 
           {(profile?.hasGmailToken || profile?.hasOutlookToken) && (
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {profile?.hasGmailToken   && <p style={{ fontSize: 13, color: '#16a34a', margin: 0 }}>✓ Gmail connected · {gmailStatus?.minutesLeft || '?'}m left</p>}
-              {profile?.hasOutlookToken && <p style={{ fontSize: 13, color: '#16a34a', margin: 0 }}>✓ Outlook connected</p>}
+            <div className="mt-3 space-y-1">
+              {profile?.hasGmailToken   && (
+                <p className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                  <CheckCircle size={12} /> Gmail connected · {gmailStatus?.minutesLeft || '?'}m left
+                </p>
+              )}
+              {profile?.hasOutlookToken && (
+                <p className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                  <CheckCircle size={12} /> Outlook connected
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -401,27 +427,34 @@ export default function SharedSettings({
 
       {/* ── Daily Discovery ── */}
       {tab === 'discovery' && (
-        <div>
-          <div style={{ ...c.card, marginBottom: 14 }}>
-            <h2 style={c.h2}>Automated daily discovery</h2>
-            <p style={{ ...c.muted, marginBottom: 16 }}>After you upload companies, the system will automatically find decision-makers each day.</p>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-1">Automated daily discovery</h2>
+            <p className="text-xs text-gray-400 mb-4">After you upload companies, the system will automatically find decision-makers each day.</p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="space-y-4">
               <div>
-                <label style={c.label}>Run discovery at (HH:MM)</label>
-                <input type="time" value={discoveryTime} onChange={e => setDiscoveryTime(e.target.value)} style={{ width: '100%' }} />
-                <p style={{ ...c.small, marginTop: 6 }}>Time when discovery task runs daily (your local timezone)</p>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Run discovery at (HH:MM)</label>
+                <input
+                  type="time"
+                  value={discoveryTime}
+                  onChange={e => setDiscoveryTime(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Time when discovery task runs daily (your local timezone)</p>
               </div>
 
               <div>
-                <label style={c.label}>Find up to N people per day</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Find up to N people per day</label>
                 <input
-                  type="number" min="1" max="500"
+                  type="number"
+                  min="1"
+                  max="500"
                   value={discoveryQuota}
                   onChange={e => setDiscoveryQuota(Math.max(1, Number(e.target.value)))}
-                  style={{ width: '100%' }}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
-                <p style={{ ...c.small, marginTop: 6 }}>Recommended: 30–100. Higher = more API costs.</p>
+                <p className="text-[11px] text-gray-400 mt-1">Recommended: 30–100. Higher = more API costs.</p>
               </div>
 
               <button
@@ -441,28 +474,37 @@ export default function SharedSettings({
                   setDiscoverySaving(false)
                 }}
                 disabled={discoverySaving}
-                style={c.primaryBtn}
+                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm transition-all"
               >
                 {discoverySaving ? 'Saving…' : '✓ Save discovery schedule'}
               </button>
 
               {discoveryStatus && (
-                <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, textAlign: 'center', background: discoveryStatus.success ? '#d1fae5' : '#fee2e2', color: discoveryStatus.success ? '#065f46' : '#991b1b' }}>
+                <div className={`px-4 py-3 rounded-xl text-xs text-center font-medium ${
+                  discoveryStatus.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
                   {discoveryStatus.message}
                 </div>
               )}
             </div>
           </div>
 
-          <div style={c.card}>
-            <h2 style={c.h2}>How it works</h2>
-            <ul style={{ margin: '0 0 0 20px', fontSize: 13, color: '#666', lineHeight: 1.8 }}>
-              <li>You upload a CSV of 500 companies with domains</li>
-              <li>Daily at your scheduled time, the system searches Apollo for decision-makers (Directors, VPs, CTOs, etc.)</li>
-              <li>New people are added to your Contact list</li>
-              <li>Emails are auto-drafted using your AI prompt + company data</li>
-              <li>You review &amp; approve the batch before sending</li>
-              <li>System sends ~50 emails/day on your schedule</li>
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-3">How it works</h2>
+            <ul className="space-y-2 text-xs text-gray-500">
+              {[
+                'Upload a CSV of 500 companies with domains',
+                'Daily at your scheduled time, AI searches for decision-makers (Directors, VPs, CTOs, etc.)',
+                'New people are added to your Contact list',
+                'Emails are auto-drafted using your AI prompt + company data',
+                'You review & approve the batch before sending',
+                'System sends ~50 emails/day on your schedule',
+              ].map((item, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-brand-100 text-brand-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  {item}
+                </li>
+              ))}
             </ul>
           </div>
         </div>

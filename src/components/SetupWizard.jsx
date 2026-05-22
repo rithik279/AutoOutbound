@@ -1,19 +1,12 @@
 import { useState } from 'react'
 import c from '../styles.js'
 import { MODELS, CAMPAIGN_MODES } from '../constants.js'
+import { Zap, CheckCircle } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-/**
- * First-run setup wizard — shown once to new users to configure their name,
- * email provider, and OAuth authorization before they can use the app.
- *
- * Props:
- *   currentUser — { userId, name, email }
- *   onComplete  — called after the user clicks "Start drafting emails"
- */
 export default function SetupWizard({ currentUser, onComplete }) {
-  const [step, setStep]             = useState(1) // 1=profile, 2=provider, 3=auth, 4=done
+  const [step, setStep]             = useState(1)
   const [localName, setLocalName]   = useState(currentUser?.name  || '')
   const [localEmail, setLocalEmail] = useState(currentUser?.email || '')
   const [provider, setProvider]     = useState('gmail')
@@ -34,9 +27,9 @@ export default function SetupWizard({ currentUser, onComplete }) {
 
   async function handleConnect() {
     setAuthLoading(true)
-    const authUrl    = provider === 'gmail' ? `/api/gmail/auth-start?userId=${currentUser.userId}` : '/api/auth-start'
-    const healthUrl  = provider === 'gmail' ? '/api/gmail/token-health' : '/api/token-health'
-    const headers    = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
+    const authUrl   = provider === 'gmail' ? `/api/gmail/auth-start?userId=${currentUser.userId}` : '/api/auth-start'
+    const healthUrl = provider === 'gmail' ? '/api/gmail/token-health' : '/api/token-health'
+    const headers   = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
     window.open(authUrl, '_blank')
     for (let i = 0; i < 40; i++) {
       await new Promise(r => setTimeout(r, 2000))
@@ -56,138 +49,194 @@ export default function SetupWizard({ currentUser, onComplete }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: '32px 36px', width: 480, maxWidth: '95vw' }}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 border-b border-gray-100">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-md bg-brand-500 flex items-center justify-center">
+              <Zap size={12} className="text-white" />
+            </div>
+            <span className="text-xs font-semibold text-brand-600 uppercase tracking-widest">FirstShot</span>
+          </div>
 
-        {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 28, justifyContent: 'center' }}>
-          {STEPS.map((_, i) => (
-            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i + 1 <= step ? '#111' : '#ddd', transition: 'background 0.2s' }} />
-          ))}
+          {/* Progress */}
+          <div className="flex items-center gap-1.5 mb-5">
+            {STEPS.map((label, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full transition-all ${i + 1 <= step ? 'bg-brand-500' : 'bg-gray-200'}`} />
+                {i < STEPS.length - 1 && <div className={`h-px w-6 transition-all ${i + 1 < step ? 'bg-brand-500' : 'bg-gray-200'}`} />}
+              </div>
+            ))}
+            <span className="ml-2 text-[11px] text-gray-400">Step {Math.min(step, 3)} of 3</span>
+          </div>
+
+          <h2 className="text-xl font-black text-gray-900">
+            {step === 1 ? `Welcome${currentUser?.name ? `, ${currentUser.name}` : ''}!` :
+             step === 2 ? 'Choose your email provider' :
+             step === 3 ? 'Connect your account' :
+             "You're all set!"}
+          </h2>
+          <p className="text-sm text-gray-400 mt-1">
+            {step === 1 ? "Let's get your account set up — this only takes a minute." :
+             step === 2 ? 'Which email provider will you use to send emails?' :
+             step === 3 ? `We'll open a secure sign-in page. Come back after authorizing.` :
+             'Your account is configured and ready to go.'}
+          </p>
         </div>
 
-        <h2 style={{ ...c.h1, marginBottom: 4 }}>Welcome{currentUser?.name ? `, ${currentUser.name}` : ''}!</h2>
-        <p style={{ ...c.muted, marginBottom: 24 }}>Let's get your account set up — this only takes a minute.</p>
-
-        {/* Step 1 — Profile */}
-        {step === 1 && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="px-8 py-6">
+          {/* Step 1 — Profile */}
+          {step === 1 && (
+            <div className="space-y-3">
               <div>
-                <label style={c.label}>Your name</label>
-                <input value={localName} onChange={e => setLocalName(e.target.value)} placeholder="e.g. James O'Brien" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Your name</label>
+                <input
+                  value={localName}
+                  onChange={e => setLocalName(e.target.value)}
+                  placeholder="e.g. James O'Brien"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
               </div>
               <div>
-                <label style={c.label}>Your email address</label>
-                <input type="email" value={localEmail} onChange={e => setLocalEmail(e.target.value)} placeholder="e.g. james@company.com" />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Your email address</label>
+                <input
+                  type="email"
+                  value={localEmail}
+                  onChange={e => setLocalEmail(e.target.value)}
+                  placeholder="e.g. james@company.com"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
               </div>
               <div>
-                <label style={c.label}>Campaign type</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Campaign type</label>
+                <div className="flex flex-wrap gap-2">
                   {Object.entries(CAMPAIGN_MODES).map(([id, mode]) => (
-                    <div key={id} onClick={() => setCampaignMode(id)} style={{
-                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: campaignMode === id ? mode.color + '18' : '#f5f5f3',
-                      color:      campaignMode === id ? mode.color : '#555',
-                      border:     campaignMode === id ? `1.5px solid ${mode.color}` : '1.5px solid #ddd',
-                    }}>
+                    <button
+                      key={id}
+                      onClick={() => setCampaignMode(id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        campaignMode === id
+                          ? 'bg-brand-50 text-brand-600 border-brand-300'
+                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
                       {mode.label}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label style={c.label}>AI model</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">AI model</label>
+                <div className="flex flex-wrap gap-2">
                   {MODELS.map(m => (
-                    <div key={m.id} onClick={() => setModelId(m.id)} style={{
-                      padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: modelId === m.id ? m.color + '18' : '#f5f5f3',
-                      color:      modelId === m.id ? m.color : '#555',
-                      border:     modelId === m.id ? `1.5px solid ${m.color}` : '1.5px solid #ddd',
-                    }}>
+                    <button
+                      key={m.id}
+                      onClick={() => setModelId(m.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        modelId === m.id
+                          ? 'bg-brand-50 text-brand-600 border-brand-300'
+                          : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
                       {m.label}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setStep(2)} disabled={!localName.trim() || !localEmail.trim()} style={{ ...c.primaryBtn, opacity: (!localName.trim() || !localEmail.trim()) ? 0.5 : 1 }}>
-                Next →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2 — Email provider */}
-        {step === 2 && (
-          <div>
-            <p style={{ ...c.muted, marginBottom: 16 }}>Which email provider will you use to send emails?</p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              {[
-                { id: 'gmail',   label: 'Gmail',   desc: 'Use your Google account',    icon: '📧' },
-                { id: 'outlook', label: 'Outlook', desc: 'Use your Microsoft account', icon: '📬' },
-              ].map(opt => (
-                <div key={opt.id} onClick={() => setProvider(opt.id)} style={{
-                  flex: 1, padding: '16px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                  background: provider === opt.id ? '#11111110' : '#f7f7f5',
-                  border:     provider === opt.id ? '2px solid #111' : '2px solid #e5e5e0',
-                  transition: 'all 0.15s',
-                }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>{opt.icon}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{opt.label}</div>
-                  <div style={{ fontSize: 11, color: '#888' }}>{opt.desc}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between' }}>
-              <button onClick={() => setStep(1)} style={c.ghostBtn}>← Back</button>
-              <button onClick={async () => { await saveProfileAndProvider(); setStep(3) }} style={c.primaryBtn}>Next →</button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3 — Authorize */}
-        {step === 3 && (
-          <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>{provider === 'gmail' ? '📧' : '📬'}</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Connect your {provider === 'gmail' ? 'Gmail' : 'Outlook'} account</h3>
-            <p style={{ ...c.muted, marginBottom: 24 }}>We'll open a secure sign-in page. After authorizing, come back here and we'll confirm.</p>
-            {!authDone && (
-              <button onClick={handleConnect} disabled={authLoading} style={{ ...c.primaryBtn, minWidth: 200 }}>
-                {authLoading ? 'Waiting for authorization…' : `Connect ${provider === 'gmail' ? 'Gmail' : 'Outlook'}`}
-              </button>
-            )}
-            {authLoading && !authDone && (
-              <p style={{ fontSize: 12, color: '#888', marginTop: 10 }}>Waiting… check the popup window</p>
-            )}
-            {authDone && (
-              <div>
-                <div style={{ color: '#16a34a', fontSize: 14, fontWeight: 700, marginBottom: 16 }}>✓ Authorized!</div>
-                <button onClick={() => setStep(4)} style={c.primaryBtn}>Continue →</button>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setStep(2)}
+                  disabled={!localName.trim() || !localEmail.trim()}
+                  className="bg-brand-500 hover:bg-brand-600 disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-all"
+                >
+                  Next →
+                </button>
               </div>
-            )}
-            <br />
-            <button onClick={() => setStep(2)} style={{ ...c.ghostBtn, marginTop: 12, fontSize: 12 }}>← Choose different provider</button>
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Step 4 — Done */}
-        {step === 4 && (
-          <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>You're all set!</h3>
-            <p style={{ ...c.muted, marginBottom: 24 }}>Your account is configured and ready to go.</p>
-            <button onClick={handleFinish} style={c.primaryBtn}>Start drafting emails →</button>
-          </div>
-        )}
+          {/* Step 2 — Provider */}
+          {step === 2 && (
+            <div>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {[
+                  { id: 'gmail',   label: 'Gmail',   desc: 'Use your Google account',    icon: '📧' },
+                  { id: 'outlook', label: 'Outlook', desc: 'Use your Microsoft account', icon: '📬' },
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setProvider(opt.id)}
+                    className={`p-4 rounded-xl border-2 text-center transition-all ${
+                      provider === opt.id
+                        ? 'border-brand-500 bg-brand-50'
+                        : 'border-gray-100 hover:border-gray-200'
+                    }`}
+                  >
+                    <div className="text-3xl mb-2">{opt.icon}</div>
+                    <div className="font-bold text-sm text-gray-900">{opt.label}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between">
+                <button onClick={() => setStep(1)} className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
+                  ← Back
+                </button>
+                <button
+                  onClick={async () => { await saveProfileAndProvider(); setStep(3) }}
+                  className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-all"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
 
-        {step < 4 && (
-          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center' }}>
-            <span style={{ fontSize: 11, color: '#bbb' }}>Step {step} of 3</span>
-          </div>
-        )}
+          {/* Step 3 — Authorize */}
+          {step === 3 && (
+            <div className="text-center py-4">
+              <div className="text-5xl mb-4">{provider === 'gmail' ? '📧' : '📬'}</div>
+              {!authDone ? (
+                <>
+                  <button
+                    onClick={handleConnect}
+                    disabled={authLoading}
+                    className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-all w-full mb-3"
+                  >
+                    {authLoading ? 'Waiting for authorization…' : `Connect ${provider === 'gmail' ? 'Gmail' : 'Outlook'}`}
+                  </button>
+                  {authLoading && <p className="text-xs text-gray-400">Check the popup window</p>}
+                </>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-center gap-2 text-green-600 font-bold text-sm mb-4">
+                    <CheckCircle size={18} /> Authorized!
+                  </div>
+                  <button onClick={() => setStep(4)} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-all">
+                    Continue →
+                  </button>
+                </div>
+              )}
+              <button onClick={() => setStep(2)} className="mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                ← Choose different provider
+              </button>
+            </div>
+          )}
+
+          {/* Step 4 — Done */}
+          {step === 4 && (
+            <div className="text-center py-4">
+              <div className="text-5xl mb-4">🎉</div>
+              <button
+                onClick={handleFinish}
+                className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-all w-full"
+              >
+                Start sending emails →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -1,54 +1,81 @@
-import c from '../../styles.js'
+import { Users, RefreshCw, ArrowLeft } from 'lucide-react'
 
-/**
- * Saved contacts list — all contacts persisted in the DB.
- */
+const STATE_STYLES = {
+  replied:  { bg: 'bg-green-100',  text: 'text-green-700' },
+  emailed:  { bg: 'bg-brand-100',  text: 'text-brand-700' },
+  default:  { bg: 'bg-gray-100',   text: 'text-gray-500' },
+}
+
 export default function MyContactsPage({ savedContacts, loadingContacts, loadSavedContacts, setPhase, statusBar }) {
   return (
     <div>
       {statusBar()}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 style={c.h1}>My Contacts</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>{savedContacts.length} contact{savedContacts.length !== 1 ? 's' : ''} saved</p>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">My Contacts</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {savedContacts.length} contact{savedContacts.length !== 1 ? 's' : ''} saved
+          </p>
         </div>
-        <div>
-          <button onClick={loadSavedContacts} style={{ ...c.ghostBtn, marginRight: 10 }} disabled={loadingContacts}>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadSavedContacts}
+            disabled={loadingContacts}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-40"
+          >
+            <RefreshCw size={13} className={loadingContacts ? 'animate-spin' : ''} />
             {loadingContacts ? 'Loading…' : 'Refresh'}
           </button>
-          <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
+          <button
+            onClick={() => setPhase('entry')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+          >
+            <ArrowLeft size={13} /> Back
+          </button>
         </div>
       </div>
 
       {loadingContacts ? (
-        <div style={{ ...c.card, textAlign: 'center', padding: '40px' }}>Loading contacts…</div>
+        <div className="bg-white border border-gray-100 rounded-xl p-12 text-center text-sm text-gray-400">
+          Loading contacts…
+        </div>
       ) : savedContacts.length === 0 ? (
-        <div style={{ ...c.card, textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-          <h2 style={c.h2}>No contacts yet</h2>
-          <p style={c.muted}>Contacts are saved automatically when you send emails.</p>
+        <div className="bg-white border border-gray-100 rounded-xl p-16 text-center">
+          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Users size={24} className="text-gray-400" />
+          </div>
+          <h2 className="font-bold text-gray-900 mb-2">No contacts yet</h2>
+          <p className="text-sm text-gray-400">Contacts are saved automatically when you send emails.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {savedContacts.map(contact => (
-            <div key={contact.id} style={{ ...c.card, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>{contact.name}</div>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 2 }}>{contact.email}</div>
-                <div style={{ fontSize: 12, color: '#999' }}>
-                  {contact.title && `${contact.title} • `}
-                  {contact.company}
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          {savedContacts.map((contact, i) => {
+            const s = STATE_STYLES[contact.state] || STATE_STYLES.default
+            return (
+              <div
+                key={contact.id}
+                className={`flex items-center justify-between px-5 py-4 ${i < savedContacts.length - 1 ? 'border-b border-gray-50' : ''} hover:bg-gray-50 transition-colors`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {(contact.name || contact.email || '?')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-gray-900">{contact.name}</div>
+                    <div className="text-xs text-gray-400">{contact.email}</div>
+                    {(contact.title || contact.company) && (
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {contact.title && `${contact.title}`}{contact.title && contact.company && ' · '}{contact.company}
+                      </div>
+                    )}
+                  </div>
                 </div>
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.text}`}>
+                  {contact.state}
+                </span>
               </div>
-              <span style={{
-                fontSize: 12, padding: '4px 12px', borderRadius: 4,
-                backgroundColor: contact.state === 'replied' ? '#d1fae5' : contact.state === 'emailed' ? '#e0e7ff' : '#f3f4f6',
-                color:           contact.state === 'replied' ? '#065f46' : contact.state === 'emailed' ? '#3730a3' : '#4b5563',
-              }}>
-                {contact.state}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

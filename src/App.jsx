@@ -20,7 +20,7 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 // The server proxy handles all OpenAI, Anthropic, and Apollo calls
 const ENV_KEYS = { openai: true, anthropic: true, apollo: true }
 
-export default function App() {
+export default function App({ onPhaseChange, onPhaseControllerReady, onUserChange } = {}) {
   // User session
   const [currentUser, setCurrentUser] = useState(null) // { userId, name, email } or null
   const [profile, setProfile] = useState(null) // full profile from server
@@ -35,7 +35,9 @@ export default function App() {
       try {
         const session = JSON.parse(raw)
         if (session?.userId) {
-          setCurrentUser({ userId: session.userId, name: session.name, email: session.email })
+          const u = { userId: session.userId, name: session.name, email: session.email }
+          setCurrentUser(u)
+          onUserChange?.(u)
         }
       } catch {}
     }
@@ -64,7 +66,9 @@ export default function App() {
       })
       const data = await res.json()
       if (!res.ok) { setLoginError(data.error || 'Login failed'); return }
-      setCurrentUser({ userId: data.userId, name: data.name, email: data.email })
+      const u = { userId: data.userId, name: data.name, email: data.email }
+      setCurrentUser(u)
+      onUserChange?.(u)
       localStorage.setItem('session', JSON.stringify({ userId: data.userId, name: data.name, email: data.email }))
       // Trigger setup wizard for friend on first login
       if (data.userId === 'friend' && localStorage.getItem('friendSetupCompleted') !== 'true') {
@@ -182,8 +186,17 @@ export default function App() {
   }, [profile, currentUser])
 
   // Config
-  const [phase, setPhase] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history | my_contacts
+  const [phase, setPhaseRaw] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history | my_contacts
+  const setPhase = useCallback((p) => {
+    setPhaseRaw(p)
+    onPhaseChange?.(p)
+  }, [onPhaseChange])
   const [entryLevel, setEntryLevel] = useState(null)
+
+  // Expose phase controller to AppShell sidebar
+  useEffect(() => {
+    onPhaseControllerReady?.({ setPhase })
+  }, [setPhase, onPhaseControllerReady])
 
   // Saved contacts state
   const [savedContacts, setSavedContacts] = useState([])
@@ -868,125 +881,138 @@ export default function App() {
 
   // ── LOGIN SCREEN ─────────────────────────────────────────────────────────
   if (!currentUser) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f7f5' }}>
-      <div style={{ width: '100%', maxWidth: 380, background: '#fff', borderRadius: 16, padding: '40px 32px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', border: '1px solid #e5e5e0' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📧</div>
-          <h1 style={{ ...c.h1, marginBottom: 6, fontSize: 24 }}>Campaign Pipeline</h1>
-          <p style={{ ...c.muted, fontSize: 13 }}>{isSignup ? 'Create account' : 'Sign in to access your campaigns'}</p>
+    <div className="min-h-screen bg-navy-900 flex items-center justify-center px-4">
+      {/* Background orbs */}
+      <div className="fixed top-[-100px] left-[-200px] w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-[80px] pointer-events-none" />
+      <div className="fixed bottom-[-80px] right-[-100px] w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[80px] pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-6">
+            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <span className="text-xl font-bold text-white tracking-tight">FirstShot</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">
+            {isSignup ? 'Create your account' : 'Welcome back'}
+          </h1>
+          <p className="text-sm text-gray-400">
+            {isSignup ? 'Start taking shots in minutes.' : 'Sign in to your campaigns.'}
+          </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {!isSignup ? (
-            <>
-              {/* Login Form */}
-              <div>
-                <label style={c.label}>Email</label>
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={loginEmail || ''}
-                  onChange={e => setLoginEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={c.label}>Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={loginPass || ''}
-                  onChange={e => setLoginPass(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              {loginError && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{loginError}</div>
-              )}
-              <button
-                onClick={() => handleLogin(loginEmail, loginPass)}
-                disabled={loginLoading}
-                style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
-              >
-                {loginLoading ? 'Signing in…' : 'Sign in'}
-              </button>
-              <div style={{ textAlign: 'center', fontSize: 13 }}>
-                <span style={{ color: '#666' }}>No account? </span>
+        {/* Card */}
+        <div className="bg-white rounded-2xl p-8 shadow-card">
+          <div className="space-y-4">
+            {!isSignup ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={loginEmail || ''}
+                    onChange={e => setLoginEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={loginPass || ''}
+                    onChange={e => setLoginPass(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleLogin(loginEmail, loginPass)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                {loginError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-3.5 py-2.5 text-red-700 text-xs font-medium">{loginError}</div>
+                )}
                 <button
-                  onClick={() => setIsSignup(true)}
-                  style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                  onClick={() => handleLogin(loginEmail, loginPass)}
+                  disabled={loginLoading}
+                  className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 disabled:opacity-40"
                 >
-                  Sign up
+                  {loginLoading ? 'Signing in…' : 'Sign in'}
                 </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Signup Form */}
-              <div>
-                <label style={c.label}>Name</label>
-                <input
-                  type="text"
-                  placeholder="Your name"
-                  value={signupName || ''}
-                  onChange={e => setSignupName(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={c.label}>Email</label>
-                <input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={signupEmail || ''}
-                  onChange={e => setSignupEmail(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={c.label}>Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={signupPassword || ''}
-                  onChange={e => setSignupPassword(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={c.label}>Confirm password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={signupPasswordConfirm || ''}
-                  onChange={e => setSignupPasswordConfirm(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              {signupError && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '10px 14px', color: '#991b1b', fontSize: 13 }}>{signupError}</div>
-              )}
-              <button
-                onClick={() => handleSignup(signupEmail, signupName, signupPassword, signupPasswordConfirm)}
-                disabled={signupLoading}
-                style={{ ...c.primaryBtn, width: '100%', padding: '12px', fontSize: 14 }}
-              >
-                {signupLoading ? 'Creating…' : 'Create account'}
-              </button>
-              <div style={{ textAlign: 'center', fontSize: 13 }}>
-                <span style={{ color: '#666' }}>Already have account? </span>
+                <p className="text-center text-xs text-gray-400">
+                  No account?{' '}
+                  <button onClick={() => setIsSignup(true)} className="text-brand-600 font-semibold hover:text-brand-700">
+                    Sign up free
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Name</label>
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={signupName || ''}
+                    onChange={e => setSignupName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={signupEmail || ''}
+                    onChange={e => setSignupEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupPassword || ''}
+                    onChange={e => setSignupPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">Confirm password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupPasswordConfirm || ''}
+                    onChange={e => setSignupPasswordConfirm(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                {signupError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-3.5 py-2.5 text-red-700 text-xs font-medium">{signupError}</div>
+                )}
                 <button
-                  onClick={() => setIsSignup(false)}
-                  style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+                  onClick={() => handleSignup(signupEmail, signupName, signupPassword, signupPasswordConfirm)}
+                  disabled={signupLoading}
+                  className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-all duration-200 disabled:opacity-40"
                 >
-                  Sign in
+                  {signupLoading ? 'Creating account…' : 'Create account — free'}
                 </button>
-              </div>
-            </>
-          )}
+                <p className="text-center text-xs text-gray-400">
+                  Already have an account?{' '}
+                  <button onClick={() => setIsSignup(false)} className="text-brand-600 font-semibold hover:text-brand-700">
+                    Sign in
+                  </button>
+                </p>
+              </>
+            )}
+          </div>
         </div>
+
+        <p className="text-center text-xs text-gray-500 mt-5">
+          Free unlimited sends · First month · No credit card
+        </p>
       </div>
     </div>
   )

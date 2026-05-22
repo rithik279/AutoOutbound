@@ -1,7 +1,7 @@
 {
   "dad": {
     "email": "manmit.singh@live.com",
-    "password": "loveisall",
+    "password": "$2b$10$bKJvayqKm7HuHYssEvjhZuzIJa0mPFifwnttuyTzzdq8K.PGbZ.Ie",
     "name": "Manmit Singh",
     "senderName": "Manmit Singh",
     "senderEmail": "manmit.singh@live.com",
@@ -14,7 +14,7 @@
   },
   "friend": {
     "email": "rishikchak2008@gmail.com",
-    "password": "UWswe$2031",
+    "password": "$2b$10$fLxNCl.JeeicoE1ovbMdcuX/E6cTSzzjnis63BqLLfJWfcGrbhbd.",
     "name": "Rishik",
     "senderName": "Rishik",
     "senderEmail": "",

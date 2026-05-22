@@ -8,6 +8,10 @@ import { normalizeDomain, extractDomainFromOrgResponse, extractEmail, extractEnr
 import Avatar from './components/Avatar.jsx'
 import SharedSettings from './components/SharedSettings.jsx'
 import SetupWizard from './components/SetupWizard.jsx'
+import EntryPage from './components/pages/EntryPage.jsx'
+import SentPage from './components/pages/SentPage.jsx'
+import MyContactsPage from './components/pages/MyContactsPage.jsx'
+import SentHistoryPage from './components/pages/SentHistoryPage.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -989,54 +993,16 @@ export default function App() {
 
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
   if (phase === 'entry') return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
-        <div>
-          <h1 style={c.h1}>Campaign pipeline</h1>
-          <p style={{ ...c.muted, marginTop: 6 }}>Where are you starting from?</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => { loadSavedContacts(); setPhase('my_contacts') }} style={c.ghostBtn}>👥 My Contacts</button>
-          <button onClick={() => setPhase('settings')} style={c.ghostBtn}>⚙️ Settings</button>
-          <button onClick={handleLogout} style={{ ...c.ghostBtn, color: '#dc2626' }}>Logout</button>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-        {ENTRY_LEVELS.map(lvl => {
-          const sel = entryLevel === lvl.id
-          return (
-            <div key={lvl.id} onClick={() => setEntryLevel(lvl.id)} style={{
-              ...c.card, cursor: 'pointer', position: 'relative',
-              border: sel ? `2px solid ${lvl.badge}` : '1px solid #e5e5e0',
-              background: sel ? lvl.badge + '08' : '#fff'
-            }}>
-              {sel && <div style={{ position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: '50%', background: lvl.badge }} />}
-              <div style={{ fontSize: 24, marginBottom: 8 }}>{lvl.emoji}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{lvl.label}</div>
-              <div style={c.muted}>{lvl.desc}</div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={loadSentHistory} style={{ ...c.ghostBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 16 }}>📧</span>
-            View sent emails {scheduleStatus?.sent ? `(${scheduleStatus.sent})` : ''}
-          </button>
-          {isFriend && (
-            <button onClick={() => setPhase('settings')} style={c.ghostBtn}>
-              ✏️ Edit Account
-            </button>
-          )}
-        </div>
-        <button onClick={() => { if (entryLevel) setPhase('settings') }} disabled={!entryLevel} style={c.primaryBtn}>
-          Continue →
-        </button>
-      </div>
-    </div>
+    <EntryPage
+      entryLevel={entryLevel}
+      setEntryLevel={setEntryLevel}
+      scheduleStatus={scheduleStatus}
+      isFriend={isFriend}
+      handleLogout={handleLogout}
+      loadSavedContacts={loadSavedContacts}
+      loadSentHistory={loadSentHistory}
+      setPhase={setPhase}
+    />
   )
 
   // ── SETTINGS ────────────────────────────────────────────────────────────
@@ -2012,130 +1978,36 @@ export default function App() {
 
   // ── SENT ──────────────────────────────────────────────────────────────────
   if (phase === 'sent') return (
-    <div>
-      {statusBar()}
-      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
-        <h1 style={{ ...c.h1, marginBottom: 8 }}>{sentCount} email{sentCount !== 1 ? 's' : ''} scheduled</h1>
-        <p style={{ ...c.muted, marginBottom: 32 }}>
-          Sending via {selectedProvider === 'gmail' ? 'Gmail' : 'Outlook'} starting {sendDate} at {sendTime}, every {gap} min.
-          The server handles delivery — you can close this tab.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, maxWidth: 400, margin: '0 auto 32px' }}>
-          {[{ n: sentCount, l: 'scheduled' }, { n: sendTime, l: 'first send' }, { n: `${gap}m`, l: 'gap' }].map(s => (
-            <div key={s.l} style={c.statBox}><span style={c.statNum}>{s.n}</span><span style={c.statLbl}>{s.l}</span></div>
-          ))}
-        </div>
-        <button onClick={() => setPhase('entry')} style={c.primaryBtn}>New campaign</button>
-      </div>
-    </div>
+    <SentPage
+      sentCount={sentCount}
+      selectedProvider={selectedProvider}
+      sendDate={sendDate}
+      sendTime={sendTime}
+      gap={gap}
+      setPhase={setPhase}
+      statusBar={statusBar}
+    />
   )
 
   // ── MY CONTACTS ───────────────────────────────────────────────────────────
-  if (phase === 'my_contacts') {
-    return (
-      <div>
-        {statusBar()}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h1 style={c.h1}>My Contacts</h1>
-            <p style={{ ...c.muted, marginTop: 4 }}>{savedContacts.length} contact{savedContacts.length !== 1 ? 's' : ''} saved</p>
-          </div>
-          <div>
-            <button onClick={loadSavedContacts} style={{ ...c.ghostBtn, marginRight: 10 }} disabled={loadingContacts}>
-              {loadingContacts ? 'Loading…' : 'Refresh'}
-            </button>
-            <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
-          </div>
-        </div>
-
-        {loadingContacts ? (
-          <div style={{ ...c.card, textAlign: 'center', padding: '40px' }}>Loading contacts…</div>
-        ) : savedContacts.length === 0 ? (
-          <div style={{ ...c.card, textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-            <h2 style={c.h2}>No contacts yet</h2>
-            <p style={c.muted}>Contacts are saved automatically when you send emails.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {savedContacts.map(contact => (
-              <div key={contact.id} style={{ ...c.card, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{contact.name}</div>
-                  <div style={{ fontSize: 13, color: '#666', marginBottom: 2 }}>{contact.email}</div>
-                  <div style={{ fontSize: 12, color: '#999' }}>
-                    {contact.title && `${contact.title} • `}
-                    {contact.company}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{
-                    fontSize: 12,
-                    padding: '4px 12px',
-                    borderRadius: 4,
-                    backgroundColor: contact.state === 'replied' ? '#d1fae5' : contact.state === 'emailed' ? '#e0e7ff' : '#f3f4f6',
-                    color: contact.state === 'replied' ? '#065f46' : contact.state === 'emailed' ? '#3730a3' : '#4b5563'
-                  }}>
-                    {contact.state}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
+  if (phase === 'my_contacts') return (
+    <MyContactsPage
+      savedContacts={savedContacts}
+      loadingContacts={loadingContacts}
+      loadSavedContacts={loadSavedContacts}
+      setPhase={setPhase}
+      statusBar={statusBar}
+    />
+  )
 
   // ── SENT HISTORY ──────────────────────────────────────────────────────────
-  if (phase === 'sent_history') {
-    const sortedEmails = [...sentHistory].sort((a, b) => {
-      if (a.sentAt && b.sentAt) return new Date(b.sentAt) - new Date(a.sentAt)
-      if (a.sentAt) return -1
-      if (b.sentAt) return 1
-      return 0
-    })
-    return (
-      <div>
-        {statusBar()}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h1 style={c.h1}>Sent emails</h1>
-            <p style={{ ...c.muted, marginTop: 4 }}>{sentHistory.length} email{sentHistory.length !== 1 ? 's' : ''} sent</p>
-          </div>
-          <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
-        </div>
-
-        {sentHistory.length === 0 ? (
-          <div style={{ ...c.card, textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-            <h2 style={c.h2}>No emails sent yet</h2>
-            <p style={c.muted}>Schedule a campaign to see your sent emails here.</p>
-          </div>
-        ) : (
-          <div style={{ ...c.card }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {sortedEmails.map((email, i) => (
-                <div key={i} style={{ padding: '12px 0', borderBottom: i < sentHistory.length - 1 ? '1px solid #f0f0ec' : 'none', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: email.failed ? '#dc2626' : '#16a34a', marginTop: 6, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 2 }}>
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{email.to}</span>
-                      {email.company && <span style={{ ...c.muted, fontSize: 12 }}>· {email.company}</span>}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#666', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.subject}</div>
-                    {email.sentAt && <div style={{ fontSize: 11, color: '#999' }}>{new Date(email.sentAt).toLocaleString()}</div>}
-                    {email.failed && email.error && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2 }}>Failed: {email.error}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
+  if (phase === 'sent_history') return (
+    <SentHistoryPage
+      sentHistory={sentHistory}
+      setPhase={setPhase}
+      statusBar={statusBar}
+    />
+  )
 
   // ── DRAFT CONFIRMATION (friend: use existing or edit before drafting) ──
   if (draftConfirmContacts) {

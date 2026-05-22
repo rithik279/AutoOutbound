@@ -10,17 +10,6 @@
             "timeout": 30
           }
         ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/auto-commit.sh",
-            "timeout": 15,
-            "statusMessage": "Committing changes..."
-          }
-        ]
       }
     ],
     "SessionStart": [

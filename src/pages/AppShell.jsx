@@ -30,17 +30,17 @@ export default function AppShell() {
   return (
     <div className="flex h-screen bg-surface-50 overflow-hidden">
       {/* Mobile overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && currentUser && (
         <div
           className="fixed inset-0 bg-black/40 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR — only when logged in */}
       <aside className={cn(
         'fixed lg:relative inset-y-0 left-0 z-30 w-56 bg-white border-r border-surface-200 flex flex-col transition-transform duration-200',
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        !currentUser ? 'hidden' : (sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
       )}>
         {/* Logo */}
         <div className="h-14 flex items-center gap-2.5 px-4 border-b border-surface-100">

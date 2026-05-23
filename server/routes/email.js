@@ -13,7 +13,7 @@
  *   1. Client sends an array of { to, subject, body, sendAt, company, contactId }.
  *   2. For each email, the endpoint finds or creates the Contact record.
  *   3. Creates an Email record in the database with the scheduled sendAt time.
- *   4. Calls scheduleEmail() which sets a setTimeout to send at the right moment.
+ *   4. Enqueues each email into pg-boss (PostgreSQL-backed job queue) for reliable delivery.
  *
  * Note on transactions:
  *   Contact creation + email creation are not wrapped in a Prisma transaction.

@@ -10,7 +10,7 @@
  *   server/lib/tokens.js     — Outlook OAuth token management
  *   server/lib/gmail.js      — Gmail OAuth token management + sending
  *   server/lib/email-sender.js — sendViaGraph / sendViaGmail
- *   server/lib/scheduler.js  — in-process setTimeout email scheduler
+ *   server/lib/queue.js       — pg-boss job queue (email sending + discovery)
  *   server/lib/oauth-state.js — ephemeral PKCE verifier store
  *
  *   server/routes/ai.js        — POST /api/ai/chat (OpenAI + Anthropic proxy)

@@ -10,7 +10,7 @@ export default function SignInPage() {
       {/* Brand mark */}
       <button
         onClick={() => navigate('/')}
-        className="flex items-center gap-2.5 mb-10 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-2.5 mb-10 hover:opacity-80 transition-opacity translate-x-6"
       >
         <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center">
           <Zap size={15} className="text-white" />
@@ -34,8 +34,8 @@ export default function SignInPage() {
             fontFamily:         'Inter, sans-serif',
           },
           elements: {
-            rootBox:          'mx-auto w-full max-w-md pl-6',
-            card:             'shadow-2xl border-0 rounded-2xl self-center',
+            rootBox:          'mx-auto w-full max-w-md',
+            card:             'shadow-2xl border-0 rounded-2xl',
             headerTitle:      'text-xl font-black text-gray-900',
             headerSubtitle:   'text-sm text-gray-400',
             socialButtonsBlockButton: 'border border-gray-200 hover:bg-gray-50 transition-all font-semibold',

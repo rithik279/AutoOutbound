@@ -905,7 +905,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       <div className="fixed top-[-100px] left-[-200px] w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-[80px] pointer-events-none" />
       <div className="fixed bottom-[-80px] right-[-100px] w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[80px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-sm pl-6">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-6">

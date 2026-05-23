@@ -11,7 +11,7 @@ export default function SignInPage() {
         {/* Brand mark */}
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2.5 mb-10 hover:opacity-80 transition-opacity -translate-x-6"
+          className="flex items-center gap-2.5 mb-10 hover:opacity-80 transition-opacity -translate-x-[45px]"
         >
           <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center">
             <Zap size={15} className="text-white" />

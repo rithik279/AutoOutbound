@@ -905,9 +905,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       <div className="fixed top-[-100px] left-[-200px] w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-[80px] pointer-events-none" />
       <div className="fixed bottom-[-80px] right-[-100px] w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[80px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-sm pl-6">
+      <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-8 ml-6">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-6">
             <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>

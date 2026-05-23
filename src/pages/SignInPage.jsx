@@ -35,7 +35,7 @@ export default function SignInPage() {
           },
           elements: {
             rootBox:          'mx-auto w-full max-w-md',
-            card:             'shadow-2xl border-0 rounded-2xl',
+            card:             'shadow-2xl border-0 rounded-2xl mx-auto',
             headerTitle:      'text-xl font-black text-gray-900',
             headerSubtitle:   'text-sm text-gray-400',
             socialButtonsBlockButton: 'border border-gray-200 hover:bg-gray-50 transition-all font-semibold',

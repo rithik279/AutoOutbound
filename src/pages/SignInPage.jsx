@@ -7,7 +7,7 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center px-4 overflow-hidden">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md flex flex-col items-center">
         {/* Brand mark */}
         <button
           onClick={() => navigate('/')}
@@ -35,7 +35,7 @@ export default function SignInPage() {
               fontFamily:         'Inter, sans-serif',
             },
             elements: {
-              rootBox:          'w-full',
+              rootBox:          'w-full self-stretch',
               card:             'shadow-2xl border-0 rounded-2xl',
               headerTitle:      'text-xl font-black text-gray-900',
               headerSubtitle:   'text-sm text-gray-400',

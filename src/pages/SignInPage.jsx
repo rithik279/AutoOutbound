@@ -34,7 +34,7 @@ export default function SignInPage() {
             fontFamily:         'Inter, sans-serif',
           },
           elements: {
-            rootBox:          'w-full max-w-md',
+            rootBox:          'mx-auto w-full max-w-md',
             card:             'shadow-2xl border-0 rounded-2xl',
             headerTitle:      'text-xl font-black text-gray-900',
             headerSubtitle:   'text-sm text-gray-400',

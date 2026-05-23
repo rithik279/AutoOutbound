@@ -20,16 +20,22 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 // The server proxy handles all OpenAI, Anthropic, and Apollo calls
 const ENV_KEYS = { openai: true, anthropic: true, apollo: true }
 
-export default function App({ onPhaseChange, onPhaseControllerReady, onUserChange } = {}) {
-  // User session
-  const [currentUser, setCurrentUser] = useState(null) // { userId, name, email } or null
-  const [profile, setProfile] = useState(null) // full profile from server
+export default function App({ onPhaseChange, onPhaseControllerReady, onUserChange, currentUserOverride } = {}) {
+  // User session — Clerk provides currentUserOverride when authenticated
+  const [currentUser, setCurrentUser] = useState(currentUserOverride || null)
+  const [profile, setProfile] = useState(null)
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // Load session from localStorage on mount (skip if ?login param forces login screen)
+  // If Clerk provides a user override, use it directly (skips manual login)
   useEffect(() => {
+    if (currentUserOverride) {
+      setCurrentUser(currentUserOverride)
+      onUserChange?.(currentUserOverride)
+      return
+    }
+    // Legacy: load session from localStorage (non-Clerk path)
     const forceLogin = new URLSearchParams(window.location.search).has('login')
     if (forceLogin) {
       localStorage.removeItem('session')

@@ -8,7 +8,13 @@
  *   - isPrivateIP    — block SSRF to private/loopback ranges
  */
 
-import { getUser } from './users.js'
+import { getUser, createUser } from './users.js'
+import { createClerkClient } from '@clerk/backend'
+import { prisma } from './prisma.js'
+
+const clerk = process.env.CLERK_SECRET_KEY
+  ? createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+  : null
 
 // ── Simple in-memory rate limiter ────────────────────────────────────────────
 // Keyed by `${ip}:${route}`. Good enough for single-process; replace with
@@ -81,9 +87,53 @@ export const apolloLimiter = makeRateLimiter({
  * Skips auth for /api/user/login and /api/user/signup (handled separately).
  */
 export async function requireAuth(req, res, next) {
+  // ── Clerk JWT path (preferred) ───────────────────────────────────────────
+  const bearerToken = req.headers.authorization?.replace('Bearer ', '')
+
+  if (bearerToken && clerk) {
+    try {
+      const payload = await clerk.verifyToken(bearerToken)
+      const clerkId = payload.sub
+
+      // Find existing user by clerkId
+      let user = await prisma.user.findUnique({ where: { clerkId } })
+
+      if (!user) {
+        // First Clerk login — match by email or auto-provision
+        const clerkUser = await clerk.users.getUser(clerkId)
+        const email = clerkUser.emailAddresses?.[0]?.emailAddress || ''
+        const name  = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ')
+
+        // Try to link to existing account by email
+        user = await prisma.user.findUnique({ where: { email } })
+        if (user) {
+          // Link existing account to Clerk
+          user = await prisma.user.update({ where: { id: user.id }, data: { clerkId } })
+        } else {
+          // Brand new user — provision
+          const userId = `${email.split('@')[0] || 'user'}-${Date.now().toString(36)}`
+          user = await prisma.user.create({
+            data: {
+              id: userId, clerkId, email,
+              name, senderName: name, senderEmail: email,
+              modelId: 'gpt-4o-mini', campaignMode: 'startup', emailProvider: 'gmail',
+            },
+          })
+        }
+      }
+
+      req.userId   = user.id
+      req.clerkId  = clerkId
+      return next()
+    } catch (e) {
+      return res.status(401).json({ error: 'Invalid session token' })
+    }
+  }
+
+  // ── Legacy x-user-id path (backward compat during migration) ───────────
   const userId = req.headers['x-user-id']
   if (!userId) {
-    return res.status(401).json({ error: 'Missing x-user-id header' })
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   const user = await getUser(userId)
@@ -91,7 +141,6 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Unknown user — please log in again.' })
   }
 
-  // Attach to request for downstream use
   req.userId = userId
   next()
 }

@@ -47,7 +47,8 @@ model Email {
 }
 
 model User {
-  id            String   @id
+  id            String   @id  // our internal userId (email-prefix + timestamp)
+  clerkId       String?  @unique // Clerk user ID — set on first Clerk login
   email         String   @unique
   name          String?
   password      String   @default("")

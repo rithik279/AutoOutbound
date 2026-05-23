@@ -20,7 +20,7 @@
 
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
-const PgBoss  = require('pg-boss')
+const { PgBoss } = require('pg-boss')
 import { prisma }        from './prisma.js'
 import { sendViaGmail }  from './gmail.js'
 import { sendViaGraph }  from './email-sender.js'

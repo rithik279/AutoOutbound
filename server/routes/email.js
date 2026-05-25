@@ -177,13 +177,16 @@ router.get('/sent-emails', async (req, res) => {
     })
     res.json({
       emails: emails.map(e => ({
-        id:      e.id,
-        to:      e.to,
-        subject: e.subject,
-        company: e.company || '',
-        sentAt:  e.sentAt,
-        failed:  e.failedAt !== null,
-        error:   e.error || null,
+        id:            e.id,
+        to:            e.to,
+        subject:       e.subject,
+        company:       e.company || '',
+        sentAt:        e.sentAt,
+        failed:        e.failedAt !== null,
+        error:         e.error || null,
+        openCount:     e.openCount,
+        clickCount:    e.clickCount,
+        firstOpenedAt: e.firstOpenedAt,
       })),
     })
   } catch (err) {

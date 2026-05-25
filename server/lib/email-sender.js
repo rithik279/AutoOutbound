@@ -23,6 +23,7 @@ import fetch from 'node-fetch'
 import { getGraphToken } from './tokens.js'
 import { sendViaGmail as _sendViaGmail } from './gmail.js'
 import { RESUME_PATH } from './config.js'
+import { buildTrackedHtml } from './email-tracking.js'
 
 // ── Outlook / Microsoft Graph ─────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ import { RESUME_PATH } from './config.js'
  * @param {{ to: string, subject: string, body: string }} opts
  * @throws {Error} if Graph API returns a non-2xx status
  */
-export async function sendViaGraph({ to, subject, body }, userId) {
+export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
   const token = await getGraphToken(userId)
 
   // Attach resume if present on disk
@@ -47,13 +48,18 @@ export async function sendViaGraph({ to, subject, body }, userId) {
     })
   }
 
+  // Use tracked HTML body if trackingId is available
+  const htmlBody = trackingId ? buildTrackedHtml(body, trackingId) : null
+
   const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify({
       message: {
         subject,
-        body:         { contentType: 'Text', content: body },
+        body: htmlBody
+          ? { contentType: 'HTML', content: htmlBody }
+          : { contentType: 'Text', content: body },
         toRecipients: [{ emailAddress: { address: to } }],
         attachments,
       },
@@ -79,3 +85,4 @@ export async function sendViaGraph({ to, subject, body }, userId) {
 export async function sendViaGmail(opts, userId) {
   return _sendViaGmail(opts, userId)
 }
+

@@ -2058,6 +2058,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       sentHistory={sentHistory}
       setPhase={setPhase}
       statusBar={statusBar}
+      userId={currentUser?.userId}
     />
   )
 

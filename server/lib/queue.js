@@ -113,10 +113,14 @@ export async function startWorkers() {
     console.log(`[queue] Sending email ${id} to ${to} via ${provider}`)
 
     try {
+      // Fetch trackingId from DB — it's generated at email creation time
+      const emailRecord = await prisma.email.findUnique({ where: { id }, select: { trackingId: true } })
+      const trackingId  = emailRecord?.trackingId || null
+
       if (provider === 'gmail') {
-        await sendViaGmail({ to, subject, body }, userId)
+        await sendViaGmail({ to, subject, body, trackingId }, userId)
       } else {
-        await sendViaGraph({ to, subject, body }, userId)
+        await sendViaGraph({ to, subject, body, trackingId }, userId)
       }
 
       // Mark sent in DB

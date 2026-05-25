@@ -53,6 +53,7 @@ import emailRouter     from './server/routes/email.js'
 import contactsRouter  from './server/routes/contacts.js'
 import userRouter      from './server/routes/user.js'
 import discoveryRouter from './server/routes/discovery.js'
+import trackingRouter  from './server/routes/tracking.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app       = express()
@@ -93,6 +94,10 @@ app.use((req, res, next) => {
 // Public: login, signup, OAuth callbacks, health
 app.use('/api', userRouter)    // login + signup are unauthenticated; profile routes check auth internally
 app.use('/api', authRouter)    // OAuth callbacks don't carry x-user-id
+
+// Public tracking: open pixel + click redirect — no auth (called by email clients/recipients)
+// Stats endpoint inside tracking router still checks userId from header
+app.use('/api', trackingRouter)
 
 // Protected: everything else requires a valid x-user-id
 app.use('/api', requireAuth, aiRouter)

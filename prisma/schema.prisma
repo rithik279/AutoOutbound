@@ -26,24 +26,45 @@ model Contact {
 }
 
 model Email {
-  id          Int       @id @default(autoincrement())
-  to          String
-  subject     String
-  body        String
-  sentAt      DateTime?
-  failedAt    DateTime?
-  error       String?
-  userId      String
-  company     String?
-  provider    String    @default("outlook")
-  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  contactId   Int
-  scheduledAt DateTime  // when this email should be sent
-  createdAt   DateTime  @default(now())
+  id             Int          @id @default(autoincrement())
+  to             String
+  subject        String
+  body           String
+  sentAt         DateTime?
+  failedAt       DateTime?
+  error          String?
+  userId         String
+  company        String?
+  provider       String       @default("outlook")
+  contact        Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  contactId      Int
+  scheduledAt    DateTime     // when this email should be sent
+  createdAt      DateTime     @default(now())
+  // Tracking
+  trackingId     String       @unique @default(uuid())
+  openCount      Int          @default(0)
+  clickCount     Int          @default(0)
+  firstOpenedAt  DateTime?
+  events         EmailEvent[]
 
   @@index([userId])
   @@index([scheduledAt])
   @@index([sentAt])
+  @@index([trackingId])
+}
+
+model EmailEvent {
+  id          Int      @id @default(autoincrement())
+  email       Email    @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId     Int
+  type        String   // 'open' | 'click'
+  linkUrl     String?  // original URL for click events
+  ip          String?
+  userAgent   String?
+  occurredAt  DateTime @default(now())
+
+  @@index([emailId])
+  @@index([type])
 }
 
 model User {

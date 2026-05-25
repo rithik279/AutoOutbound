@@ -1,6 +1,17 @@
-import { Mail, ArrowLeft, AlertCircle } from 'lucide-react'
+import { Mail, ArrowLeft, AlertCircle, Eye, MousePointer, TrendingUp } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-export default function SentHistoryPage({ sentHistory, setPhase, statusBar }) {
+export default function SentHistoryPage({ sentHistory, setPhase, statusBar, userId }) {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    if (!userId) return
+    fetch('/api/track/stats', { headers: { 'x-user-id': userId } })
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => {})
+  }, [userId])
+
   const sortedEmails = [...sentHistory].sort((a, b) => {
     if (a.sentAt && b.sentAt) return new Date(b.sentAt) - new Date(a.sentAt)
     if (a.sentAt) return -1
@@ -25,6 +36,23 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar }) {
           <ArrowLeft size={13} /> Back
         </button>
       </div>
+
+      {/* Tracking stats banner */}
+      {stats && stats.totalSent > 0 && (
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {[
+            { icon: <Mail size={15} />, value: stats.totalSent, label: 'Sent', color: 'text-gray-600' },
+            { icon: <Eye size={15} />, value: `${stats.openRate}%`, label: `${stats.totalOpened} opened`, color: 'text-blue-600' },
+            { icon: <MousePointer size={15} />, value: `${stats.clickRate}%`, label: `${stats.totalClicked} clicked`, color: 'text-purple-600' },
+          ].map(s => (
+            <div key={s.label} className="bg-white border border-gray-100 rounded-xl p-4 text-center">
+              <div className={`flex justify-center mb-1 ${s.color}`}>{s.icon}</div>
+              <div className="text-xl font-black text-gray-900">{s.value}</div>
+              <div className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {sentHistory.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-16 text-center">
@@ -56,6 +84,24 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar }) {
                     <AlertCircle size={10} />
                     {email.error}
                   </div>
+                )}
+              </div>
+              {/* Per-email open/click badges */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {email.openCount > 0 && (
+                  <div className="flex items-center gap-1 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                    <Eye size={10} />
+                    {email.openCount}
+                  </div>
+                )}
+                {email.clickCount > 0 && (
+                  <div className="flex items-center gap-1 bg-purple-50 text-purple-600 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                    <MousePointer size={10} />
+                    {email.clickCount}
+                  </div>
+                )}
+                {!email.failed && email.openCount === 0 && (
+                  <div className="text-[10px] text-gray-200 uppercase tracking-wide">not opened</div>
                 )}
               </div>
             </div>

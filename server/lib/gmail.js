@@ -15,6 +15,7 @@
 import fetch  from 'node-fetch'
 import { GMAIL } from './config.js'
 import { prisma } from './prisma.js'
+import { buildTrackedHtml } from './email-tracking.js'
 
 // ── Token health ──────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ export async function getGmailToken(userId) {
 
 // ── Send email via Gmail REST API ─────────────────────────────────────────────
 
-export async function sendViaGmail({ to, subject, body }, userId) {
+export async function sendViaGmail({ to, subject, body, trackingId }, userId) {
   const accessToken = await getGmailToken(userId)
 
   // Build RFC 2822 message
@@ -96,15 +97,42 @@ export async function sendViaGmail({ to, subject, body }, userId) {
     ? `${user.senderName || ''} <${user.senderEmail}>`.trim()
     : 'me'
 
-  const message = [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=utf-8',
-    '',
-    body,
-  ].join('\r\n')
+  // Build tracked HTML if we have a trackingId, otherwise fall back to plain text
+  const htmlBody   = trackingId ? buildTrackedHtml(body, trackingId) : null
+  const boundary   = `boundary_${Date.now()}`
+
+  // Multipart/alternative: plain text + HTML (email clients show HTML if supported)
+  const messageParts = htmlBody
+    ? [
+        `From: ${from}`,
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/alternative; boundary="${boundary}"`,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        body,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset=utf-8',
+        '',
+        htmlBody,
+        '',
+        `--${boundary}--`,
+      ]
+    : [
+        `From: ${from}`,
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=utf-8',
+        '',
+        body,
+      ]
+
+  const message = messageParts.join('\r\n')
 
   const encoded = Buffer.from(message).toString('base64url')
 

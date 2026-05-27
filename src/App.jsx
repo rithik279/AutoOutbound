@@ -397,54 +397,71 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
-  // Status bar — show both Gmail and Outlook
-  const getAuthLabel = (status, provider) => {
-    if (!status) return `${provider} not connected`
-    if (status.status === 'ok') return `${provider} connected`
-    if (status.status === 'warning') return `${provider} expires in ${status.minutesLeft}m`
-    if (status.status === 'critical') return `${provider} critical — ${status.minutesLeft}m left`
-    if (status.status === 'expired') return `${provider} expired`
-    return `${provider} not connected`
-  }
-  const gmailLabel = getAuthLabel(gmailAuthStatus, 'Gmail')
-  const outlookLabel = getAuthLabel(authStatus, 'Outlook')
-  const authLabels = [gmailLabel, outlookLabel].filter(l => !l.includes('not connected'))
-  const activeAuthColor = authStatus?.status === 'ok' ? '#16a34a' : authStatus?.status === 'warning' ? '#d97706' : authStatus?.status === 'expired' ? '#dc2626' : '#888'
+  // Status bar — contextual only. Hidden when everything is calm.
   const activeProvider = isFriend ? emailProvider : 'outlook'
-  const schedLabel = scheduleStatus ? `${scheduleStatus.pending} pending · ${scheduleStatus.sent} sent${scheduleStatus.failed ? ` · ${scheduleStatus.failed} failed` : ''}` : 'checking…'
   const hasFailed = scheduleStatus?.failed > 0
-  const statusBar = (wide = false) => (
-    <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-100 rounded-xl mb-5 shadow-sm text-xs flex-wrap">
-      <div className="flex items-center gap-2">
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: activeAuthColor, flexShrink: 0 }} />
-        <span className="text-gray-500 font-medium">{authLabels.join(' · ')}</span>
-        <button
-          onClick={() => {
-            if (isFriend && emailProvider === 'gmail') {
-              window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
-            } else {
-              runReAuth()
-            }
-          }}
-          disabled={reAuthLoading}
-          className="px-2 py-0.5 bg-gray-900 text-white rounded-md text-[11px] font-medium hover:bg-gray-700 transition-colors disabled:opacity-40"
-        >
-          {reAuthLoading ? 'Opening…' : 'Re-authorize'}
-        </button>
+  const hasPending = (scheduleStatus?.pending || 0) > 0
+  // Auth is problematic when it's warning/critical/expired AND the provider is connected
+  const gmailProblem = gmailAuthStatus && gmailAuthStatus.status !== 'ok'
+  const outlookProblem = authStatus && authStatus.status !== 'ok'
+  const authProblem = gmailProblem || outlookProblem
+  // Only show the bar when there's something actionable
+  const showStatusBar = hasFailed || hasPending || authProblem
+
+  const statusBar = (wide = false) => {
+    if (!showStatusBar) return null
+
+    const authColor = gmailProblem
+      ? (gmailAuthStatus.status === 'expired' ? '#dc2626' : '#d97706')
+      : outlookProblem
+        ? (authStatus.status === 'expired' ? '#dc2626' : '#d97706')
+        : '#16a34a'
+
+    const authMsg = gmailProblem
+      ? `Gmail ${gmailAuthStatus.status === 'expired' ? 'expired' : `expires in ${gmailAuthStatus.minutesLeft}m`}`
+      : outlookProblem
+        ? `Outlook ${authStatus.status === 'expired' ? 'expired' : `expires in ${authStatus.minutesLeft}m`}`
+        : null
+
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-5 text-xs flex-wrap">
+        {authProblem && authMsg && (
+          <div className="flex items-center gap-2">
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: authColor, flexShrink: 0 }} />
+            <span className="text-amber-800 font-medium">{authMsg}</span>
+            <button
+              onClick={() => {
+                if (isFriend && emailProvider === 'gmail') {
+                  window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+                } else {
+                  runReAuth()
+                }
+              }}
+              disabled={reAuthLoading}
+              className="px-2 py-0.5 bg-amber-700 text-white rounded-md text-[11px] font-medium hover:bg-amber-800 transition-colors disabled:opacity-40"
+            >
+              {reAuthLoading ? 'Opening…' : 'Re-authorize'}
+            </button>
+          </div>
+        )}
+        {hasPending && (
+          <span className="text-amber-700">⏳ {scheduleStatus.pending} email{scheduleStatus.pending !== 1 ? 's' : ''} sending…</span>
+        )}
+        {hasFailed && (
+          <div className="flex items-center gap-2">
+            <span className="text-red-600 font-medium">⚠️ {scheduleStatus.failed} failed</span>
+            <button
+              onClick={runRetryFailed}
+              disabled={retryLoading}
+              className="px-2 py-0.5 bg-red-500 text-white rounded-md text-[11px] font-medium hover:bg-red-600 transition-colors disabled:opacity-40"
+            >
+              {retryLoading ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
+        )}
       </div>
-      <div className="w-px h-3.5 bg-gray-200" />
-      <span className="text-gray-400">Queue: <span className="text-gray-600 font-medium">{schedLabel}</span></span>
-      {hasFailed && (
-        <button
-          onClick={runRetryFailed}
-          disabled={retryLoading}
-          className="px-2 py-0.5 bg-red-500 text-white rounded-md text-[11px] font-medium hover:bg-red-600 transition-colors disabled:opacity-40"
-        >
-          {retryLoading ? 'Retrying…' : `Retry ${scheduleStatus.failed} failed`}
-        </button>
-      )}
-    </div>
-  )
+    )
+  }
 
   const canDraft = senderName.trim() && senderEmail.trim()
 

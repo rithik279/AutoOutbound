@@ -54,16 +54,25 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     }
   }, [])
 
-  // Fetch profile when user changes
+  // Fetch profile when user changes.
+  // Retry once after 300 ms to handle the race where the Clerk Bearer-token
+  // fetch interceptor (installed in AppShell) hasn't fired yet on first mount.
   useEffect(() => {
-    async function loadProfile() {
+    let cancelled = false
+    async function loadProfile(attempt = 0) {
       if (!currentUser) return
       try {
         const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
-        if (res.ok) setProfile(await res.json())
+        if (res.ok) {
+          if (!cancelled) setProfile(await res.json())
+        } else if (res.status === 401 && attempt === 0) {
+          // Interceptor may not be ready yet — retry after a short delay
+          setTimeout(() => { if (!cancelled) loadProfile(1) }, 400)
+        }
       } catch { }
     }
     loadProfile()
+    return () => { cancelled = true }
   }, [currentUser])
 
   async function handleLogin(email, password) {
@@ -320,24 +329,28 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [sentHistory, setSentHistory] = useState([])
 
   useEffect(() => {
-    async function fetchStatus() {
+    let cancelled = false
+    async function fetchStatus(attempt = 0) {
       try {
         const [authRes, schedRes, gmailRes] = await Promise.all([
           fetch(`${API_URL}/api/token-health`),
           fetch(`${API_URL}/api/schedule-status`),
           fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
         ])
-        const auth = await authRes.json()
+        const auth  = await authRes.json()
         const sched = await schedRes.json()
         const gmail = await gmailRes.json()
+        if (cancelled) return
         setAuthStatus(auth)
-        setScheduleStatus(sched)
+        // Only set if real data (not an error response from race-condition 401)
+        if (sched.pending !== undefined) setScheduleStatus(sched)
+        else if (attempt === 0) setTimeout(() => { if (!cancelled) fetchStatus(1) }, 400)
         setGmailAuthStatus(gmail)
       } catch { }
     }
     fetchStatus()
     const id = setInterval(fetchStatus, 30000)
-    return () => clearInterval(id)
+    return () => { cancelled = true; clearInterval(id) }
   }, [isFriend, currentUser])
 
   async function runReAuth() {

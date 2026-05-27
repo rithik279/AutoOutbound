@@ -149,4 +149,8 @@ export async function sendViaGmail({ to, subject, body, trackingId }, userId) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(`Gmail send failed: ${JSON.stringify(err)}`)
   }
+
+  // Return message + thread IDs so the caller can store them for reply detection
+  const sent = await res.json().catch(() => ({}))
+  return { gmailMessageId: sent.id || null, gmailThreadId: sent.threadId || null }
 }

@@ -1,8 +1,10 @@
-import { Mail, ArrowLeft, AlertCircle, Eye, MousePointer, TrendingUp, Zap } from 'lucide-react'
+import { Mail, ArrowLeft, AlertCircle, Eye, MousePointer, TrendingUp, Zap, RefreshCw, MessageSquare } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-export default function SentHistoryPage({ sentHistory, setPhase, statusBar, userId }) {
+export default function SentHistoryPage({ sentHistory, setPhase, statusBar, userId, onRefresh }) {
   const [stats, setStats] = useState(null)
+  const [checkingReplies, setCheckingReplies] = useState(false)
+  const [replyResult, setReplyResult] = useState(null)
 
   useEffect(() => {
     if (!userId) return
@@ -11,6 +13,23 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
       .then(setStats)
       .catch(() => {})
   }, [userId])
+
+  async function handleCheckReplies() {
+    setCheckingReplies(true)
+    setReplyResult(null)
+    try {
+      const res = await fetch('/api/check-replies', {
+        method: 'POST',
+        headers: { 'x-user-id': userId, 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      setReplyResult(data.repliesFound || 0)
+      if (data.repliesFound > 0 && onRefresh) onRefresh()
+    } catch {
+      setReplyResult(-1)
+    }
+    setCheckingReplies(false)
+  }
 
   const sortedEmails = [...sentHistory].sort((a, b) => {
     if (a.sentAt && b.sentAt) return new Date(b.sentAt) - new Date(a.sentAt)
@@ -29,13 +48,34 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
             {sentHistory.length} email{sentHistory.length !== 1 ? 's' : ''} sent
           </p>
         </div>
-        <button
-          onClick={() => setPhase('entry')}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
-        >
-          <ArrowLeft size={13} /> Back
-        </button>
+        <div className="flex items-center gap-2">
+          {sentHistory.length > 0 && (
+            <button
+              onClick={handleCheckReplies}
+              disabled={checkingReplies}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-40"
+              title="Check Gmail for replies"
+            >
+              <RefreshCw size={13} className={checkingReplies ? 'animate-spin' : ''} />
+              {checkingReplies ? 'Checking…' : 'Check replies'}
+            </button>
+          )}
+          <button
+            onClick={() => setPhase('entry')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
+          >
+            <ArrowLeft size={13} /> Back
+          </button>
+        </div>
       </div>
+
+      {/* Reply check result toast */}
+      {replyResult !== null && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl mb-4 text-sm font-medium ${replyResult > 0 ? 'bg-green-50 text-green-700' : replyResult === 0 ? 'bg-gray-50 text-gray-500' : 'bg-red-50 text-red-600'}`}>
+          <MessageSquare size={14} />
+          {replyResult > 0 ? `${replyResult} new repl${replyResult === 1 ? 'y' : 'ies'} found!` : replyResult === 0 ? 'No new replies yet.' : 'Could not check replies — Gmail not connected.'}
+        </div>
+      )}
 
       {/* Tracking stats banner */}
       {stats && stats.totalSent > 0 && (
@@ -92,8 +132,14 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
                   </div>
                 )}
               </div>
-              {/* Per-email open/click badges */}
+              {/* Per-email open/click/reply badges */}
               <div className="flex items-center gap-2 flex-shrink-0">
+                {email.repliedAt && (
+                  <div className="flex items-center gap-1 bg-green-50 text-green-600 rounded-full px-2 py-0.5 text-[11px] font-bold">
+                    <MessageSquare size={10} />
+                    Replied
+                  </div>
+                )}
                 {email.openCount > 0 && (
                   <div className="flex items-center gap-1 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-[11px] font-medium">
                     <Eye size={10} />
@@ -106,7 +152,7 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
                     {email.clickCount}
                   </div>
                 )}
-                {!email.failed && email.openCount === 0 && (
+                {!email.failed && !email.repliedAt && email.openCount === 0 && (
                   <div className="text-[10px] text-gray-200 uppercase tracking-wide">not opened</div>
                 )}
               </div>

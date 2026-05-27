@@ -388,13 +388,17 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setRetryLoading(false)
   }
 
-  async function loadSentHistory() {
+  async function fetchSentHistory() {
     try {
       const res = await fetch(`${API_URL}/api/sent-emails`, { headers: { 'x-user-id': currentUser?.userId || 'friend' } })
       const data = await res.json()
       setSentHistory(data.emails || [])
-      setPhase('sent_history')
     } catch { }
+  }
+
+  async function loadSentHistory() {
+    await fetchSentHistory()
+    setPhase('sent_history')
   }
 
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
@@ -2224,6 +2228,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setPhase={setPhase}
       statusBar={statusBar}
       userId={currentUser?.userId}
+      onRefresh={fetchSentHistory}
     />
   )
 

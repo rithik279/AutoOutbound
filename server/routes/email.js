@@ -187,6 +187,7 @@ router.get('/sent-emails', async (req, res) => {
         openCount:     e.openCount,
         clickCount:    e.clickCount,
         firstOpenedAt: e.firstOpenedAt,
+        repliedAt:     e.repliedAt,
       })),
     })
   } catch (err) {
@@ -241,6 +242,100 @@ router.post('/schedule-retry', async (req, res) => {
     res.json({ ok: true, count: failed.length })
   } catch (err) {
     console.error('[email] schedule-retry error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Reply detection ─────────────────────────────────────────────────────────
+
+/**
+ * POST /api/check-replies
+ *
+ * Polls Gmail for replies to sent emails by checking each thread for
+ * messages from the recipient (not from the sender).
+ * Updates Email.repliedAt and Contact.state = 'replied' when found.
+ *
+ * Response: { ok: true, repliesFound: number }
+ */
+router.post('/check-replies', async (req, res) => {
+  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+
+  try {
+    // Get all sent Gmail emails that have a threadId but haven't been marked replied yet
+    const sentEmails = await prisma.email.findMany({
+      where: {
+        userId,
+        provider:      'gmail',
+        sentAt:        { not: null },
+        gmailThreadId: { not: null },
+        repliedAt:     null,
+      },
+      select: { id: true, to: true, gmailThreadId: true, contactId: true },
+    })
+
+    if (!sentEmails.length) return res.json({ ok: true, repliesFound: 0 })
+
+    // Get Gmail access token
+    let accessToken
+    try {
+      accessToken = await getGmailToken(userId)
+    } catch (e) {
+      return res.status(503).json({ error: 'Gmail not authenticated' })
+    }
+
+    // Get sender email to exclude their messages from reply detection
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { senderEmail: true } })
+    const senderEmail = user?.senderEmail?.toLowerCase() || ''
+
+    let repliesFound = 0
+    const BATCH = 10 // check 10 threads at a time to avoid rate limits
+
+    for (let i = 0; i < sentEmails.length; i += BATCH) {
+      const chunk = sentEmails.slice(i, i + BATCH)
+
+      await Promise.all(chunk.map(async (email) => {
+        try {
+          // Fetch the thread
+          const threadRes = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/threads/${email.gmailThreadId}?format=metadata&metadataHeaders=From`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          )
+          if (!threadRes.ok) return
+
+          const thread = await threadRes.json()
+          const messages = thread.messages || []
+
+          // A reply exists if the thread has >1 message AND one of them is from the recipient
+          const hasReply = messages.length > 1 && messages.some(msg => {
+            const fromHeader = msg.payload?.headers?.find(h => h.name === 'From')?.value || ''
+            const fromAddr   = fromHeader.toLowerCase()
+            return fromAddr.includes(email.to.toLowerCase()) && !fromAddr.includes(senderEmail)
+          })
+
+          if (hasReply) {
+            repliesFound++
+            await prisma.$transaction([
+              prisma.email.update({
+                where: { id: email.id },
+                data:  { repliedAt: new Date() },
+              }),
+              prisma.contact.update({
+                where: { id: email.contactId },
+                data:  { state: 'replied' },
+              }),
+            ])
+            console.log(`[replies] Reply detected: email ${email.id} from ${email.to}`)
+          }
+        } catch (e) {
+          console.error(`[replies] Thread check failed for email ${email.id}: ${e.message}`)
+        }
+      }))
+    }
+
+    console.log(`[replies] Check complete: ${repliesFound} new replies for user ${userId}`)
+    res.json({ ok: true, repliesFound })
+  } catch (err) {
+    console.error('[replies] check-replies error:', err)
     res.status(500).json({ error: err.message })
   }
 })

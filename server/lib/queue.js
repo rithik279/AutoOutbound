@@ -118,18 +118,22 @@ export async function startWorkers() {
       const trackingId  = emailRecord?.trackingId || null
 
       let gmailMessageId = null, gmailThreadId = null
+      let outlookMessageId = null, outlookConversationId = null
+
       if (provider === 'gmail') {
         const result = await sendViaGmail({ to, subject, body, trackingId }, userId)
         gmailMessageId = result?.gmailMessageId || null
         gmailThreadId  = result?.gmailThreadId  || null
       } else {
-        await sendViaGraph({ to, subject, body, trackingId }, userId)
+        const result = await sendViaGraph({ to, subject, body, trackingId }, userId)
+        outlookMessageId      = result?.outlookMessageId      || null
+        outlookConversationId = result?.outlookConversationId || null
       }
 
-      // Mark sent in DB, store Gmail thread info for reply detection
+      // Mark sent in DB, store provider thread/conversation IDs for reply detection
       await prisma.email.update({
         where: { id },
-        data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId },
+        data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId, outlookMessageId, outlookConversationId },
       })
 
       // Update contact state to 'emailed'

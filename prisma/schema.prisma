@@ -47,15 +47,18 @@ model Email {
   firstOpenedAt  DateTime?
   events         EmailEvent[]
   // Reply tracking — populated after send by the email worker
-  gmailMessageId String?      // Gmail API message id (used to detect replies via threadId)
-  gmailThreadId  String?      // Gmail thread id
-  repliedAt      DateTime?    // when a reply was detected
+  gmailMessageId        String?   // Gmail API message id
+  gmailThreadId         String?   // Gmail thread id (used to detect replies)
+  outlookMessageId      String?   // Graph API message id
+  outlookConversationId String?   // Graph API conversation id (used to detect replies)
+  repliedAt             DateTime? // when a reply was detected
 
   @@index([userId])
   @@index([scheduledAt])
   @@index([sentAt])
   @@index([trackingId])
   @@index([gmailThreadId])
+  @@index([outlookConversationId])
 }
 
 model EmailEvent {

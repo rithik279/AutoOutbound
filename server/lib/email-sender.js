@@ -51,26 +51,44 @@ export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
   // Use tracked HTML body if trackingId is available
   const htmlBody = trackingId ? buildTrackedHtml(body, trackingId) : null
 
-  const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+  const messageBody = {
+    subject,
+    body: htmlBody
+      ? { contentType: 'HTML', content: htmlBody }
+      : { contentType: 'Text', content: body },
+    toRecipients: [{ emailAddress: { address: to } }],
+    attachments,
+  }
+
+  // Step 1: Create draft — this gives us an ID and conversationId for reply tracking
+  const draftRes = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      message: {
-        subject,
-        body: htmlBody
-          ? { contentType: 'HTML', content: htmlBody }
-          : { contentType: 'Text', content: body },
-        toRecipients: [{ emailAddress: { address: to } }],
-        attachments,
-      },
-      saveToSentItems: true,
-    }),
+    body:    JSON.stringify(messageBody),
   })
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err?.error?.message || `Graph API error ${res.status}`)
+  if (!draftRes.ok) {
+    const err = await draftRes.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `Graph create draft error ${draftRes.status}`)
   }
+
+  const draft = await draftRes.json()
+  const messageId      = draft.id             || null
+  const conversationId = draft.conversationId || null
+
+  // Step 2: Send the draft
+  const sendRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}/send`, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  if (!sendRes.ok) {
+    const err = await sendRes.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `Graph send error ${sendRes.status}`)
+  }
+
+  // Return IDs so the queue worker can store them for reply detection
+  return { outlookMessageId: messageId, outlookConversationId: conversationId }
 }
 
 // ── Gmail ─────────────────────────────────────────────────────────────────────

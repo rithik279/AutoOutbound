@@ -76,7 +76,7 @@ app.use((req, res, next) => {
     // Server-to-server or same-origin — allow
     res.header('Access-Control-Allow-Origin', '*')
   }
-  res.header('Access-Control-Allow-Headers', 'Content-Type, x-apollo-key, x-user-id')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-apollo-key, x-user-id, Authorization')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS')
   if (req.method === 'OPTIONS') return res.sendStatus(200)
   next()

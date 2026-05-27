@@ -1,4 +1,4 @@
-import { Users, RefreshCw, ArrowLeft } from 'lucide-react'
+import { Users, RefreshCw, ArrowLeft, ArrowRight, Zap } from 'lucide-react'
 
 const STATE_STYLES = {
   replied:  { bg: 'bg-green-100',  text: 'text-green-700' },
@@ -41,11 +41,17 @@ export default function MyContactsPage({ savedContacts, loadingContacts, loadSav
         </div>
       ) : savedContacts.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-16 text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Users size={24} className="text-gray-400" />
+          <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Users size={28} className="text-brand-400" />
           </div>
-          <h2 className="font-bold text-gray-900 mb-2">No contacts yet</h2>
-          <p className="text-sm text-gray-400">Contacts are saved automatically when you send emails.</p>
+          <h2 className="text-lg font-black text-gray-900 mb-2">No contacts yet</h2>
+          <p className="text-sm text-gray-400 mb-6 max-w-xs mx-auto">Run your first campaign and contacts will appear here automatically.</p>
+          <button
+            onClick={() => setPhase('entry')}
+            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all"
+          >
+            <Zap size={14} /> Start your first campaign
+          </button>
         </div>
       ) : (
         <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">

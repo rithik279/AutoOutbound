@@ -1,4 +1,4 @@
-import { Mail, ArrowLeft, AlertCircle, Eye, MousePointer, TrendingUp } from 'lucide-react'
+import { Mail, ArrowLeft, AlertCircle, Eye, MousePointer, TrendingUp, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export default function SentHistoryPage({ sentHistory, setPhase, statusBar, userId }) {
@@ -56,11 +56,17 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
 
       {sentHistory.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-xl p-16 text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Mail size={24} className="text-gray-400" />
+          <div className="w-16 h-16 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Mail size={28} className="text-brand-400" />
           </div>
-          <h2 className="font-bold text-gray-900 mb-2">No emails sent yet</h2>
-          <p className="text-sm text-gray-400">Schedule a campaign to see your sent emails here.</p>
+          <h2 className="text-lg font-black text-gray-900 mb-2">No emails sent yet</h2>
+          <p className="text-sm text-gray-400 mb-6 max-w-xs mx-auto">Send your first campaign and track opens, clicks, and replies here.</p>
+          <button
+            onClick={() => setPhase('entry')}
+            className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all"
+          >
+            <Zap size={14} /> Launch a campaign
+          </button>
         </div>
       ) : (
         <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">

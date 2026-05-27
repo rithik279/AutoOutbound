@@ -9,12 +9,14 @@
  */
 
 import { getUser, createUser } from './users.js'
-import { createClerkClient } from '@clerk/backend'
+import { createClerkClient, verifyToken as clerkVerifyToken } from '@clerk/backend'
 import { prisma } from './prisma.js'
 
 const clerk = process.env.CLERK_SECRET_KEY
   ? createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
   : null
+
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY || ''
 
 // ── Simple in-memory rate limiter ────────────────────────────────────────────
 // Keyed by `${ip}:${route}`. Good enough for single-process; replace with
@@ -92,7 +94,8 @@ export async function requireAuth(req, res, next) {
 
   if (bearerToken && clerk) {
     try {
-      const payload = await clerk.verifyToken(bearerToken, {
+      const payload = await clerkVerifyToken(bearerToken, {
+        secretKey: CLERK_SECRET_KEY,
         authorizedParties: [
           'https://auto-outbound.rithiksingh.com',
           'https://firstshot.rithiksingh.com',

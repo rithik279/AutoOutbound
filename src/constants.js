@@ -7,8 +7,8 @@ export const MODELS = [
 ]
 
 export const ENTRY_LEVELS = [
-  { id: 'scratch',     emoji: '🔍', label: 'From a prompt',            desc: 'Describe who you want to reach — AI finds companies + decision makers via Apollo',             badge: '#7c3aed' },
-  { id: 'companies',  emoji: '🏢', label: 'Company list',              desc: 'Paste company names or domains — we find the right people via Apollo + enrich emails',         badge: '#0891b2' },
+  { id: 'scratch',     emoji: '🔍', label: 'From a prompt',            desc: 'Describe who you want to reach — AI finds companies + decision makers',             badge: '#7c3aed' },
+  { id: 'companies',  emoji: '🏢', label: 'Company list',              desc: 'Paste company names or domains — we find the right people and enrich emails',         badge: '#0891b2' },
   { id: 'bulk_import', emoji: '📊', label: 'Bulk import (500+ companies)', desc: 'Upload CSV of companies → daily auto-discovery → auto-draft → review → auto-send',         badge: '#ec4899' },
 ]
 

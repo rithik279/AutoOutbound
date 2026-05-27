@@ -1428,7 +1428,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={c.h1}>Find contacts from a prompt</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>AI translates your description into Apollo search parameters</p>
+          <p style={{ ...c.muted, marginTop: 4 }}>AI finds the right people and their verified contact details</p>
         </div>
         <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Settings</button>
       </div>
@@ -1442,7 +1442,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           onChange={e => setDiscoverPrompt(e.target.value)}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={c.small}>Apollo searches its database of 275M+ people · enriches top matches to get emails</p>
+          <p style={c.small}>Searches 275M+ professionals · enriches top matches to get verified emails</p>
           <button onClick={runDiscover} disabled={discoverLoading || !discoverPrompt.trim()} style={c.primaryBtn}>
             {discoverLoading ? 'Searching…' : 'Find contacts →'}
           </button>
@@ -1517,7 +1517,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           onChange={e => setCompanyOrgPrompt(e.target.value)}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={c.small}>Searches Apollo's 275M+ company database · exports a CSV you can upload below</p>
+          <p style={c.small}>Searches 275M+ company database · exports a CSV you can upload below</p>
           <button onClick={searchCompanyOrgs} disabled={companyOrgSearching || !companyOrgPrompt.trim()} style={c.primaryBtn}>
             {companyOrgSearching ? 'Searching…' : 'Find companies →'}
           </button>
@@ -1630,7 +1630,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={c.small}>Tiered Apollo search per company · max 2 contacts · CTO/CEO/Founder fallback</p>
+          <p style={c.small}>AI finds decision-makers per company · max 2 contacts · CTO/CEO/Founder fallback</p>
           <button onClick={searchCompanies} disabled={companySearching || (!companyList.length && !companyText.trim())} style={c.primaryBtn}>
             {companySearching ? 'Searching…' : 'Find contacts →'}
           </button>

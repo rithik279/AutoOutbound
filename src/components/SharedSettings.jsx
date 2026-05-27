@@ -197,25 +197,7 @@ export default function SharedSettings({
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-xl p-5">
-            <h2 className="text-sm font-bold text-gray-900 mb-4">AI model</h2>
-            <div className="grid grid-cols-3 gap-3">
-              {MODELS.map(m => {
-                const sel = modelId === m.id
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setModelIdFn(m.id)}
-                    className={`text-left p-3.5 rounded-xl border-2 transition-all ${sel ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'}`}
-                  >
-                    <div className={`font-bold text-xs mb-1 ${sel ? 'text-brand-600' : 'text-gray-700'}`}>{m.label}</div>
-                    <div className="text-[10px] text-gray-400">{m.note}</div>
-                    <div className="text-[10px] text-gray-300 mt-1">Est. 26 emails: {m.cost}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          {/* AI model selector removed — GPT-4o Mini always used */}
         </div>
       )}
 

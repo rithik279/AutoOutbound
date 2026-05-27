@@ -1076,12 +1076,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   if (phase === 'settings') return wrap(
     <div>
       {statusBar()}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={c.h1}>Settings</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>Configure your account</p>
-        </div>
-        <button onClick={() => setPhase('entry')} style={c.ghostBtn}>← Back</button>
+      <div style={{ marginBottom: 24 }}>
+        <button onClick={() => setPhase('entry')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+        <h1 style={c.h1}>Settings</h1>
+        <p style={{ ...c.muted, marginTop: 4 }}>Configure your account</p>
       </div>
 
       {/* Unified settings for all users */}
@@ -1121,12 +1119,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   if (phase === 'import_companies') return wrap(
     <div>
       {statusBar()}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1 style={c.h1}>Import & validate companies</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>CSV: name, domain, industry (opt), size (opt), location (opt)</p>
-        </div>
-        <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Settings</button>
+      <div style={{ marginBottom: 20 }}>
+        <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+        <h1 style={c.h1}>Import & validate companies</h1>
+        <p style={{ ...c.muted, marginTop: 4 }}>CSV: name, domain, industry (opt), size (opt), location (opt)</p>
       </div>
 
       <div style={{ ...c.card, marginBottom: 14 }}>
@@ -1221,14 +1217,15 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h1 style={c.h1}>Review drafted emails</h1>
-            <p style={{ ...c.muted, marginTop: 4 }}>{N} drafted · {appCount} approved · avg score {avgScore}/25</p>
-          </div>
+        <div style={{ marginBottom: 20 }}>
+          <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h1 style={c.h1}>Review drafted emails</h1>
+              <p style={{ ...c.muted, marginTop: 4 }}>{N} drafted · {appCount} approved · avg score {avgScore}/25</p>
+            </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {lowCount > 0 && <span style={{ ...c.muted, fontSize: 12, color: '#dc2626' }}>⚠️ {lowCount} low-score drafts</span>}
-            <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Back</button>
             <button
               onClick={() => {
                 // Move approved drafts to regular drafts for scheduling
@@ -1261,6 +1258,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             >
               Schedule ({appCount}) →
             </button>
+          </div>
           </div>
         </div>
 
@@ -1425,12 +1423,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   if (phase === 'discover') return wrap(
     <div>
       {statusBar()}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1 style={c.h1}>Find contacts from a prompt</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>AI finds the right people and their verified contact details</p>
-        </div>
-        <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Settings</button>
+      <div style={{ marginBottom: 20 }}>
+        <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+        <h1 style={c.h1}>Find contacts from a prompt</h1>
+        <p style={{ ...c.muted, marginTop: 4 }}>AI finds the right people and their verified contact details</p>
       </div>
 
       <div style={{ ...c.card, marginBottom: 14 }}>
@@ -1495,15 +1491,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   if (phase === 'companies') return wrap(
     <div>
       {statusBar()}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1 style={c.h1}>Find decision makers by company</h1>
-          <p style={{ ...c.muted, marginTop: 4 }}>
-            One company per line — Apollo finds the right person + email at each
-            <span style={{ ...c.pill(CAMPAIGN_MODES[campaignMode].color, ''), marginLeft: 10 }}>{CAMPAIGN_MODES[campaignMode].label}</span>
-          </p>
-        </div>
-        <button onClick={() => setPhase('settings')} style={c.ghostBtn}>← Settings</button>
+      <div style={{ marginBottom: 20 }}>
+        <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+        <h1 style={c.h1}>Find decision makers by company</h1>
+        <p style={{ ...c.muted, marginTop: 4 }}>
+          One company per line — AI finds the right person + email at each
+          <span style={{ ...c.pill(CAMPAIGN_MODES[campaignMode].color, ''), marginLeft: 10 }}>{CAMPAIGN_MODES[campaignMode].label}</span>
+        </p>
       </div>
 
       {/* AI company discovery */}
@@ -1834,20 +1828,19 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-          <div>
-            <h1 style={c.h1}>Review & approve</h1>
-            <p style={{ ...c.muted, marginTop: 4 }}>{model.label} · {totalTokens.toLocaleString()} tokens{fallbackCount > 0 ? ` · ${fallbackCount} fallbacks` : ''}</p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => {
-              const msg = encodeURIComponent('Your outbound emails are ready to review at http://localhost:3000')
-              window.open(`https://wa.me/?text=${msg}`, '_blank')
-            }} style={c.ghostBtn}>WhatsApp share</button>
-            <button onClick={approveAll} style={c.ghostBtn}>Approve all</button>
-            <button onClick={() => setPhase('schedule')} disabled={approved.size === 0} style={c.primaryBtn}>
-              Schedule ({approved.size}) →
-            </button>
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={() => setPhase('discover')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h1 style={c.h1}>Review & approve</h1>
+              <p style={{ ...c.muted, marginTop: 4 }}>{model.label} · {totalTokens.toLocaleString()} tokens{fallbackCount > 0 ? ` · ${fallbackCount} fallbacks` : ''}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={approveAll} style={c.ghostBtn}>Approve all</button>
+              <button onClick={() => setPhase('schedule')} disabled={approved.size === 0} style={c.primaryBtn}>
+                Schedule ({approved.size}) →
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1950,9 +1943,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div><h1 style={c.h1}>Schedule campaign</h1><p style={{ ...c.muted, marginTop: 4 }}>{N} approved · set your send window</p></div>
-          <button onClick={() => setPhase('review')} style={c.ghostBtn}>← Review</button>
+        <div style={{ marginBottom: 20 }}>
+          <button onClick={() => setPhase('review')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+          <h1 style={c.h1}>Schedule campaign</h1>
+          <p style={{ ...c.muted, marginTop: 4 }}>{N} approved · set your send window</p>
         </div>
         <div style={{ ...c.card, marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>

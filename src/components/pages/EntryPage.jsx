@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Upload, ArrowRight } from 'lucide-react'
+import { FileText, Upload, ArrowRight, RotateCcw, X } from 'lucide-react'
 
 export default function EntryPage({
   entryLevel, setEntryLevel,
@@ -11,6 +11,9 @@ export default function EntryPage({
   setPhase,
   discoverPrompt,
   setDiscoverPrompt,
+  hasSavedCampaign,
+  onResumeCampaign,
+  onDiscardCampaign,
 }) {
   const sentCount = scheduleStatus?.sent || 0
   const [localPrompt, setLocalPrompt] = useState(discoverPrompt || '')
@@ -30,6 +33,30 @@ export default function EntryPage({
 
   return (
     <div>
+      {/* Resume banner */}
+      {hasSavedCampaign && (
+        <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-4 py-3 mb-6">
+          <RotateCcw size={15} className="text-brand-500 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-semibold text-brand-700">You have an unfinished campaign</span>
+            <span className="text-xs text-brand-500 ml-2">Pick up where you left off</span>
+          </div>
+          <button
+            onClick={onResumeCampaign}
+            className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
+          >
+            Continue <ArrowRight size={12} />
+          </button>
+          <button
+            onClick={onDiscardCampaign}
+            className="text-brand-300 hover:text-brand-500 transition-colors flex-shrink-0"
+            title="Discard draft"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Campaign</h1>

@@ -399,6 +399,59 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
 
+  // ── Campaign draft persistence ────────────────────────────────────────────
+  const CAMPAIGN_KEY = 'fs_campaign_draft'
+
+  // Auto-save when there's an active campaign in progress
+  useEffect(() => {
+    if (contacts.length > 0 && phase !== 'entry' && phase !== 'sent') {
+      const saved = {
+        contacts,
+        drafts,
+        approved: [...approved],
+        flagged: [...flagged],
+        discoverPrompt,
+        phase: ['review', 'schedule'].includes(phase) ? phase : 'review',
+        savedAt: Date.now(),
+      }
+      try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify(saved)) } catch {}
+    }
+  }, [contacts, drafts, approved, flagged, phase])
+
+  // Clear saved campaign when sent or user explicitly starts new
+  function clearSavedCampaign() {
+    try { localStorage.removeItem(CAMPAIGN_KEY) } catch {}
+  }
+
+  // Resume a saved campaign
+  function resumeCampaign() {
+    try {
+      const raw = localStorage.getItem(CAMPAIGN_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      setContacts(saved.contacts || [])
+      setDrafts(saved.drafts || {})
+      setApproved(new Set(saved.approved || []))
+      setFlagged(new Set(saved.flagged || []))
+      if (saved.discoverPrompt) setDiscoverPrompt(saved.discoverPrompt)
+      setPhase(saved.phase || 'review')
+    } catch {}
+  }
+
+  const hasSavedCampaign = (() => {
+    try {
+      const raw = localStorage.getItem(CAMPAIGN_KEY)
+      if (!raw) return false
+      const saved = JSON.parse(raw)
+      // Expire after 7 days
+      if (Date.now() - (saved.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(CAMPAIGN_KEY)
+        return false
+      }
+      return (saved.contacts?.length || 0) > 0
+    } catch { return false }
+  })()
+
   // Status bar — contextual only. Hidden when everything is calm.
   const activeProvider = isFriend ? emailProvider : 'outlook'
   const hasFailed = scheduleStatus?.failed > 0
@@ -918,6 +971,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const data = await res.json()
       if (data.ok) {
         setSentCount(emails.length)
+        clearSavedCampaign()
         setPhase('sent')
       } else {
         setScheduleError(data.error || 'Server error')
@@ -1107,6 +1161,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setPhase={setPhase}
       discoverPrompt={discoverPrompt}
       setDiscoverPrompt={setDiscoverPrompt}
+      hasSavedCampaign={hasSavedCampaign}
+      onResumeCampaign={resumeCampaign}
+      onDiscardCampaign={clearSavedCampaign}
     />
   )
 

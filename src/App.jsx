@@ -299,6 +299,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [editBody, setEditBody] = useState('')
   const [flagged, setFlagged] = useState(new Set())
   const [approved, setApproved] = useState(new Set())
+  const [regenLoading, setRegenLoading] = useState(null) // contactId being regenerated
 
   // Schedule state
   const [sendDate, setSendDate] = useState('')
@@ -860,6 +861,24 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setDraftCurrent(null)
     setSelected(contactList[0])
     setPhase('review')
+  }
+
+  // ── REGENERATE SINGLE DRAFT ─────────────────────────────────────────────────
+  async function regenDraft(contact) {
+    if (!contact) return
+    setRegenLoading(contact.id)
+    try {
+      const siteContent = await fetchSiteContent(contact.domain || contact.co).catch(() => '')
+      const { subjects, body } = await draftEmail(contact, aiConfig, campaignMode, siteContent)
+      const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
+      setDrafts(prev => ({ ...prev, [contact.id]: { subject, body, status: 'ready' } }))
+      // Remove from flagged/approved so user reviews the new draft
+      setFlagged(prev => { const s = new Set(prev); s.delete(contact.id); return s })
+      setApproved(prev => { const s = new Set(prev); s.delete(contact.id); return s })
+    } catch (e) {
+      console.error('[regen] failed:', e.message)
+    }
+    setRegenLoading(null)
   }
 
   // ── BATCH DRAFT FOR BULK IMPORT ────────────────────────────────────────────
@@ -2040,6 +2059,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   <>
                     <button onClick={() => toggleFlag(sel.id)} style={{ ...c.ghostBtn, color: flagged.has(sel.id) ? '#dc2626' : undefined }}>
                       {flagged.has(sel.id) ? '⚑ Unflag' : 'Flag'}
+                    </button>
+                    <button
+                      onClick={() => regenDraft(sel)}
+                      disabled={regenLoading === sel.id}
+                      title="AI regenerate email"
+                      style={{ ...c.ghostBtn, display: 'inline-flex', alignItems: 'center', gap: 5, opacity: regenLoading === sel.id ? 0.5 : 1 }}
+                    >
+                      {regenLoading === sel.id ? '⏳' : '✨'} {regenLoading === sel.id ? 'Rewriting…' : 'Regenerate'}
                     </button>
                     <button onClick={() => startEdit(sel.id)} style={c.ghostBtn}>Edit</button>
                     <button

@@ -12,6 +12,7 @@ import EntryPage from './components/pages/EntryPage.jsx'
 import SentPage from './components/pages/SentPage.jsx'
 import MyContactsPage from './components/pages/MyContactsPage.jsx'
 import SentHistoryPage from './components/pages/SentHistoryPage.jsx'
+import FlowStepper from './components/FlowStepper.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -1442,6 +1443,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   if (phase === 'discover') return wrap(
     <div>
       {statusBar()}
+      <FlowStepper current="describe" />
       <div style={{ marginBottom: 20 }}>
         <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
         <h1 style={c.h1}>Find contacts from a prompt</h1>
@@ -1796,6 +1798,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
+        <FlowStepper current="contacts" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <h1 style={c.h1}>Drafting {N} emails…</h1>
@@ -1847,6 +1850,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
+        <FlowStepper current="approve" />
         <div style={{ marginBottom: 16 }}>
           <button onClick={() => setPhase('discover')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1962,6 +1966,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return wrap(
       <div>
         {statusBar()}
+        <FlowStepper current="schedule" />
         <div style={{ marginBottom: 20 }}>
           <button onClick={() => setPhase('review')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
           <h1 style={c.h1}>Schedule campaign</h1>

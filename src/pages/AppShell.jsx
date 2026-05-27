@@ -2,18 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useUser, SignOutButton } from '@clerk/clerk-react'
 import {
-  Zap, LayoutDashboard, Users, Mail, Settings,
-  LogOut, Plus, Menu, X
+  Zap, Plus, Users, Mail, Settings,
+  LogOut, Menu, X
 } from 'lucide-react'
 import { cn } from '../lib/cn.js'
 import App from '../App.jsx'
 
 const NAV = [
-  { icon: LayoutDashboard, label: 'Dashboard',   phase: 'entry' },
-  { icon: Plus,            label: 'New Campaign', phase: 'entry' },
-  { icon: Users,           label: 'My Contacts',  phase: 'my_contacts' },
-  { icon: Mail,            label: 'Sent Emails',  phase: 'sent_history' },
-  { icon: Settings,        label: 'Settings',     phase: 'settings' },
+  { icon: Plus,     label: 'New Campaign', phase: 'entry' },
+  { icon: Users,    label: 'My Contacts',  phase: 'my_contacts' },
+  { icon: Mail,     label: 'Sent Emails',  phase: 'sent_history' },
+  { icon: Settings, label: 'Settings',     phase: 'settings' },
 ]
 
 export default function AppShell() {

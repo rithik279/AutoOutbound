@@ -92,7 +92,14 @@ export async function requireAuth(req, res, next) {
 
   if (bearerToken && clerk) {
     try {
-      const payload = await clerk.verifyToken(bearerToken)
+      const payload = await clerk.verifyToken(bearerToken, {
+        authorizedParties: [
+          'https://auto-outbound.rithiksingh.com',
+          'https://firstshot.rithiksingh.com',
+          'http://localhost:5173',
+          'http://localhost:3000',
+        ],
+      })
       const clerkId = payload.sub
 
       // Find existing user by clerkId

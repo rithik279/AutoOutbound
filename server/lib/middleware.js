@@ -133,6 +133,7 @@ export async function requireAuth(req, res, next) {
       req.clerkId  = clerkId
       return next()
     } catch (e) {
+      console.error('[auth] Clerk verifyToken failed:', e?.message || e)
       return res.status(401).json({ error: 'Invalid session token' })
     }
   }

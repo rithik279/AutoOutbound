@@ -766,7 +766,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       try {
         // Fetch company website before drafting so the AI has real content to hook from
         const siteContent = await fetchSiteContent(contact.domain || contact.co)
-        const { subject, body, tokens } = await draftEmail(contact, aiConfig, campaignMode, siteContent)
+        const { subjects, body, tokens } = await draftEmail(contact, aiConfig, campaignMode, siteContent)
+        const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
         tokRef.current += tokens || 0
         setTotalTokens(tokRef.current)
         draftsRef.current[contact.id] = { subject, body, status: 'ready' }
@@ -800,7 +801,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       try {
         // Use new draftEmail signature with companyData for category detection
         const siteContent = await fetchSiteContent(contact.domain || contact.co)
-        const { subject, body, tokens, category, score, passed } = await draftEmail(contact, aiConfig, companyData, siteContent)
+        const { subjects, body, tokens, category, score, passed } = await draftEmail(contact, aiConfig, companyData, siteContent)
+        const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
         tokRef.current += tokens || 0
         batch.push({
           id: contact.id,

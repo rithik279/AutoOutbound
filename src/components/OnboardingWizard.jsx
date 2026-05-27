@@ -116,35 +116,45 @@ export default function OnboardingWizard({ currentUser, onComplete, onUpdateProf
         {step === 1 && (
           <div className="bg-white rounded-3xl shadow-xl p-8">
             <h2 className="text-xl font-black text-gray-900 mb-1">Connect your email</h2>
-            <p className="text-sm text-gray-400 mb-6">FirstShot sends from your own account — not a shared domain.</p>
+            <p className="text-sm text-gray-400 mb-4">FirstShot sends from your own account — not a shared domain.</p>
+
+            {/* .edu insight callout */}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-blue-700 mb-0.5">🎓 Using a .edu email? Use Outlook.</p>
+              <p className="text-xs text-blue-500 leading-relaxed">Your university email is your unfair advantage — it signals legitimacy instantly. Prospects open emails from students at a far higher rate than from generic domains.</p>
+            </div>
 
             <div className="space-y-3 mb-6">
+              {/* Outlook — recommended first */}
+              <button
+                onClick={handleConnectOutlook}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-blue-400 bg-blue-50 hover:bg-blue-100 transition-all group relative"
+              >
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Mail size={18} className="text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-800">Connect Outlook</span>
+                    <span className="text-[10px] font-bold bg-blue-500 text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                  </div>
+                  <div className="text-xs text-blue-500">University .edu · Microsoft 365 · Outlook.com</div>
+                </div>
+                <ArrowRight size={14} className="ml-auto text-blue-300 group-hover:text-blue-500 transition-colors" />
+              </button>
+
               <button
                 onClick={handleConnectGmail}
-                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-brand-300 hover:bg-brand-50 transition-all group"
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all group"
               >
                 <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-                  <Mail size={18} className="text-red-500" />
+                  <Mail size={18} className="text-red-400" />
                 </div>
                 <div className="text-left">
                   <div className="text-sm font-bold text-gray-800">Connect Gmail</div>
                   <div className="text-xs text-gray-400">Google Workspace or personal Gmail</div>
                 </div>
-                <ArrowRight size={14} className="ml-auto text-gray-300 group-hover:text-brand-400 transition-colors" />
-              </button>
-
-              <button
-                onClick={handleConnectOutlook}
-                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all group"
-              >
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Mail size={18} className="text-blue-500" />
-                </div>
-                <div className="text-left">
-                  <div className="text-sm font-bold text-gray-800">Connect Outlook</div>
-                  <div className="text-xs text-gray-400">Microsoft 365 or Outlook.com</div>
-                </div>
-                <ArrowRight size={14} className="ml-auto text-gray-300 group-hover:text-blue-400 transition-colors" />
+                <ArrowRight size={14} className="ml-auto text-gray-300 group-hover:text-gray-400 transition-colors" />
               </button>
             </div>
 

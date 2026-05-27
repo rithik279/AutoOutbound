@@ -335,10 +335,16 @@ export default function SharedSettings({
           <h2 className="text-sm font-bold text-gray-900 mb-1">Email Account</h2>
           <p className="text-xs text-gray-400 mb-4">Choose your email provider and connect your account.</p>
 
+          {/* .edu insight */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3 mb-4">
+            <p className="text-xs font-semibold text-blue-700 mb-0.5">🎓 Have a university .edu email? Use Outlook.</p>
+            <p className="text-xs text-blue-500 leading-relaxed">A .edu address gives you instant credibility — prospects open emails from students at a significantly higher rate. Connect your university Outlook below.</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[
-              { id: 'gmail',   label: 'Gmail',   desc: 'Google account',    icon: '📧' },
-              { id: 'outlook', label: 'Outlook', desc: 'Microsoft account', icon: '📬' },
+              { id: 'outlook', label: 'Outlook', desc: 'University .edu · Microsoft 365', icon: '📬', recommended: true },
+              { id: 'gmail',   label: 'Gmail',   desc: 'Google Workspace · Gmail',        icon: '📧', recommended: false },
             ].map(opt => {
               const isActive    = emailProvider === opt.id
               const isConnected = opt.id === 'gmail' ? profile?.hasGmailToken : profile?.hasOutlookToken
@@ -346,11 +352,14 @@ export default function SharedSettings({
                 <button
                   key={opt.id}
                   onClick={() => setEmailProvider(opt.id)}
-                  className={`p-4 rounded-xl border-2 text-center transition-all ${
-                    isActive ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'
+                  className={`p-4 rounded-xl border-2 text-center transition-all relative ${
+                    isActive ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
                   }`}
                 >
-                  <div className="text-2xl mb-2">{opt.icon}</div>
+                  {opt.recommended && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Recommended</span>
+                  )}
+                  <div className="text-2xl mb-2 mt-1">{opt.icon}</div>
                   <div className="font-bold text-sm text-gray-900">{opt.label}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
                   {isConnected && (

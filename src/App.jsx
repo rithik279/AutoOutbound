@@ -1857,24 +1857,33 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
   // ── REVIEW ────────────────────────────────────────────────────────────────
   if (phase === 'review') {
-    const sel = selected || contacts[0]
+    const N = contacts.length
+    // One-at-a-time navigation — use selected index
+    const currentIdx = selected ? contacts.findIndex(c => c.id === selected.id) : 0
+    const safeIdx = Math.max(0, Math.min(currentIdx, N - 1))
+    const sel = contacts[safeIdx]
     const selDraft = sel ? drafts[sel.id] : null
     const isEditing = sel && editing === sel.id
-    const N = contacts.length
-    const readyCount = Object.values(drafts).filter(d => d).length
-    const editedCount = Object.values(drafts).filter(d => d?.status === 'edited').length
     const fallbackCount = Object.values(drafts).filter(d => d?.status === 'fallback').length
+
+    function goNext() { if (safeIdx < N - 1) { setSelected(contacts[safeIdx + 1]); setEditing(null) } }
+    function goPrev() { if (safeIdx > 0) { setSelected(contacts[safeIdx - 1]); setEditing(null) } }
 
     return wrap(
       <div>
         {statusBar()}
         <FlowStepper current="approve" />
-        <div style={{ marginBottom: 16 }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 20 }}>
           <button onClick={() => setPhase('discover')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h1 style={c.h1}>Review & approve</h1>
-              <p style={{ ...c.muted, marginTop: 4 }}>{model.label} · {totalTokens.toLocaleString()} tokens{fallbackCount > 0 ? ` · ${fallbackCount} fallbacks` : ''}</p>
+              <p style={{ ...c.muted, marginTop: 4 }}>
+                {approved.size} of {N} approved
+                {fallbackCount > 0 && <span style={{ color: '#d97706', marginLeft: 8 }}>· {fallbackCount} need editing</span>}
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={approveAll} style={c.ghostBtn}>Approve all</button>
@@ -1885,88 +1894,109 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
-          {[
-            { n: readyCount, l: 'drafted', col: '#0066cc' },
-            { n: editedCount, l: 'edited', col: '#d97706' },
-            { n: flagged.size, l: 'flagged', col: '#dc2626' },
-            { n: approved.size, l: 'approved', col: '#16a34a' },
-          ].map(s => (
-            <div key={s.l} style={c.statBox}>
-              <span style={{ ...c.statNum, color: s.col }}>{s.n}</span>
-              <span style={c.statLbl}>{s.l}</span>
-            </div>
+        {/* Progress dots */}
+        <div className="flex items-center gap-1.5 mb-5">
+          {contacts.map((ct, i) => (
+            <button
+              key={ct.id}
+              onClick={() => { setSelected(ct); setEditing(null) }}
+              className={`transition-all rounded-full ${
+                i === safeIdx ? 'w-5 h-2 bg-brand-500' :
+                approved.has(ct.id) ? 'w-2 h-2 bg-green-400' :
+                flagged.has(ct.id) ? 'w-2 h-2 bg-red-400' :
+                'w-2 h-2 bg-gray-200'
+              }`}
+              title={ct.name}
+            />
           ))}
+          <span className="ml-2 text-xs text-gray-400">{safeIdx + 1} / {N}</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          {/* Sidebar */}
-          <div style={c.sidebar}>
-            {contacts.map(ct => {
-              const d = drafts[ct.id]
-              const isSel = sel?.id === ct.id
-              return wrap(
-                <div key={ct.id} onClick={() => { setSelected(ct); setEditing(null) }} style={c.sideItem(isSel)}>
-                  <Avatar name={ct.name} size={26} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{ct.name}</div>
-                    <div style={{ ...c.muted, fontSize: 11 }}>{ct.co || ct.company}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    {flagged.has(ct.id) && <span style={{ color: '#dc2626', fontSize: 11 }}>⚑</span>}
-                    {approved.has(ct.id) && <span style={{ color: '#16a34a', fontSize: 12 }}>✓</span>}
-                    {d?.status === 'fallback' && <span style={{ color: '#d97706', fontSize: 11 }}>~</span>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Email view */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {sel && (
-              <div style={{ ...c.card, display: 'flex', gap: 12, alignItems: 'center' }}>
-                <Avatar name={sel.name} size={40} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>{sel.name}</p>
-                  <p style={{ ...c.muted, margin: '2px 0 0', fontSize: 12 }}>{sel.title} · {sel.co || sel.company}</p>
-                  <p style={{ ...c.muted, margin: '1px 0 0', fontSize: 11 }}>{sel.email}</p>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {!isEditing && <>
-                    <button onClick={() => toggleFlag(sel.id)} style={{ ...c.ghostBtn, color: flagged.has(sel.id) ? '#dc2626' : undefined }}>{flagged.has(sel.id) ? 'Unflag' : 'Flag'}</button>
-                    <button onClick={() => startEdit(sel.id)} style={c.ghostBtn}>Edit</button>
-                    <button onClick={() => toggleApprove(sel.id)} style={approved.has(sel.id) ? c.successBtn : c.ghostBtn}>{approved.has(sel.id) ? 'Approved ✓' : 'Approve'}</button>
-                  </>}
-                  {isEditing && <>
-                    <button onClick={() => setEditing(null)} style={c.ghostBtn}>Cancel</button>
-                    <button onClick={saveEdit} style={c.primaryBtn}>Save</button>
-                  </>}
-                </div>
+        {/* Card */}
+        {sel && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Contact header */}
+            <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-50">
+              <Avatar name={sel.name} size={44} />
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 16 }}>{sel.name}</p>
+                <p style={{ ...c.muted, margin: '2px 0 0', fontSize: 13 }}>{sel.title}{sel.title && (sel.co || sel.company) ? ' · ' : ''}{sel.co || sel.company}</p>
+                <p style={{ ...c.muted, margin: '1px 0 0', fontSize: 12, color: '#9ca3af' }}>{sel.email}</p>
               </div>
-            )}
+              {approved.has(sel.id) && (
+                <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-semibold rounded-full">Approved ✓</span>
+              )}
+              {flagged.has(sel.id) && (
+                <span className="px-3 py-1 bg-red-50 text-red-500 text-xs font-semibold rounded-full">Flagged</span>
+              )}
+            </div>
 
+            {/* Email content */}
             {selDraft && (
-              <div style={c.card}>
-                <label style={c.label}>Subject</label>
-                <div style={{ marginBottom: 12 }}>
-                  {isEditing
-                    ? <input value={editSubj} onChange={e => setEditSubj(e.target.value)} />
-                    : <p style={{ margin: 0, fontSize: 14, fontWeight: 700, padding: '8px 12px', background: '#f7f7f5', borderRadius: 8 }}>{selDraft.subject}</p>}
-                </div>
-                <label style={c.label}>Body</label>
-                {isEditing
-                  ? <textarea style={{ minHeight: 180 }} value={editBody} onChange={e => setEditBody(e.target.value)} />
-                  : <pre style={{ margin: 0, fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'inherit', padding: 12, background: '#f7f7f5', borderRadius: 8, maxHeight: 300, overflowY: 'auto' }}>{selDraft.body}</pre>}
-                {selDraft.status === 'fallback' && (
-                  <p style={{ fontSize: 11, marginTop: 10, padding: '7px 12px', background: '#fef3c7', borderRadius: 8, color: '#92400e' }}>
-                    Fallback template ({selDraft.error}) — edit before sending.
-                  </p>
+              <div className="px-6 py-5">
+                {isEditing ? (
+                  <>
+                    <label style={c.label}>Subject</label>
+                    <input value={editSubj} onChange={e => setEditSubj(e.target.value)} style={{ marginBottom: 14 }} />
+                    <label style={c.label}>Body</label>
+                    <textarea style={{ minHeight: 220 }} value={editBody} onChange={e => setEditBody(e.target.value)} />
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, padding: '10px 14px', background: '#f7f7f5', borderRadius: 10 }}>
+                      {selDraft.subject || <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>No subject</span>}
+                    </p>
+                    <pre style={{ margin: 0, fontSize: 13.5, lineHeight: 1.75, whiteSpace: 'pre-wrap', fontFamily: 'inherit', padding: '14px 16px', background: '#f7f7f5', borderRadius: 10, maxHeight: 320, overflowY: 'auto' }}>
+                      {selDraft.body}
+                    </pre>
+                    {selDraft.status === 'fallback' && (
+                      <p style={{ fontSize: 11, marginTop: 10, padding: '7px 12px', background: '#fef3c7', borderRadius: 8, color: '#92400e' }}>
+                        ⚠ Fallback template — edit before sending.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
+
+            {/* Action bar */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-50 bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                {/* Prev / Next */}
+                <button
+                  onClick={goPrev} disabled={safeIdx === 0}
+                  className="w-8 h-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-all"
+                >←</button>
+                <button
+                  onClick={goNext} disabled={safeIdx === N - 1}
+                  className="w-8 h-8 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-all"
+                >→</button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button onClick={() => setEditing(null)} style={c.ghostBtn}>Cancel</button>
+                    <button onClick={() => { saveEdit(); goNext() }} style={c.primaryBtn}>Save & next</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => toggleFlag(sel.id)} style={{ ...c.ghostBtn, color: flagged.has(sel.id) ? '#dc2626' : undefined }}>
+                      {flagged.has(sel.id) ? '⚑ Unflag' : 'Flag'}
+                    </button>
+                    <button onClick={() => startEdit(sel.id)} style={c.ghostBtn}>Edit</button>
+                    <button
+                      onClick={() => { toggleApprove(sel.id); if (!approved.has(sel.id)) goNext() }}
+                      style={approved.has(sel.id) ? c.successBtn : c.primaryBtn}
+                    >
+                      {approved.has(sel.id) ? 'Approved ✓' : 'Approve →'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     )
   }

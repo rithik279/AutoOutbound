@@ -1,37 +1,5 @@
-import { Mail, FileText, Upload, Search } from 'lucide-react'
-
-const ENTRY_OPTIONS = [
-  {
-    id: 'scratch',
-    icon: <Search size={22} />,
-    label: 'Discover from prompt',
-    desc: 'Describe what you\'re looking for. AI finds the companies and people.',
-    color: 'text-brand-500',
-    activeBorder: 'border-brand-500',
-    activeBg: 'bg-brand-50',
-    iconBg: 'bg-brand-100',
-  },
-  {
-    id: 'companies',
-    icon: <FileText size={22} />,
-    label: 'Start from company list',
-    desc: 'Paste a list of companies. AI finds decision-makers at each one.',
-    color: 'text-violet-500',
-    activeBorder: 'border-violet-500',
-    activeBg: 'bg-violet-50',
-    iconBg: 'bg-violet-100',
-  },
-  {
-    id: 'bulk_import',
-    icon: <Upload size={22} />,
-    label: 'Bulk import (CSV)',
-    desc: 'Upload a CSV of companies — auto-discovery, draft, review, send.',
-    color: 'text-amber-500',
-    activeBorder: 'border-amber-500',
-    activeBg: 'bg-amber-50',
-    iconBg: 'bg-amber-100',
-  },
-]
+import { useState } from 'react'
+import { FileText, Upload, ArrowRight } from 'lucide-react'
 
 export default function EntryPage({
   entryLevel, setEntryLevel,
@@ -41,13 +9,23 @@ export default function EntryPage({
   loadSavedContacts,
   loadSentHistory,
   setPhase,
+  discoverPrompt,
+  setDiscoverPrompt,
 }) {
   const sentCount = scheduleStatus?.sent || 0
+  const [localPrompt, setLocalPrompt] = useState(discoverPrompt || '')
 
-  function handleSelect(id) {
-    setEntryLevel(id)
-    // Immediately advance — no extra Continue click needed
-    setPhase('settings')
+  function handlePromptGo() {
+    if (!localPrompt.trim()) return
+    setDiscoverPrompt(localPrompt)
+    setEntryLevel('scratch')
+    setPhase('discover')
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handlePromptGo()
+    }
   }
 
   return (
@@ -55,37 +33,49 @@ export default function EntryPage({
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Campaign</h1>
-        <p className="text-sm text-gray-400 mt-1">Where are you starting from?</p>
+        <p className="text-sm text-gray-400 mt-1">Who do you want to reach?</p>
       </div>
 
-      {/* Entry options grid — click to advance immediately */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {ENTRY_OPTIONS.map(opt => (
+      {/* Primary: prompt textarea */}
+      <div className="bg-white rounded-2xl border-2 border-gray-100 hover:border-brand-200 focus-within:border-brand-400 transition-colors duration-150 mb-4 shadow-sm">
+        <textarea
+          className="w-full px-5 pt-5 pb-3 text-sm text-gray-800 placeholder-gray-300 bg-transparent resize-none outline-none leading-relaxed"
+          rows={4}
+          placeholder={`Describe who you want to reach, e.g.\n"VP of Engineering at Series A AI startups in NYC"\n"Head of Data at US asset managers with 500–5000 employees"`}
+          value={localPrompt}
+          onChange={e => setLocalPrompt(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <div className="flex items-center justify-between px-4 pb-4">
+          <span className="text-xs text-gray-300">⌘ + Enter to search</span>
           <button
-            key={opt.id}
-            onClick={() => handleSelect(opt.id)}
-            className={`text-left p-6 rounded-2xl border-2 transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]
-              border-gray-100 bg-white hover:border-gray-200 hover:shadow-md hover:bg-gray-50`}
+            onClick={handlePromptGo}
+            disabled={!localPrompt.trim()}
+            className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-30 disabled:cursor-not-allowed text-white font-semibold px-5 py-2 rounded-xl text-sm transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
           >
-            <div className={`w-11 h-11 rounded-xl ${opt.iconBg} ${opt.color} flex items-center justify-center mb-4`}>
-              {opt.icon}
-            </div>
-            <div className="font-bold text-sm mb-1.5 text-gray-800">{opt.label}</div>
-            <div className="text-xs text-gray-400 leading-relaxed">{opt.desc}</div>
+            Find contacts <ArrowRight size={14} />
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* Subtle sent-emails link — no Continue button needed */}
-      {sentCount > 0 && (
+      {/* Secondary: alternative modes */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-gray-300 flex-shrink-0">or start from</span>
         <button
-          onClick={() => { loadSentHistory(); setPhase('sent_history') }}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-700 transition-colors"
+          onClick={() => { setEntryLevel('companies'); setPhase('settings') }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-100 bg-white hover:border-violet-200 hover:bg-violet-50 text-xs font-medium text-gray-500 hover:text-violet-600 transition-all duration-150"
         >
-          <Mail size={14} />
-          {sentCount} sent email{sentCount !== 1 ? 's' : ''}
+          <FileText size={13} className="text-violet-400" />
+          Company list
         </button>
-      )}
+        <button
+          onClick={() => { setEntryLevel('bulk_import'); setPhase('settings') }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-100 bg-white hover:border-amber-200 hover:bg-amber-50 text-xs font-medium text-gray-500 hover:text-amber-600 transition-all duration-150"
+        >
+          <Upload size={13} className="text-amber-400" />
+          Bulk CSV
+        </button>
+      </div>
     </div>
   )
 }

@@ -1086,6 +1086,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       loadSavedContacts={loadSavedContacts}
       loadSentHistory={loadSentHistory}
       setPhase={setPhase}
+      discoverPrompt={discoverPrompt}
+      setDiscoverPrompt={setDiscoverPrompt}
     />
   )
 

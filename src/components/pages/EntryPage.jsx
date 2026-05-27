@@ -1,4 +1,4 @@
-import { Zap, Users, Mail, Settings, LogOut, FileText, Upload, Search } from 'lucide-react'
+import { Mail, FileText, Upload, Search } from 'lucide-react'
 
 const ENTRY_OPTIONS = [
   {
@@ -47,37 +47,9 @@ export default function EntryPage({
   return (
     <div>
       {/* Page header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-md bg-brand-500 flex items-center justify-center">
-              <Zap size={12} className="text-white" />
-            </div>
-            <span className="text-xs font-semibold text-brand-600 uppercase tracking-widest">FirstShot</span>
-          </div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Campaign</h1>
-          <p className="text-sm text-gray-400 mt-1">Where are you starting from?</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { loadSavedContacts(); setPhase('my_contacts') }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
-          >
-            <Users size={14} /> Contacts
-          </button>
-          <button
-            onClick={() => setPhase('settings')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
-          >
-            <Settings size={14} /> Settings
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-          >
-            <LogOut size={14} /> Sign out
-          </button>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">New Campaign</h1>
+        <p className="text-sm text-gray-400 mt-1">Where are you starting from?</p>
       </div>
 
       {/* Entry options grid */}

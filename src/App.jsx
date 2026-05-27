@@ -13,6 +13,7 @@ import SentPage from './components/pages/SentPage.jsx'
 import MyContactsPage from './components/pages/MyContactsPage.jsx'
 import SentHistoryPage from './components/pages/SentHistoryPage.jsx'
 import FlowStepper from './components/FlowStepper.jsx'
+import OnboardingWizard from './components/OnboardingWizard.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -1075,6 +1076,23 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       {children}
     </div>
   )
+
+  // ── ONBOARDING WIZARD — shown once to new users ──────────────────────────
+  // Condition: profile loaded, senderEmail is blank, and user hasn't done onboarding
+  const onboardingDone = localStorage.getItem('onboardingDone') === '1'
+  if (currentUser && profile && !profile.senderEmail && !onboardingDone) {
+    return (
+      <OnboardingWizard
+        currentUser={currentUser}
+        onUpdateProfile={updateProfile}
+        onComplete={() => {
+          // Force profile re-fetch then proceed to app
+          setProfile(p => p ? { ...p, senderEmail: senderEmail || currentUser.email } : p)
+          setPhase('entry')
+        }}
+      />
+    )
+  }
 
   // ── ENTRY LEVEL SELECTION ───────────────────────────────────────────────
   if (phase === 'entry') return wrap(

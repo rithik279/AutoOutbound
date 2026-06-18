@@ -141,7 +141,7 @@ export async function runDiscovery(userId, limit = 50) {
  * Headers: x-user-id
  */
 router.post('/discovery/run', async (req, res) => {
-  const userId = req.headers['x-user-id'] || req.body.userId
+  const userId = req.userId || req.headers['x-user-id'] || req.body.userId
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
   try {
@@ -161,7 +161,7 @@ router.post('/discovery/run', async (req, res) => {
  *             pendingCompanies, discoveredContacts }
  */
 router.get('/discovery/status', async (req, res) => {
-  const userId = req.headers['x-user-id']
+  const userId = req.userId || req.headers['x-user-id']
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
   try {
@@ -194,7 +194,7 @@ router.get('/discovery/status', async (req, res) => {
  * Body: { runTime: 'HH:MM', dailyQuota: number, enabled: boolean }
  */
 router.post('/discovery/config', async (req, res) => {
-  const userId = req.headers['x-user-id']
+  const userId = req.userId || req.headers['x-user-id']
   const { runTime, dailyQuota, enabled } = req.body
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 

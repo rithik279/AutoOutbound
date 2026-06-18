@@ -11,7 +11,18 @@
 
 import { PrismaClient } from '@prisma/client'
 
-export const prisma = new PrismaClient()
+// Cap Prisma's connection pool. Supabase's session pooler limits total clients
+// to 15; with pg-boss also connecting and the old instance overlapping during a
+// deploy, an unbounded Prisma pool exhausts the limit and crashes boot
+// (EMAXCONNSESSION). connection_limit=3 keeps the footprint small.
+const rawUrl = process.env.DATABASE_URL || ''
+const dbUrl  = rawUrl && !/[?&]connection_limit=/.test(rawUrl)
+  ? rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'connection_limit=3'
+  : rawUrl
+
+export const prisma = dbUrl
+  ? new PrismaClient({ datasourceUrl: dbUrl })
+  : new PrismaClient()
 
 /**
  * Resolve a caller-supplied identifier to the internal User.id.

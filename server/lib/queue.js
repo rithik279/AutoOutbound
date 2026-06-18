@@ -38,6 +38,7 @@ export async function getQueue() {
 
   boss = new PgBoss({
     connectionString: databaseUrl,
+    max:              3,         // small pool — Supabase session pooler caps total clients at 15
     retryLimit:       3,
     retryDelay:       60,        // seconds between retries
     retryBackoff:     true,      // exponential backoff

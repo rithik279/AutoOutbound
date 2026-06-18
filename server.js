@@ -99,15 +99,16 @@ app.use('/api', authRouter)    // OAuth callbacks don't carry x-user-id
 // Stats endpoint inside tracking router still checks userId from header
 app.use('/api', trackingRouter)
 
+// Simple liveness probe used by Render and monitoring tools — must stay
+// above the requireAuth routers below, or it gets shadowed and returns 401.
+app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }))
+
 // Protected: everything else requires a valid x-user-id
 app.use('/api', requireAuth, aiRouter)
 app.use('/api', requireAuth, apolloRouter)
 app.use('/api', requireAuth, emailRouter)
 app.use('/api', requireAuth, contactsRouter)
 app.use('/api', requireAuth, discoveryRouter)
-
-// Simple liveness probe used by Render and monitoring tools
-app.get('/api/health', (req, res) => res.json({ ok: true, ts: new Date().toISOString() }))
 
 // ── Serve built frontend in production ─────────────────────────────────────────
 // In development, Vite serves the frontend on its own port (3000/5173).

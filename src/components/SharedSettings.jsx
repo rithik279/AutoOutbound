@@ -47,9 +47,11 @@ export default function SharedSettings({
     if (!file) return
     setResumeStatus('Extracting text…')
     try {
+      const name = file.name.toLowerCase()
       let resumeText
-      if (file.name.endsWith('.docx')) {
-        // .docx is a binary ZIP — send raw bytes, not file.text() (which corrupts them)
+      if (name.endsWith('.docx') || name.endsWith('.pdf')) {
+        // .docx/.pdf are binary — send raw bytes (file.text() corrupts them) and
+        // let the server extract text (mammoth for .docx, pdf-parse for .pdf)
         const buffer = await file.arrayBuffer()
         const res = await fetch(`${API_URL}/api/resume-text-upload`, {
           method: 'POST',
@@ -66,8 +68,8 @@ export default function SharedSettings({
       }
       await onUpdateProfile({ resumeText })
       setResumeStatus(`Uploaded! ${resumeText.length} chars`)
-    } catch {
-      setResumeStatus('Failed to upload')
+    } catch (e) {
+      setResumeStatus(`Failed: ${e.message || 'upload error'}`)
     }
   }
 
@@ -212,7 +214,7 @@ export default function SharedSettings({
       {tab === 'resume' && (
         <div className="bg-white border border-gray-100 rounded-xl p-5">
           <h2 className="text-sm font-bold text-gray-900 mb-1">Upload your resume</h2>
-          <p className="text-xs text-gray-400 mb-4">AI uses your resume to personalize cold emails. Upload .docx or .txt.</p>
+          <p className="text-xs text-gray-400 mb-4">AI uses your resume to personalize cold emails. Upload .docx, .pdf, or .txt.</p>
           <input
             type="file"
             accept=".docx,.txt,.pdf"

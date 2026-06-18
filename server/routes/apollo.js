@@ -19,6 +19,7 @@
 import express, { Router } from 'express'
 import fetch        from 'node-fetch'
 import mammoth      from 'mammoth'
+import { PDFParse } from 'pdf-parse'
 import { APOLLO_KEY, RESUME_PATH } from '../lib/config.js'
 import { prisma }   from '../lib/prisma.js'
 import { validateOutboundUrl, apolloLimiter } from '../lib/middleware.js'
@@ -256,16 +257,33 @@ router.get('/resume-text', async (req, res) => {
  *
  * Response: { text: string }
  */
-router.post('/resume-text-upload', express.raw({ type: 'application/octet-stream', limit: '10mb' }), async (req, res) => {
+router.post('/resume-text-upload', express.raw({ type: 'application/octet-stream', limit: '15mb' }), async (req, res) => {
   try {
     const buffer = req.body
     if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
       return res.status(400).json({ error: 'Empty or invalid upload body' })
     }
-    const result = await mammoth.extractRawText({ buffer })
-    res.json({ text: result.value })
+    const filename = String(req.headers['x-filename'] || '').toLowerCase()
+    let text
+    if (filename.endsWith('.pdf')) {
+      const parser = new PDFParse({ data: buffer })
+      try {
+        const result = await parser.getText()
+        // pdf-parse v2 injects "-- N of M --" page separators — strip them
+        text = result.text.replace(/^\s*-- \d+ of \d+ --\s*$/gm, '').trim()
+      } finally {
+        await parser.destroy()
+      }
+    } else {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+    }
+    if (!text || !text.trim()) {
+      return res.status(422).json({ error: 'No readable text found in the document' })
+    }
+    res.json({ text })
   } catch (e) {
-    res.status(500).json({ error: `Failed to parse .docx: ${e.message}` })
+    res.status(500).json({ error: `Failed to parse resume: ${e.message}` })
   }
 })
 

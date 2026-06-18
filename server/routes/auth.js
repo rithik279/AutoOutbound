@@ -46,7 +46,7 @@ router.get('/auth-start', async (req, res) => {
     client_id:             clientId,
     response_type:         'code',
     redirect_uri:          redirect,
-    scope:                 'https://graph.microsoft.com/Mail.Send offline_access openid profile',
+    scope:                 'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access openid profile',
     code_challenge:        challenge,
     code_challenge_method: 'S256',
     response_mode:         'query',

@@ -60,35 +60,46 @@ export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
     attachments,
   }
 
-  // Step 1: Create draft — this gives us an ID and conversationId for reply tracking
+  // Preferred path: create a draft then send it — this captures the messageId
+  // and conversationId used for reply tracking. Requires the Mail.ReadWrite
+  // scope. If the token only has Mail.Send (older consent), the draft create
+  // returns "Access is denied"; fall back to a direct /me/sendMail, which
+  // needs only Mail.Send but yields no conversationId.
   const draftRes = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify(messageBody),
   })
 
-  if (!draftRes.ok) {
-    const err = await draftRes.json().catch(() => ({}))
-    throw new Error(err?.error?.message || `Graph create draft error ${draftRes.status}`)
+  if (draftRes.ok) {
+    const draft = await draftRes.json()
+    const messageId      = draft.id             || null
+    const conversationId = draft.conversationId || null
+
+    const sendRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}/send`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!sendRes.ok) {
+      const err = await sendRes.json().catch(() => ({}))
+      throw new Error(err?.error?.message || `Graph send error ${sendRes.status}`)
+    }
+    return { outlookMessageId: messageId, outlookConversationId: conversationId }
   }
 
-  const draft = await draftRes.json()
-  const messageId      = draft.id             || null
-  const conversationId = draft.conversationId || null
-
-  // Step 2: Send the draft
-  const sendRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}/send`, {
+  // Fallback: direct send (no draft) — only needs Mail.Send.
+  const sendMailRes = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method:  'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ message: messageBody, saveToSentItems: true }),
   })
-
-  if (!sendRes.ok) {
-    const err = await sendRes.json().catch(() => ({}))
-    throw new Error(err?.error?.message || `Graph send error ${sendRes.status}`)
+  if (!sendMailRes.ok) {
+    const err = await sendMailRes.json().catch(() => ({}))
+    throw new Error(err?.error?.message || `Graph sendMail error ${sendMailRes.status}`)
   }
 
-  // Return IDs so the queue worker can store them for reply detection
-  return { outlookMessageId: messageId, outlookConversationId: conversationId }
+  // No conversationId available via sendMail — reply tracking unavailable for this send.
+  return { outlookMessageId: null, outlookConversationId: null }
 }
 
 // ── Gmail ─────────────────────────────────────────────────────────────────────

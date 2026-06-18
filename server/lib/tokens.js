@@ -89,7 +89,7 @@ export async function getGraphToken(userId) {
         client_secret: OUTLOOK.clientSecret,
         grant_type:    'refresh_token',
         refresh_token: t.refreshToken,
-        scope:         'https://graph.microsoft.com/Mail.Send offline_access',
+        scope:         'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access',
       }),
     })
     const data = await res.json()

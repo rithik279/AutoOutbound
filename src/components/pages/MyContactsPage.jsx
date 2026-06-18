@@ -1,4 +1,5 @@
-import { Users, RefreshCw, ArrowLeft, ArrowRight, Zap } from 'lucide-react'
+import { useEffect } from 'react'
+import { Users, RefreshCw, ArrowLeft, ArrowRight, Zap, PenLine } from 'lucide-react'
 
 const STATE_STYLES = {
   replied:  { bg: 'bg-green-100',  text: 'text-green-700' },
@@ -6,7 +7,11 @@ const STATE_STYLES = {
   default:  { bg: 'bg-gray-100',   text: 'text-gray-500' },
 }
 
-export default function MyContactsPage({ savedContacts, loadingContacts, loadSavedContacts, setPhase, statusBar }) {
+export default function MyContactsPage({ savedContacts, loadingContacts, loadSavedContacts, setPhase, statusBar, onDraft }) {
+  // Load saved contacts whenever the page opens so the user always sees their
+  // most recent results without having to hit Refresh.
+  useEffect(() => { loadSavedContacts() }, [])
+
   return (
     <div>
       {statusBar()}
@@ -76,9 +81,30 @@ export default function MyContactsPage({ savedContacts, loadingContacts, loadSav
                     )}
                   </div>
                 </div>
-                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.text}`}>
-                  {contact.state}
-                </span>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.text}`}>
+                    {contact.state}
+                  </span>
+                  {onDraft && contact.email && (
+                    <button
+                      onClick={() => onDraft([{
+                        id:      contact.id,
+                        name:    contact.name,
+                        first:   (contact.name || '').split(' ')[0],
+                        title:   contact.title   || '',
+                        co:      contact.company || '',
+                        company: contact.company || '',
+                        email:   contact.email,
+                        domain:  contact.domain  || '',
+                        source:  contact.source  || 'saved',
+                      }])}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-600 hover:text-white hover:bg-brand-500 border border-brand-200 rounded-lg transition-all"
+                      title="Draft an email to this contact"
+                    >
+                      <PenLine size={12} /> Draft
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}

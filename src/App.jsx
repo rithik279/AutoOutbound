@@ -2262,6 +2262,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       loadSavedContacts={loadSavedContacts}
       setPhase={setPhase}
       statusBar={statusBar}
+      onDraft={beginDrafting}
     />
   )
 

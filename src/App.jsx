@@ -932,9 +932,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode)
         const { subjects, body, tokens } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
+        const researchSignal = extractResearchSignal(siteContent)
         tokRef.current += tokens || 0
         setTotalTokens(tokRef.current)
-        draftsRef.current[contact.id] = { subject, body, status: 'ready' }
+        draftsRef.current[contact.id] = { subject, body, status: 'ready', researchSignal, researchSummary: siteContent }
       } catch (e) {
         draftsRef.current[contact.id] = {
           subject: campaignMode === 'recruiting'
@@ -943,7 +944,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           body: campaignMode === 'recruiting'
             ? `Hi ${contact.first || contact.name?.split(' ')[0]},\n\nI'm a senior data engineering contractor — 24+ years in ETL, Python, and enterprise data systems. I'm actively working through recruiting partners for client placements and wanted to explore alignment.\n\nExperience includes Informatica pipelines at Scotiabank, TD, and Rogers. Comfortable in financial services, regulatory, and high-volume data environments.\n\nOpen to a quick 15-minute call if you have relevant roles.\n\nBest,\nManmit`
             : `Hi ${contact.first || contact.name?.split(' ')[0]},\n\nI'm a senior data engineering contractor with 24 years of experience in Informatica ETL and Python pipelines across financial services and tech. I'm available for remote USD contracts.\n\nWorth a quick call?\n\nBest,\nManmit`,
-          status: 'fallback', error: e.message
+          status: 'fallback', error: e.message, researchSignal: '', researchSummary: ''
         }
       }
       setDrafts({ ...draftsRef.current })
@@ -996,6 +997,25 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return rows
   }
 
+  function extractResearchSignal(summary = '') {
+    const text = String(summary || '').trim()
+    if (!text) return ''
+
+    const signalBlock = text.match(/RESEARCH SIGNALS\s+([\s\S]+)/i)?.[1] || ''
+    const signalLine = signalBlock
+      .split('\n')
+      .map(line => line.replace(/^\s*-\s*/, '').trim())
+      .find(Boolean)
+
+    if (signalLine) return signalLine.slice(0, 220)
+
+    return text
+      .split('\n')
+      .map(line => line.trim())
+      .find(line => line && !/^PAGE SNAPSHOT$/i.test(line))
+      ?.slice(0, 220) || ''
+  }
+
   const regenQuickActions = [
     { label: 'Fix contact info', instruction: 'Fix any incorrect contact details and use the most current phone number, email, and contact method consistently.' },
     { label: 'Shorten CTA', instruction: 'Keep the same message, but shorten the CTA so it is one direct sentence.' },
@@ -1020,7 +1040,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
       )
       const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
-      const nextDraft = { subject, body, status: 'ready' }
+      const nextDraft = {
+        subject,
+        body,
+        status: 'ready',
+        researchSignal: extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
+        researchSummary: siteContent || currentDraft?.researchSummary || '',
+      }
       setDrafts(prev => ({ ...prev, [contact.id]: nextDraft }))
       openRegenPreview('single', [{
         id: contact.id,
@@ -1056,6 +1082,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           buildDraftOptions(contact, siteContent, companyData)
         )
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
+        const researchSignal = extractResearchSignal(siteContent)
         tokRef.current += tokens || 0
         batch.push({
           id: contact.id,
@@ -1067,7 +1094,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           body,
           category,
           score: score || 0,
-          passed: passed !== false
+          passed: passed !== false,
+          researchSignal,
+          researchSummary: siteContent,
         })
       } catch (e) {
         // Fallback: create low-score draft
@@ -1081,7 +1110,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           body: `Hi ${contact.name?.split(' ')[0]},\n\nI'm reaching out regarding a potential fit. Would you be open to a brief conversation?\n\nBest regards`,
           category: 'unknown',
           score: 10,
-          passed: false
+          passed: false,
+          researchSignal: '',
+          researchSummary: '',
         })
       }
       setTotalTokens(tokRef.current)
@@ -1112,7 +1143,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
         )
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
-        nextDrafts[contact.id] = { subject, body, status: 'ready' }
+        nextDrafts[contact.id] = {
+          subject,
+          body,
+          status: 'ready',
+          researchSignal: extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
+          researchSummary: siteContent || currentDraft?.researchSummary || '',
+        }
         previewChanges.push({
           id: contact.id,
           name: contact.name,
@@ -1195,6 +1232,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           category,
           score: score || 0,
           passed: passed !== false,
+          researchSignal: extractResearchSignal(siteContent) || draft.researchSignal || '',
+          researchSummary: siteContent || draft.researchSummary || '',
         })
         previewChanges.push({
           id: draft.id,
@@ -1819,7 +1858,16 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                       <td style={{ padding: '8px 12px' }}><strong>{draft.company}</strong></td>
                       <td style={{ padding: '8px 12px' }}>{draft.name}</td>
                       <td style={{ padding: '8px 12px', fontSize: 12, color: '#666' }}>{draft.title}</td>
-                      <td style={{ padding: '8px 12px', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reviewEdits[draft.id]?.subject || draft.subject}</td>
+                      <td style={{ padding: '8px 12px', maxWidth: 320 }}>
+                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {reviewEdits[draft.id]?.subject || draft.subject}
+                        </div>
+                        {draft.researchSignal && (
+                          <div style={{ marginTop: 6, fontSize: 11, lineHeight: 1.45, color: '#5b6475' }}>
+                            <span style={{ fontWeight: 600, color: '#4338ca' }}>Signal:</span> {draft.researchSignal}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, color: scoreColor }}>{draft.score}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <button
@@ -2002,6 +2050,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ ...c.card, maxWidth: 600, maxHeight: '80vh', overflowY: 'auto', width: '90%' }}>
               <h2 style={{ ...c.h2, marginBottom: 16 }}>Edit email</h2>
+              {reviewBatch.find(d => d.id === reviewEditModal)?.researchSignal && (
+                <div style={{ marginBottom: 14, padding: '10px 14px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10 }}>
+                  <div style={{ ...c.label, marginBottom: 4, color: '#4338ca' }}>Research signal used</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: '#312e81' }}>
+                    {reviewBatch.find(d => d.id === reviewEditModal)?.researchSignal}
+                  </div>
+                </div>
+              )}
               <label style={c.label}>Subject</label>
               <input
                 value={reviewEditSubj}
@@ -2545,6 +2601,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   </>
                 ) : (
                   <>
+                    {selDraft.researchSignal && (
+                      <div style={{ marginBottom: 12, padding: '10px 14px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10 }}>
+                        <div style={{ ...c.label, marginBottom: 4, color: '#4338ca' }}>Research signal used</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.6, color: '#312e81' }}>{selDraft.researchSignal}</div>
+                      </div>
+                    )}
                     <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, padding: '10px 14px', background: '#f7f7f5', borderRadius: 10 }}>
                       {selDraft.subject || <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>No subject</span>}
                     </p>

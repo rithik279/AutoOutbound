@@ -392,75 +392,131 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [retryLoading, setRetryLoading] = useState(false)
   const [sentHistory, setSentHistory] = useState([])
 
+  const getUserHeaders = useCallback(() => (
+    currentUser?.userId ? { 'x-user-id': currentUser.userId } : {}
+  ), [currentUser?.userId])
+
+  const refreshStatusSnapshot = useCallback(async () => {
+    if (!currentUser?.userId) return null
+
+    const headers = getUserHeaders()
+    const [authRes, schedRes, gmailRes] = await Promise.all([
+      fetch(`${API_URL}/api/token-health`, { headers }),
+      fetch(`${API_URL}/api/schedule-status`, { headers }),
+      fetch(`${API_URL}/api/gmail/token-health`, { headers }),
+    ])
+
+    const [auth, sched, gmail] = await Promise.all([
+      authRes.json(),
+      schedRes.json(),
+      gmailRes.json(),
+    ])
+
+    return { auth, sched, gmail }
+  }, [API_URL, currentUser?.userId, getUserHeaders])
+
   useEffect(() => {
     let cancelled = false
+
     async function fetchStatus(attempt = 0) {
       try {
-        const [authRes, schedRes, gmailRes] = await Promise.all([
-          fetch(`${API_URL}/api/token-health`, { headers: { 'x-user-id': currentUser.userId } }),
-          fetch(`${API_URL}/api/schedule-status`),
-          fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
-        ])
-        const auth  = await authRes.json()
-        const sched = await schedRes.json()
-        const gmail = await gmailRes.json()
-        if (cancelled) return
-        setAuthStatus(auth)
-        // Only set if real data (not an error response from race-condition 401)
-        if (sched.pending !== undefined) setScheduleStatus(sched)
+        const snapshot = await refreshStatusSnapshot()
+        if (!snapshot || cancelled) return
+
+        setAuthStatus(snapshot.auth)
+        setGmailAuthStatus(snapshot.gmail)
+        if (snapshot.sched?.pending !== undefined) setScheduleStatus(snapshot.sched)
         else if (attempt === 0) setTimeout(() => { if (!cancelled) fetchStatus(1) }, 400)
-        setGmailAuthStatus(gmail)
-      } catch { }
+      } catch {}
     }
+
     fetchStatus()
     const id = setInterval(fetchStatus, 30000)
     return () => { cancelled = true; clearInterval(id) }
-  }, [isFriend, currentUser])
+  }, [refreshStatusSnapshot])
 
-  async function runReAuth() {
+  useEffect(() => {
+    if (!currentUser?.userId) return undefined
+
+    async function handleOAuthMessage(event) {
+      if (event.origin !== window.location.origin) return
+      if (event.data?.type !== 'oauth-complete') return
+      if (event.data?.userId && event.data.userId !== currentUser.userId) return
+
+      try {
+        const snapshot = await refreshStatusSnapshot()
+        if (!snapshot) return
+        setAuthStatus(snapshot.auth)
+        setGmailAuthStatus(snapshot.gmail)
+        if (snapshot.sched?.pending !== undefined) setScheduleStatus(snapshot.sched)
+      } catch {}
+      setReAuthLoading(false)
+    }
+
+    window.addEventListener('message', handleOAuthMessage)
+    return () => window.removeEventListener('message', handleOAuthMessage)
+  }, [currentUser?.userId, refreshStatusSnapshot])
+
+  async function runProviderReAuth(provider = 'outlook') {
+    if (!currentUser?.userId) return
+
     setReAuthLoading(true)
-    window.open('/api/auth-start', '_blank')
+    const headers = getUserHeaders()
+    const authUrl = provider === 'gmail'
+      ? `/api/gmail/auth-start?userId=${currentUser.userId}`
+      : `/api/auth-start?userId=${currentUser.userId}`
+    const healthUrl = provider === 'gmail'
+      ? `${API_URL}/api/gmail/token-health`
+      : `${API_URL}/api/token-health`
+
+    window.open(authUrl, '_blank')
+
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
-        const res = await fetch(`/api/token-health?_=${Date.now()}`, { headers: { 'x-user-id': currentUser.userId } })
+        const res = await fetch(`${healthUrl}?_=${Date.now()}`, { headers })
         const data = await res.json()
-        console.log('[ReAuth] poll', i, data)
-        if (data.ok) {
-          setAuthStatus(data)
+        if (data.ok || data.status === 'ok' || data.status === 'warning') {
+          if (provider === 'gmail') setGmailAuthStatus(data)
+          else setAuthStatus(data)
+
+          const snapshot = await refreshStatusSnapshot()
+          if (snapshot?.sched?.pending !== undefined) setScheduleStatus(snapshot.sched)
           setReAuthLoading(false)
           return
         }
-      } catch (e) { console.error('[ReAuth] poll error', i, e) }
+      } catch {}
     }
+
     setReAuthLoading(false)
   }
 
   async function runRetryFailed() {
     setRetryLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/schedule-retry`, { method: 'POST' })
+      const headers = getUserHeaders()
+      const res = await fetch(`${API_URL}/api/schedule-retry`, { method: 'POST', headers })
       const data = await res.json()
       if (data.ok) {
-        const schedRes = await fetch(`${API_URL}/api/schedule-status`)
+        const schedRes = await fetch(`${API_URL}/api/schedule-status`, { headers })
         setScheduleStatus(await schedRes.json())
       }
     } catch { }
     setRetryLoading(false)
   }
 
-  async function fetchSentHistory() {
+  const fetchSentHistory = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/sent-emails`, { headers: { 'x-user-id': currentUser?.userId || 'friend' } })
       const data = await res.json()
       setSentHistory(data.emails || [])
     } catch { }
-  }
+  }, [API_URL, currentUser?.userId])
 
-  async function loadSentHistory() {
+  const loadSentHistory = useCallback(async () => {
     await fetchSentHistory()
     setPhase('sent_history')
-  }
+  }, [fetchSentHistory, setPhase])
 
   const model = MODELS.find(m => m.id === modelId) || MODELS[0]
   const aiConfig = { model: modelId }
@@ -556,9 +612,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             <button
               onClick={() => {
                 if (isFriend && emailProvider === 'gmail') {
-                  window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+                  runProviderReAuth('gmail')
                 } else {
-                  runReAuth()
+                  runProviderReAuth(emailProvider === 'gmail' ? 'gmail' : 'outlook')
                 }
               }}
               disabled={reAuthLoading}

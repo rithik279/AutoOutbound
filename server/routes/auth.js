@@ -23,6 +23,29 @@ import { OUTLOOK, GMAIL }        from '../lib/config.js'
 
 const router = Router()
 
+function buildOAuthSuccessPage(provider, userId = '') {
+  const payload = JSON.stringify({ type: 'oauth-complete', provider, userId })
+  return `<!doctype html>
+<html>
+  <body style="font-family:sans-serif;padding:40px">
+    <h2>${provider === 'gmail' ? 'Gmail' : 'Outlook'} Authorized!</h2>
+    <p>You can close this tab and return to the app.</p>
+    <script>
+      (function () {
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(${payload}, window.location.origin)
+          }
+        } catch (e) {}
+        setTimeout(function () {
+          try { window.close() } catch (e) {}
+        }, 250)
+      })()
+    </script>
+  </body>
+</html>`
+}
+
 // ── Outlook / Microsoft Graph ─────────────────────────────────────────────────
 
 router.get('/auth-start', async (req, res) => {
@@ -104,7 +127,7 @@ router.get('/auth-callback', async (req, res) => {
   oauthVerifiers.delete(state)
   const { verifier, clientId, clientSecret, redirect, userId } = stored
 
-  res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
+  res.end(buildOAuthSuccessPage('outlook', userId))
 
   try {
     const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
@@ -216,7 +239,7 @@ router.get('/gmail/auth-callback', async (req, res) => {
   oauthVerifiers.delete(state)
   const { verifier, clientId, userId, redirect } = stored
 
-  res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Gmail Authorized!</h2><p>You can close this tab and return to the app.</p></body></html>')
+  res.end(buildOAuthSuccessPage('gmail', userId))
 
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

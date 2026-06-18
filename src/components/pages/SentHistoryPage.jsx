@@ -7,6 +7,10 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
   const [replyResult, setReplyResult] = useState(null)
 
   useEffect(() => {
+    onRefresh?.()
+  }, [onRefresh])
+
+  useEffect(() => {
     if (!userId) return
     fetch('/api/track/stats', { headers: { 'x-user-id': userId } })
       .then(r => r.json())

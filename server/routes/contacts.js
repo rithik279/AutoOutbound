@@ -27,11 +27,32 @@ const router = Router()
  */
 router.get('/contacts', async (req, res) => {
   try {
+    const userId = req.userId || req.headers['x-user-id'] || 'friend'
     const contacts = await prisma.contact.findMany({
-      include:  { emails: true },
+      include:  {
+        emails: {
+          where:   { userId },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
       orderBy:  { updatedAt: 'desc' },
     })
-    res.json({ contacts })
+
+    const normalized = contacts.map(contact => {
+      const userEmails = contact.emails || []
+      const state = userEmails.some(email => email.repliedAt)
+        ? 'replied'
+        : userEmails.some(email => email.sentAt)
+          ? 'emailed'
+          : 'new'
+
+      return {
+        ...contact,
+        state,
+      }
+    })
+
+    res.json({ contacts: normalized })
   } catch (err) {
     console.error('[contacts] GET /contacts error:', err)
     res.status(500).json({ error: err.message })
@@ -169,8 +190,9 @@ router.put('/contacts/:id', async (req, res) => {
 router.get('/contacts/:id/emails', async (req, res) => {
   const { id } = req.params
   try {
+    const userId = req.userId || req.headers['x-user-id'] || 'friend'
     const emails = await prisma.email.findMany({
-      where:   { contactId: parseInt(id, 10) },
+      where:   { contactId: parseInt(id, 10), userId },
       orderBy: { createdAt: 'desc' },
     })
     res.json({ emails })

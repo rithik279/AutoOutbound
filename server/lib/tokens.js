@@ -78,7 +78,10 @@ export async function getGraphToken(userId) {
   // Auto-refresh if within 5 minutes of expiry
   if (t.expiresAt - Date.now() < 5 * 60_000) {
     console.log(`[TOKEN] Refreshing Outlook token for ${userId}…`)
-    const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    // Use /consumers/ to match the authorization flow (auth.js) — personal
+    // Microsoft account refresh tokens are bound to that authority and fail
+    // to refresh against /common/.
+    const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    new URLSearchParams({
@@ -91,7 +94,7 @@ export async function getGraphToken(userId) {
     })
     const data = await res.json()
     if (!data.access_token) {
-      throw new Error('Outlook token refresh failed — re-authorize in Settings')
+      throw new Error(`Outlook token refresh failed (${data.error || 'unknown'}: ${data.error_description?.split('\n')[0] || ''}) — re-authorize in Settings`)
     }
     const updated = {
       ...t,

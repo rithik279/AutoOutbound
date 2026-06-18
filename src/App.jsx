@@ -356,6 +356,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [regenBatchScope, setRegenBatchScope] = useState('all')
   const [regenPreview, setRegenPreview] = useState(null) // { scope, changes: [{...}] }
   const [regenPreviewIndex, setRegenPreviewIndex] = useState(0)
+  const [draftHistory, setDraftHistory] = useState({})
+  const [reviewBatchHistory, setReviewBatchHistory] = useState({})
+  const [lastReviewBulkUndo, setLastReviewBulkUndo] = useState(null)
+  const [lastBatchUndo, setLastBatchUndo] = useState(null)
 
   // Schedule state
   const [sendDate, setSendDate] = useState('')
@@ -917,6 +921,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     abortRef.current = false
     setFlagged(new Set())
     setApproved(new Set())
+    setDraftHistory({})
+    setLastReviewBulkUndo(null)
     setPhase('drafting')
     runDrafts(contactList)
   }
@@ -1016,6 +1022,130 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       ?.slice(0, 220) || ''
   }
 
+  function pushDraftHistoryEntry(id, snapshot) {
+    if (!id || (!snapshot?.subject && !snapshot?.body)) return
+    setDraftHistory(prev => ({
+      ...prev,
+      [id]: [...(prev[id] || []), { ...snapshot }],
+    }))
+  }
+
+  function pushBatchHistoryEntry(id, snapshot) {
+    if (!id || (!snapshot?.subject && !snapshot?.body)) return
+    setReviewBatchHistory(prev => ({
+      ...prev,
+      [id]: [...(prev[id] || []), { ...snapshot }],
+    }))
+  }
+
+  function restorePreviousDraft(id) {
+    const history = draftHistory[id] || []
+    const previous = history[history.length - 1]
+    if (!previous) return
+
+    setDrafts(prev => {
+      const next = { ...prev, [id]: previous }
+      draftsRef.current = next
+      return next
+    })
+    setDraftHistory(prev => ({
+      ...prev,
+      [id]: (prev[id] || []).slice(0, -1),
+    }))
+    setApproved(prev => { const next = new Set(prev); next.delete(id); return next })
+    setFlagged(prev => { const next = new Set(prev); next.delete(id); return next })
+  }
+
+  function restorePreviousBatchDraft(id) {
+    const history = reviewBatchHistory[id] || []
+    const previous = history[history.length - 1]
+    if (!previous) return
+
+    setReviewBatch(prev => prev.map(draft => (
+      draft.id === id ? { ...draft, ...previous } : draft
+    )))
+    setReviewBatchHistory(prev => ({
+      ...prev,
+      [id]: (prev[id] || []).slice(0, -1),
+    }))
+    setReviewApproved(prev => { const next = new Set(prev); next.delete(id); return next })
+    setReviewEdits(prev => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  function popBatchHistoryEntries(ids = []) {
+    if (!ids.length) return
+    setReviewBatchHistory(prev => {
+      const next = { ...prev }
+      ids.forEach(id => {
+        if (next[id]?.length) next[id] = next[id].slice(0, -1)
+      })
+      return next
+    })
+  }
+
+  function popDraftHistoryEntries(ids = []) {
+    if (!ids.length) return
+    setDraftHistory(prev => {
+      const next = { ...prev }
+      ids.forEach(id => {
+        if (next[id]?.length) next[id] = next[id].slice(0, -1)
+      })
+      return next
+    })
+  }
+
+  function restoreLastReviewRewrite() {
+    if (!lastReviewBulkUndo?.items?.length) return
+
+    const nextDrafts = { ...draftsRef.current }
+    const ids = []
+    lastReviewBulkUndo.items.forEach(item => {
+      nextDrafts[item.id] = { ...item.snapshot }
+      ids.push(item.id)
+    })
+    draftsRef.current = nextDrafts
+    setDrafts(nextDrafts)
+    popDraftHistoryEntries(ids)
+    setApproved(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+    setFlagged(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+    setLastReviewBulkUndo(null)
+  }
+
+  function restoreLastBatchRewrite() {
+    if (!lastBatchUndo?.items?.length) return
+
+    const restoreMap = new Map(lastBatchUndo.items.map(item => [item.id, item.snapshot]))
+    const ids = lastBatchUndo.items.map(item => item.id)
+
+    setReviewBatch(prev => prev.map(draft => (
+      restoreMap.has(draft.id) ? { ...draft, ...restoreMap.get(draft.id) } : draft
+    )))
+    popBatchHistoryEntries(ids)
+    setReviewApproved(prev => {
+      const next = new Set(prev)
+      ids.forEach(id => next.delete(id))
+      return next
+    })
+    setReviewEdits(prev => {
+      const next = { ...prev }
+      ids.forEach(id => delete next[id])
+      return next
+    })
+    setLastBatchUndo(null)
+  }
+
   const regenQuickActions = [
     { label: 'Fix contact info', instruction: 'Fix any incorrect contact details and use the most current phone number, email, and contact method consistently.' },
     { label: 'Shorten CTA', instruction: 'Keep the same message, but shorten the CTA so it is one direct sentence.' },
@@ -1034,6 +1164,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     try {
       const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
       const currentDraft = drafts[contact.id] || null
+      pushDraftHistoryEntry(contact.id, currentDraft)
       const { subjects, body } = await draftEmail(
         contact,
         aiConfig,
@@ -1123,6 +1254,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setReviewApproved(new Set())
     setReviewSelectedRows(new Set())
     setReviewEdits({})
+    setReviewBatchHistory({})
+    setLastBatchUndo(null)
     setDraftProgress(contactList.length)
     setDraftCurrent(null)
     setPhase('review_batch')
@@ -1134,9 +1267,11 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     try {
       const nextDrafts = {}
       const previewChanges = []
+      const undoItems = []
       for (const contact of contacts) {
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
         const currentDraft = drafts[contact.id] || null
+        pushDraftHistoryEntry(contact.id, currentDraft)
         const { subjects, body } = await draftEmail(
           contact,
           aiConfig,
@@ -1150,6 +1285,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           researchSignal: extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
           researchSummary: siteContent || currentDraft?.researchSummary || '',
         }
+        undoItems.push({ id: contact.id, snapshot: { ...(currentDraft || {}) } })
         previewChanges.push({
           id: contact.id,
           name: contact.name,
@@ -1164,6 +1300,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       draftsRef.current = nextDrafts
       setApproved(new Set())
       setFlagged(new Set())
+      setLastReviewBulkUndo({ items: undoItems, instruction })
       openRegenPreview('all_review', previewChanges)
     } catch (e) {
       console.error('[regen-all-review] failed:', e.message)
@@ -1197,6 +1334,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
       const nextBatch = []
       const previewChanges = []
+      const undoItems = []
       for (const draft of reviewBatch) {
         if (!targetIds.has(draft.id)) {
           nextBatch.push(draft)
@@ -1217,7 +1355,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         const currentDraft = {
           subject: reviewEdits[draft.id]?.subject || draft.subject,
           body: reviewEdits[draft.id]?.body || draft.body,
+          researchSignal: draft.researchSignal || '',
+          researchSummary: draft.researchSummary || '',
+          category: draft.category,
+          score: draft.score,
+          passed: draft.passed,
         }
+        pushBatchHistoryEntry(draft.id, currentDraft)
         const { subjects, body, tokens, category, score, passed } = await draftEmail(
           contact,
           aiConfig,
@@ -1235,6 +1379,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           researchSignal: extractResearchSignal(siteContent) || draft.researchSignal || '',
           researchSummary: siteContent || draft.researchSummary || '',
         })
+        undoItems.push({ id: draft.id, snapshot: { ...currentDraft } })
         previewChanges.push({
           id: draft.id,
           name: draft.name,
@@ -1249,6 +1394,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setReviewBatch(nextBatch)
       setReviewEdits({})
       setReviewApproved(new Set())
+      setLastBatchUndo({ items: undoItems, instruction, scope: regenBatchScope })
       openRegenPreview('all_batch', previewChanges)
     } catch (e) {
       console.error('[regen-all-batch] failed:', e.message)
@@ -1718,6 +1864,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           <div style={{ display: 'flex', gap: 8 }}>
             {lowCount > 0 && <span style={{ ...c.muted, fontSize: 12, color: '#dc2626' }}>⚠️ {lowCount} low-score drafts</span>}
             <button
+              onClick={restoreLastBatchRewrite}
+              disabled={!lastBatchUndo?.items?.length || bulkRegenLoading}
+              style={{ ...c.ghostBtn, opacity: !lastBatchUndo?.items?.length || bulkRegenLoading ? 0.5 : 1 }}
+            >
+              Undo last batch rewrite
+            </button>
+            <button
               onClick={() => openRegenModal('all_batch')}
               disabled={bulkRegenLoading || N === 0}
               style={{ ...c.ghostBtn, opacity: bulkRegenLoading ? 0.6 : 1 }}
@@ -2058,6 +2211,15 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   </div>
                 </div>
               )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+                <button
+                  onClick={() => restorePreviousBatchDraft(reviewEditModal)}
+                  disabled={!reviewBatchHistory[reviewEditModal]?.length}
+                  style={{ ...c.ghostBtn, opacity: !reviewBatchHistory[reviewEditModal]?.length ? 0.5 : 1 }}
+                >
+                  Restore previous version
+                </button>
+              </div>
               <label style={c.label}>Subject</label>
               <input
                 value={reviewEditSubj}
@@ -2538,6 +2700,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
+                onClick={restoreLastReviewRewrite}
+                disabled={!lastReviewBulkUndo?.items?.length || bulkRegenLoading}
+                style={{ ...c.ghostBtn, opacity: !lastReviewBulkUndo?.items?.length || bulkRegenLoading ? 0.5 : 1 }}
+              >
+                Undo last regenerate
+              </button>
+              <button
                 onClick={() => openRegenModal('all_review')}
                 disabled={bulkRegenLoading || N === 0}
                 style={{ ...c.ghostBtn, opacity: bulkRegenLoading ? 0.6 : 1 }}
@@ -2647,6 +2816,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   <>
                     <button onClick={() => toggleFlag(sel.id)} style={{ ...c.ghostBtn, color: flagged.has(sel.id) ? '#dc2626' : undefined }}>
                       {flagged.has(sel.id) ? '⚑ Unflag' : 'Flag'}
+                    </button>
+                    <button
+                      onClick={() => restorePreviousDraft(sel.id)}
+                      disabled={!draftHistory[sel.id]?.length}
+                      style={{ ...c.ghostBtn, opacity: !draftHistory[sel.id]?.length ? 0.5 : 1 }}
+                    >
+                      Restore previous
                     </button>
                     <button
                       onClick={() => openRegenModal('single', sel)}

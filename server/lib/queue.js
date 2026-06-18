@@ -49,6 +49,15 @@ export async function getQueue() {
   boss.on('error', e => console.error('[queue] pg-boss error:', e.message))
 
   await boss.start()
+
+  // pg-boss v10+ requires queues to exist before send()/work(). Create them
+  // up front so both the producer and worker paths can use them. Ignore
+  // "already exists" on restarts.
+  for (const q of ['send-email', 'run-discovery']) {
+    try { await boss.createQueue(q) }
+    catch (e) { if (!/exist/i.test(e.message)) throw e }
+  }
+
   console.log('[queue] pg-boss started')
   return boss
 }

@@ -192,14 +192,25 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   async function updateProfile(updates) {
     if (!currentUser) return
     try {
-      await fetch(`${API_URL}/api/user/profile`, {
+      const saveRes = await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.userId },
         body: JSON.stringify(updates)
       })
+      if (!saveRes.ok) throw new Error(`Profile save failed (${saveRes.status})`)
+
+      const saved = await saveRes.json().catch(() => null)
+      if (saved?.profile) {
+        setProfile(saved.profile)
+        return
+      }
+
       const res = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
-      if (res.ok) setProfile(await res.json())
-    } catch { }
+      if (!res.ok) throw new Error(`Profile reload failed (${res.status})`)
+      setProfile(await res.json())
+    } catch (e) {
+      console.error('[profile] update failed:', e.message)
+    }
   }
   const setCampaignModeFn = useCallback(v => {
     setProfile(p => p ? { ...p, campaignMode: v } : p)
@@ -1646,6 +1657,40 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         <button onClick={() => setPhase('settings')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
         <h1 style={c.h1}>Find contacts from a prompt</h1>
         <p style={{ ...c.muted, marginTop: 4 }}>AI finds the right people and their verified contact details</p>
+      </div>
+
+      <div style={{ ...c.card, marginBottom: 14 }}>
+        <div style={{ ...c.label, marginBottom: 10 }}>Ways to start</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          {ENTRY_LEVELS.map(level => {
+            const isActive = level.id === 'scratch'
+            return (
+              <button
+                key={level.id}
+                onClick={() => {
+                  setEntryLevel(level.id)
+                  if (level.id === 'scratch') setPhase('discover')
+                  else if (level.id === 'companies') setPhase('companies')
+                  else if (level.id === 'bulk_import') setPhase('import_companies')
+                }}
+                style={{
+                  textAlign: 'left',
+                  border: `2px solid ${isActive ? '#6366f1' : '#e5e7eb'}`,
+                  background: isActive ? '#eef2ff' : '#ffffff',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? '#4338ca' : '#111827' }}>{level.label}</span>
+                  <span style={{ ...c.pill(level.badge), fontSize: 10 }}>{isActive ? 'Current' : 'Switch'}</span>
+                </div>
+                <div style={{ fontSize: 12, lineHeight: 1.55, color: '#6b7280' }}>{level.desc}</div>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div style={{ ...c.card, marginBottom: 14 }}>

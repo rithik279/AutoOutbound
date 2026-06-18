@@ -96,10 +96,33 @@ router.put('/user/profile', requireAuth, async (req, res) => {
   const allowed = ['name', 'senderName', 'senderEmail', 'linkedinUrl', 'phoneNumber', 'modelId', 'campaignMode', 'emailProvider', 'resumeText', 'prompt']
   const patch   = {}
   for (const key of allowed) {
-    if (req.body[key] !== undefined) patch[key] = req.body[key]
+    if (req.body[key] === undefined) continue
+    const value = req.body[key]
+    if (['linkedinUrl', 'phoneNumber', 'senderName', 'senderEmail', 'name'].includes(key)) {
+      patch[key] = typeof value === 'string' ? value.trim() || null : value
+    } else {
+      patch[key] = value
+    }
   }
-  await updateUser(req.userId, patch)
-  res.json({ ok: true })
+  const user = await updateUser(req.userId, patch)
+  res.json({
+    ok: true,
+    profile: {
+      name:            user.name,
+      email:           user.email,
+      senderName:      user.senderName,
+      senderEmail:     user.senderEmail,
+      linkedinUrl:     user.linkedinUrl || null,
+      phoneNumber:     user.phoneNumber || null,
+      modelId:         user.modelId,
+      campaignMode:    user.campaignMode,
+      emailProvider:   user.emailProvider,
+      resumeText:      user.resumeText || null,
+      prompt:          user.prompt || null,
+      hasGmailToken:   !!(user.gmailTokens),
+      hasOutlookToken: !!(user.outlookTokens),
+    }
+  })
 })
 
 // ── Prompt templates ──────────────────────────────────────────────────────────

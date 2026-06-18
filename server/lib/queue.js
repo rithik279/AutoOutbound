@@ -116,66 +116,71 @@ export async function startWorkers() {
   const q = await getQueue()
 
   // ── Worker: send-email ────────────────────────────────────────────────────
-  await q.work('send-email', { teamSize: 5, teamConcurrency: 5 }, async (job) => {
-    const { id, to, subject, body, provider, userId } = job.data
+  // pg-boss v10+ passes the handler an ARRAY of jobs (batch) — iterate it.
+  await q.work('send-email', { batchSize: 5 }, async (jobs) => {
+    for (const job of jobs) {
+      const { id, to, subject, body, provider, userId } = job.data
 
-    console.log(`[queue] Sending email ${id} to ${to} via ${provider}`)
+      console.log(`[queue] Sending email ${id} to ${to} via ${provider}`)
 
-    try {
-      // Fetch trackingId from DB — it's generated at email creation time
-      const emailRecord = await prisma.email.findUnique({ where: { id }, select: { trackingId: true } })
-      const trackingId  = emailRecord?.trackingId || null
+      try {
+        // Fetch trackingId from DB — it's generated at email creation time
+        const emailRecord = await prisma.email.findUnique({ where: { id }, select: { trackingId: true } })
+        const trackingId  = emailRecord?.trackingId || null
 
-      let gmailMessageId = null, gmailThreadId = null
-      let outlookMessageId = null, outlookConversationId = null
+        let gmailMessageId = null, gmailThreadId = null
+        let outlookMessageId = null, outlookConversationId = null
 
-      if (provider === 'gmail') {
-        const result = await sendViaGmail({ to, subject, body, trackingId }, userId)
-        gmailMessageId = result?.gmailMessageId || null
-        gmailThreadId  = result?.gmailThreadId  || null
-      } else {
-        const result = await sendViaGraph({ to, subject, body, trackingId }, userId)
-        outlookMessageId      = result?.outlookMessageId      || null
-        outlookConversationId = result?.outlookConversationId || null
+        if (provider === 'gmail') {
+          const result = await sendViaGmail({ to, subject, body, trackingId }, userId)
+          gmailMessageId = result?.gmailMessageId || null
+          gmailThreadId  = result?.gmailThreadId  || null
+        } else {
+          const result = await sendViaGraph({ to, subject, body, trackingId }, userId)
+          outlookMessageId      = result?.outlookMessageId      || null
+          outlookConversationId = result?.outlookConversationId || null
+        }
+
+        // Mark sent in DB, store provider thread/conversation IDs for reply detection
+        await prisma.email.update({
+          where: { id },
+          data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId, outlookMessageId, outlookConversationId },
+        })
+
+        // Update contact state to 'emailed'
+        await prisma.contact.updateMany({
+          where: { emails: { some: { id } } },
+          data:  { state: 'emailed' },
+        })
+
+        console.log(`[queue] ✓ Sent email ${id} to ${to}`)
+      } catch (e) {
+        console.error(`[queue] ✗ Failed email ${id} to ${to}: ${e.message}`)
+
+        // Mark failed — pg-boss will retry up to retryLimit times
+        await prisma.email.update({
+          where: { id },
+          data:  { failedAt: new Date(), error: e.message },
+        })
+
+        // Re-throw so pg-boss knows to retry
+        throw e
       }
-
-      // Mark sent in DB, store provider thread/conversation IDs for reply detection
-      await prisma.email.update({
-        where: { id },
-        data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId, outlookMessageId, outlookConversationId },
-      })
-
-      // Update contact state to 'emailed'
-      await prisma.contact.updateMany({
-        where: { emails: { some: { id } } },
-        data:  { state: 'emailed' },
-      })
-
-      console.log(`[queue] ✓ Sent email ${id} to ${to}`)
-    } catch (e) {
-      console.error(`[queue] ✗ Failed email ${id} to ${to}: ${e.message}`)
-
-      // Mark failed — pg-boss will retry up to retryLimit times
-      await prisma.email.update({
-        where: { id },
-        data:  { failedAt: new Date(), error: e.message },
-      })
-
-      // Re-throw so pg-boss knows to retry
-      throw e
     }
   })
 
   // ── Worker: run-discovery ─────────────────────────────────────────────────
-  await q.work('run-discovery', { teamSize: 2, teamConcurrency: 1 }, async (job) => {
-    const { userId, dailyQuota } = job.data
-    console.log(`[queue] Running discovery for ${userId} (quota: ${dailyQuota})`)
-    try {
-      await runDiscovery(userId, dailyQuota)
-      console.log(`[queue] ✓ Discovery complete for ${userId}`)
-    } catch (e) {
-      console.error(`[queue] ✗ Discovery failed for ${userId}: ${e.message}`)
-      throw e
+  await q.work('run-discovery', { batchSize: 1 }, async (jobs) => {
+    for (const job of jobs) {
+      const { userId, dailyQuota } = job.data
+      console.log(`[queue] Running discovery for ${userId} (quota: ${dailyQuota})`)
+      try {
+        await runDiscovery(userId, dailyQuota)
+        console.log(`[queue] ✓ Discovery complete for ${userId}`)
+      } catch (e) {
+        console.error(`[queue] ✗ Discovery failed for ${userId}: ${e.message}`)
+        throw e
+      }
     }
   })
 

@@ -360,6 +360,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [reviewBatchHistory, setReviewBatchHistory] = useState({})
   const [lastReviewBulkUndo, setLastReviewBulkUndo] = useState(null)
   const [lastBatchUndo, setLastBatchUndo] = useState(null)
+  const [globalEditRule, setGlobalEditRule] = useState(null)
 
   // Schedule state
   const [sendDate, setSendDate] = useState('')
@@ -476,16 +477,18 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         approved: [...approved],
         flagged: [...flagged],
         discoverPrompt,
+        globalEditRule,
         phase: ['review', 'schedule'].includes(phase) ? phase : 'review',
         savedAt: Date.now(),
       }
       try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify(saved)) } catch {}
     }
-  }, [contacts, drafts, approved, flagged, phase])
+  }, [contacts, drafts, approved, flagged, phase, globalEditRule])
 
   // Clear saved campaign when sent or user explicitly starts new
   function clearSavedCampaign() {
     try { localStorage.removeItem(CAMPAIGN_KEY) } catch {}
+    setGlobalEditRule(null)
   }
 
   // Resume a saved campaign
@@ -498,6 +501,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setDrafts(saved.drafts || {})
       setApproved(new Set(saved.approved || []))
       setFlagged(new Set(saved.flagged || []))
+      setGlobalEditRule(saved.globalEditRule || null)
       if (saved.discoverPrompt) setDiscoverPrompt(saved.discoverPrompt)
       setPhase(saved.phase || 'review')
     } catch {}
@@ -923,6 +927,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setApproved(new Set())
     setDraftHistory({})
     setLastReviewBulkUndo(null)
+    setGlobalEditRule(null)
     setPhase('drafting')
     runDrafts(contactList)
   }
@@ -1020,6 +1025,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       .map(line => line.trim())
       .find(line => line && !/^PAGE SNAPSHOT$/i.test(line))
       ?.slice(0, 220) || ''
+  }
+
+  function formatBatchScopeLabel(scope) {
+    if (scope === 'selected') return 'Selected only'
+    if (scope === 'approved') return 'Approved only'
+    if (scope === 'low_score') return 'Low-score only'
+    if (scope === 'current_filter') return 'Current filter only'
+    return 'All drafts'
   }
 
   function pushDraftHistoryEntry(id, snapshot) {
@@ -1256,6 +1269,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setReviewEdits({})
     setReviewBatchHistory({})
     setLastBatchUndo(null)
+    setGlobalEditRule(null)
     setDraftProgress(contactList.length)
     setDraftCurrent(null)
     setPhase('review_batch')
@@ -1301,6 +1315,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setApproved(new Set())
       setFlagged(new Set())
       setLastReviewBulkUndo({ items: undoItems, instruction })
+      setGlobalEditRule({
+        instruction,
+        label: 'All drafts',
+        phase: 'review',
+        appliedAt: Date.now(),
+      })
       openRegenPreview('all_review', previewChanges)
     } catch (e) {
       console.error('[regen-all-review] failed:', e.message)
@@ -1395,6 +1415,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setReviewEdits({})
       setReviewApproved(new Set())
       setLastBatchUndo({ items: undoItems, instruction, scope: regenBatchScope })
+      setGlobalEditRule({
+        instruction,
+        label: formatBatchScopeLabel(regenBatchScope),
+        phase: 'review_batch',
+        appliedAt: Date.now(),
+      })
       openRegenPreview('all_batch', previewChanges)
     } catch (e) {
       console.error('[regen-all-batch] failed:', e.message)
@@ -1912,6 +1938,23 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </div>
           </div>
         </div>
+
+        {globalEditRule && (
+          <div style={{ ...c.card, marginBottom: 14, background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ ...c.label, marginBottom: 6, color: '#4338ca' }}>Global edit rule active</div>
+                <div style={{ fontSize: 13, color: '#312e81', lineHeight: 1.6 }}>
+                  <strong>{globalEditRule.label}:</strong> {globalEditRule.instruction}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, color: '#5b6475' }}>
+                  Applied {new Date(globalEditRule.appliedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                </div>
+              </div>
+              <button onClick={() => setGlobalEditRule(null)} style={c.ghostBtn}>Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
@@ -2720,6 +2763,23 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             </div>
           </div>
         </div>
+
+        {globalEditRule && (
+          <div style={{ marginBottom: 14, padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ ...c.label, marginBottom: 6, color: '#4338ca' }}>Global edit rule active</div>
+                <div style={{ fontSize: 13, color: '#312e81', lineHeight: 1.6 }}>
+                  <strong>{globalEditRule.label}:</strong> {globalEditRule.instruction}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 11, color: '#5b6475' }}>
+                  Applied {new Date(globalEditRule.appliedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                </div>
+              </div>
+              <button onClick={() => setGlobalEditRule(null)} style={c.ghostBtn}>Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Progress dots */}
         <div className="flex items-center gap-1.5 mb-5">

@@ -19,7 +19,7 @@
  */
 
 import { readFileSync, existsSync } from 'fs'
-import fetch from 'node-fetch'
+import { httpFetch } from './http.js'
 import { getGraphToken } from './tokens.js'
 import { sendViaGmail as _sendViaGmail } from './gmail.js'
 import { RESUME_PATH } from './config.js'
@@ -65,21 +65,24 @@ export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
   // scope. If the token only has Mail.Send (older consent), the draft create
   // returns "Access is denied"; fall back to a direct /me/sendMail, which
   // needs only Mail.Send but yields no conversationId.
-  const draftRes = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
+  // Sends are NOT retried (retries:0) — a retried send risks a duplicate email.
+  // Timeouts still apply so a hung Graph call can't wedge the worker; pg-boss
+  // retries the whole job on failure.
+  const draftRes = await httpFetch('https://graph.microsoft.com/v1.0/me/messages', {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify(messageBody),
-  })
+  }, { timeoutMs: 20_000, retries: 0, label: 'graph-create-draft' })
 
   if (draftRes.ok) {
     const draft = await draftRes.json()
     const messageId      = draft.id             || null
     const conversationId = draft.conversationId || null
 
-    const sendRes = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}/send`, {
+    const sendRes = await httpFetch(`https://graph.microsoft.com/v1.0/me/messages/${messageId}/send`, {
       method:  'POST',
       headers: { Authorization: `Bearer ${token}` },
-    })
+    }, { timeoutMs: 20_000, retries: 0, label: 'graph-send-draft' })
     if (!sendRes.ok) {
       const err = await sendRes.json().catch(() => ({}))
       throw new Error(err?.error?.message || `Graph send error ${sendRes.status}`)
@@ -87,12 +90,12 @@ export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
     return { outlookMessageId: messageId, outlookConversationId: conversationId }
   }
 
-  // Fallback: direct send (no draft) — only needs Mail.Send.
-  const sendMailRes = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+  // Fallback: direct send (no draft) — only needs Mail.Send. Not retried.
+  const sendMailRes = await httpFetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify({ message: messageBody, saveToSentItems: true }),
-  })
+  }, { timeoutMs: 20_000, retries: 0, label: 'graph-sendmail' })
   if (!sendMailRes.ok) {
     const err = await sendMailRes.json().catch(() => ({}))
     throw new Error(err?.error?.message || `Graph sendMail error ${sendMailRes.status}`)

@@ -24,7 +24,7 @@
  */
 
 import { Router } from 'express'
-import fetch      from 'node-fetch'
+import { httpFetch } from '../lib/http.js'
 import { prisma } from '../lib/prisma.js'
 import { APOLLO_KEY } from '../lib/config.js'
 
@@ -69,7 +69,7 @@ export async function runDiscovery(userId, limit = 50) {
     if (!co.apolloOrgId) continue // Can't search Apollo without an org ID
 
     // Search for senior data/engineering roles at this company
-    const apolloRes = await fetch('https://api.apollo.io/api/v1/mixed_people/api_search', {
+    const apolloRes = await httpFetch('https://api.apollo.io/api/v1/mixed_people/api_search', {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -85,7 +85,7 @@ export async function runDiscovery(userId, limit = 50) {
         person_seniorities: ['director', 'manager', 'vp', 'c_suite'],
         per_page: 10,
       }),
-    })
+    }, { timeoutMs: 20_000, retries: 1, label: 'apollo-discovery' })
 
     if (apolloRes.ok) {
       const data   = await apolloRes.json()

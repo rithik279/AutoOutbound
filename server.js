@@ -43,6 +43,7 @@ import { dirname }       from 'path'
 import { migratePasswordsIfNeeded }        from './server/lib/users.js'
 import { rehydrateQueue, startWorkers }    from './server/lib/queue.js'
 import { logTokenHealth }                  from './server/lib/tokens.js'
+import { checkRepliesAllUsers }            from './server/lib/replies.js'
 import { PORT }                            from './server/lib/config.js'
 import { requireAuth }                     from './server/lib/middleware.js'
 
@@ -119,6 +120,17 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 }
 
+// ── Global error handler ───────────────────────────────────────────────────────
+// Registered last. Catches anything thrown in a sync handler or passed to
+// next(err), so one bad request returns 500 JSON instead of hanging the socket
+// or bubbling into an uncaughtException that restarts the instance.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('[server] Unhandled route error:', err?.message || err)
+  if (res.headersSent) return next(err)
+  res.status(500).json({ error: 'Internal server error' })
+})
+
 // ── Start server FIRST ───────────────────────────────────────────────────────
 // Listen immediately so /api/health responds and Render can promote this
 // instance. DB/queue init is deferred to the background below — if we blocked
@@ -147,6 +159,19 @@ initBackgroundTasks()
 
 // Log Outlook token health every 10 minutes
 setInterval(logTokenHealth, 10 * 60_000)
+
+// ── Near-real-time reply polling ──────────────────────────────────────────────
+// Sweep all users with outstanding sent emails every 60s so "Replied" status
+// updates without the user opening the Sent Emails page. Guarded against
+// overlapping runs and never throws (the route remains available for on-demand).
+let replySweepRunning = false
+setInterval(async () => {
+  if (replySweepRunning) return
+  replySweepRunning = true
+  try { await checkRepliesAllUsers() }
+  catch (e) { console.error('[replies] background sweep error:', e.message) }
+  finally { replySweepRunning = false }
+}, 60_000)
 
 // ── Global error handlers ──────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason) => {

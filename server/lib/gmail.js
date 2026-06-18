@@ -12,7 +12,7 @@
  *   sendViaGmail(opts, userId)   → Promise<void>
  */
 
-import fetch  from 'node-fetch'
+import { httpFetch } from './http.js'
 import { GMAIL } from './config.js'
 import { prisma, resolveUserId } from './prisma.js'
 import { buildTrackedHtml } from './email-tracking.js'
@@ -63,7 +63,7 @@ export async function getGmailToken(userId) {
   // Auto-refresh if within 5 minutes of expiry
   if (t.expiresAt - Date.now() < 5 * 60_000) {
     console.log(`[GMAIL] Refreshing token for ${userId}…`)
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await httpFetch('https://oauth2.googleapis.com/token', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    new URLSearchParams({
@@ -72,7 +72,7 @@ export async function getGmailToken(userId) {
         grant_type:    'refresh_token',
         refresh_token: t.refreshToken,
       }),
-    })
+    }, { timeoutMs: 15_000, retries: 2, label: 'gmail-token-refresh' })
     const data = await res.json()
     if (!data.access_token) {
       throw new Error('Gmail token refresh failed — re-authorize in Settings')
@@ -143,14 +143,16 @@ export async function sendViaGmail({ to, subject, body, trackingId }, userId) {
 
   const encoded = Buffer.from(message).toString('base64url')
 
-  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+  // Send is NOT retried (retries:0) to avoid a duplicate message; pg-boss
+  // retries the whole job on failure. Timeout guards against a hung call.
+  const res = await httpFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
     method:  'POST',
     headers: {
       Authorization:  `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ raw: encoded }),
-  })
+  }, { timeoutMs: 20_000, retries: 0, label: 'gmail-send' })
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))

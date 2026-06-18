@@ -12,7 +12,7 @@
  *   saveOutlookTokens(userId, t)   → Promise<void>
  */
 
-import fetch   from 'node-fetch'
+import { httpFetch } from './http.js'
 import { OUTLOOK } from './config.js'
 import { prisma, resolveUserId }  from './prisma.js'
 
@@ -81,7 +81,7 @@ export async function getGraphToken(userId) {
     // Use /consumers/ to match the authorization flow (auth.js) — personal
     // Microsoft account refresh tokens are bound to that authority and fail
     // to refresh against /common/.
-    const res = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+    const res = await httpFetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    new URLSearchParams({
@@ -91,7 +91,7 @@ export async function getGraphToken(userId) {
         refresh_token: t.refreshToken,
         scope:         'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.ReadWrite offline_access',
       }),
-    })
+    }, { timeoutMs: 15_000, retries: 2, label: 'graph-token-refresh' })
     const data = await res.json()
     if (!data.access_token) {
       throw new Error(`Outlook token refresh failed (${data.error || 'unknown'}: ${data.error_description?.split('\n')[0] || ''}) — re-authorize in Settings`)

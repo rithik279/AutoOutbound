@@ -18,7 +18,7 @@
  */
 
 import { Router } from 'express'
-import fetch from 'node-fetch'
+import { httpFetch } from '../lib/http.js'
 import { OPENAI_KEY, ANTHROPIC_KEY } from '../lib/config.js'
 import { aiLimiter } from '../lib/middleware.js'
 
@@ -39,7 +39,7 @@ router.post('/ai/chat', aiLimiter, async (req, res) => {
   try {
     if (isAnthropic) {
       // Anthropic Messages API — uses x-api-key header and a different request shape
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
+      const r = await httpFetch('https://api.anthropic.com/v1/messages', {
         method:  'POST',
         headers: {
           'Content-Type':      'application/json',
@@ -52,12 +52,12 @@ router.post('/ai/chat', aiLimiter, async (req, res) => {
           system,
           messages,
         }),
-      })
+      }, { timeoutMs: 60_000, retries: 1, label: 'anthropic' })
       const data = await r.json()
       res.status(r.status).json(data)
     } else {
       // OpenAI Chat Completions API
-      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      const r = await httpFetch('https://api.openai.com/v1/chat/completions', {
         method:  'POST',
         headers: {
           'Content-Type':  'application/json',
@@ -69,7 +69,7 @@ router.post('/ai/chat', aiLimiter, async (req, res) => {
           temperature: temperature ?? 0.85,
           messages,
         }),
-      })
+      }, { timeoutMs: 60_000, retries: 1, label: 'openai' })
       const data = await r.json()
       res.status(r.status).json(data)
     }

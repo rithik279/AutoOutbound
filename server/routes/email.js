@@ -27,6 +27,7 @@ import { prisma }              from '../lib/prisma.js'
 import { scheduleEmailJob }    from '../lib/queue.js'
 import { getGraphToken }       from '../lib/tokens.js'
 import { getGmailToken }       from '../lib/gmail.js'
+import { checkRepliesForUser } from '../lib/replies.js'
 
 const router = Router()
 
@@ -260,94 +261,8 @@ router.post('/schedule-retry', async (req, res) => {
  */
 router.post('/check-replies', async (req, res) => {
   const userId = req.userId || req.headers['x-user-id'] || 'friend'
-
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { senderEmail: true } })
-    const senderEmail = user?.senderEmail?.toLowerCase() || ''
-
-    let repliesFound = 0
-    const BATCH = 10
-
-    // ── Gmail ──────────────────────────────────────────────────────────────
-    const gmailEmails = await prisma.email.findMany({
-      where: { userId, provider: 'gmail', sentAt: { not: null }, gmailThreadId: { not: null }, repliedAt: null },
-      select: { id: true, to: true, gmailThreadId: true, contactId: true },
-    })
-
-    if (gmailEmails.length > 0) {
-      let gmailToken = null
-      try { gmailToken = await getGmailToken(userId) } catch {}
-
-      if (gmailToken) {
-        for (let i = 0; i < gmailEmails.length; i += BATCH) {
-          await Promise.all(gmailEmails.slice(i, i + BATCH).map(async (email) => {
-            try {
-              const threadRes = await fetch(
-                `https://gmail.googleapis.com/gmail/v1/users/me/threads/${email.gmailThreadId}?format=metadata&metadataHeaders=From`,
-                { headers: { Authorization: `Bearer ${gmailToken}` } }
-              )
-              if (!threadRes.ok) return
-              const thread   = await threadRes.json()
-              const messages = thread.messages || []
-              const hasReply = messages.length > 1 && messages.some(msg => {
-                const from = (msg.payload?.headers?.find(h => h.name === 'From')?.value || '').toLowerCase()
-                return from.includes(email.to.toLowerCase()) && !from.includes(senderEmail)
-              })
-              if (hasReply) {
-                repliesFound++
-                await prisma.$transaction([
-                  prisma.email.update({ where: { id: email.id }, data: { repliedAt: new Date() } }),
-                  prisma.contact.update({ where: { id: email.contactId }, data: { state: 'replied' } }),
-                ])
-                console.log(`[replies] Gmail reply: email ${email.id} from ${email.to}`)
-              }
-            } catch (e) { console.error(`[replies] Gmail thread error email ${email.id}:`, e.message) }
-          }))
-        }
-      }
-    }
-
-    // ── Outlook ────────────────────────────────────────────────────────────
-    const outlookEmails = await prisma.email.findMany({
-      where: { userId, provider: 'outlook', sentAt: { not: null }, outlookConversationId: { not: null }, repliedAt: null },
-      select: { id: true, to: true, outlookConversationId: true, contactId: true },
-    })
-
-    if (outlookEmails.length > 0) {
-      let graphToken = null
-      try { graphToken = await getGraphToken(userId) } catch {}
-
-      if (graphToken) {
-        for (let i = 0; i < outlookEmails.length; i += BATCH) {
-          await Promise.all(outlookEmails.slice(i, i + BATCH).map(async (email) => {
-            try {
-              // Query all messages in the conversation
-              const convRes = await fetch(
-                `https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq '${email.outlookConversationId}'&$select=from,sender&$top=25`,
-                { headers: { Authorization: `Bearer ${graphToken}` } }
-              )
-              if (!convRes.ok) return
-              const conv     = await convRes.json()
-              const messages = conv.value || []
-              // Reply exists if >1 message in conversation AND one is from the recipient
-              const hasReply = messages.length > 1 && messages.some(msg => {
-                const fromAddr = (msg.from?.emailAddress?.address || msg.sender?.emailAddress?.address || '').toLowerCase()
-                return fromAddr.includes(email.to.toLowerCase()) && !fromAddr.includes(senderEmail)
-              })
-              if (hasReply) {
-                repliesFound++
-                await prisma.$transaction([
-                  prisma.email.update({ where: { id: email.id }, data: { repliedAt: new Date() } }),
-                  prisma.contact.update({ where: { id: email.contactId }, data: { state: 'replied' } }),
-                ])
-                console.log(`[replies] Outlook reply: email ${email.id} from ${email.to}`)
-              }
-            } catch (e) { console.error(`[replies] Outlook conv error email ${email.id}:`, e.message) }
-          }))
-        }
-      }
-    }
-
+    const repliesFound = await checkRepliesForUser(userId)
     console.log(`[replies] Check complete: ${repliesFound} new replies for user ${userId}`)
     res.json({ ok: true, repliesFound })
   } catch (err) {

@@ -18,6 +18,7 @@
 
 import express, { Router } from 'express'
 import fetch        from 'node-fetch'
+import { httpFetch } from '../lib/http.js'
 import mammoth      from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import { APOLLO_KEY, RESUME_PATH } from '../lib/config.js'
@@ -61,7 +62,7 @@ router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
   const apolloUrl = `${base}${req.params.path}`
 
   try {
-    const upstream = await fetch(apolloUrl, {
+    const upstream = await httpFetch(apolloUrl, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -69,7 +70,7 @@ router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
         'Cache-Control': 'no-cache',
       },
       body: JSON.stringify(req.body),
-    })
+    }, { timeoutMs: 25_000, retries: 1, label: 'apollo-proxy' })
     const data = await upstream.json()
     res.status(upstream.status).json(data)
   } catch (e) {
@@ -112,7 +113,7 @@ router.post('/companies/validate-batch', async (req, res) => {
           continue
         }
 
-        const apolloRes = await fetch('https://api.apollo.io/v1/mixed_companies/api_search', {
+        const apolloRes = await httpFetch('https://api.apollo.io/v1/mixed_companies/api_search', {
           method:  'POST',
           headers: {
             'Content-Type':  'application/json',
@@ -123,7 +124,7 @@ router.post('/companies/validate-batch', async (req, res) => {
             q_organization_domains_list: [co.domain],
             per_page: 1,
           }),
-        })
+        }, { timeoutMs: 20_000, retries: 1, label: 'apollo-validate' })
 
         const apolloData = await apolloRes.json()
         const orgs = apolloData.organizations || []

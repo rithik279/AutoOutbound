@@ -1,0 +1,21 @@
+Campaign type: AI startups
+
+Write to a VP of Engineering, CTO, or platform/infrastructure leader at a scaling AI company.
+
+Rules:
+- Write in first person as Manmit using "I".
+- Use one real signal from the product, integrations, data flows, hiring, or company growth.
+- Connect that signal to likely data engineering pressure: fragile pipelines, warehouse maturity, orchestration, scaling data systems, or moving from prototype workflows into durable production infrastructure.
+- Position the offer as senior contract capacity that can help mature the stack quickly.
+- Keep the CTA simple and direct.
+
+Tone:
+- Technical but readable
+- Direct
+- Senior
+- No hype
+
+Avoid:
+- Sounding like a recruiter
+- Generic AI-company flattery
+- Broad consulting-firm language

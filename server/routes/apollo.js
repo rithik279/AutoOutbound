@@ -27,6 +27,167 @@ import { validateOutboundUrl, apolloLimiter } from '../lib/middleware.js'
 
 const router = Router()
 
+const GENERAL_SIGNAL_KEYWORDS = [
+  'data', 'analytics', 'engineering', 'platform', 'pipeline', 'warehouse',
+  'etl', 'ai', 'machine learning', 'api', 'integration', 'cloud',
+  'governance', 'reporting', 'compliance', 'risk', 'payments', 'claims',
+  'hiring', 'career', 'job', 'staffing', 'recruiting', 'talent', 'search',
+  'contract', 'consulting', 'enterprise', 'customer', 'product'
+]
+
+const MODE_SIGNAL_KEYWORDS = {
+  finance: [
+    'data', 'reporting', 'reconciliation', 'risk', 'regulatory', 'compliance',
+    'payments', 'credit', 'banking', 'insurance', 'warehouse', 'migration'
+  ],
+  startup: [
+    'ai', 'platform', 'api', 'integration', 'infrastructure', 'engineering',
+    'data', 'pipeline', 'cloud', 'product', 'scale', 'hiring'
+  ],
+  recruiting: [
+    'recruiting', 'staffing', 'talent', 'search', 'placement', 'clients',
+    'contract', 'consulting', 'delivery', 'account manager', 'data', 'technology'
+  ],
+}
+
+function normalizeBaseDomain(url = '') {
+  return url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]
+}
+
+function decodeHtml(text = '') {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#\d+;/g, ' ')
+}
+
+function cleanHtmlToText(html = '') {
+  return decodeHtml(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+      .replace(/<svg[\s\S]*?<\/svg>/gi, ' ')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, ' ')
+      .replace(/<header[\s\S]*?<\/header>/gi, ' ')
+      .replace(/<form[\s\S]*?<\/form>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+function extractTag(html = '', tagName = '') {
+  const match = html.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'))
+  return decodeHtml(match?.[1] || '').replace(/\s+/g, ' ').trim()
+}
+
+function extractMetaDescription(html = '') {
+  const match = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i)
+  return decodeHtml(match?.[1] || '').replace(/\s+/g, ' ').trim()
+}
+
+function extractInterestingLinks(html = '', baseUrl = '', campaignMode = '') {
+  const priorities = campaignMode === 'recruiting'
+    ? ['about', 'company', 'team', 'specialties', 'practice', 'services', 'industries', 'jobs', 'careers']
+    : ['about', 'company', 'platform', 'product', 'solutions', 'services', 'careers', 'jobs', 'engineering']
+
+  const links = new Map()
+  const hrefRegex = /href=["']([^"'#]+)["']/gi
+  let match
+
+  while ((match = hrefRegex.exec(html))) {
+    const href = match[1]
+    if (/^(mailto:|tel:|javascript:)/i.test(href)) continue
+    try {
+      const absolute = new URL(href, baseUrl)
+      const path = absolute.pathname.toLowerCase()
+      if (!path || path === '/') continue
+      if (absolute.host !== new URL(baseUrl).host) continue
+      if (!priorities.some(p => path.includes(p))) continue
+      if (!links.has(absolute.toString())) {
+        links.set(absolute.toString(), {
+          url: absolute.toString(),
+          score: priorities.findIndex(p => path.includes(p)),
+          label: path.replace(/\//g, ' ').trim() || 'page'
+        })
+      }
+    } catch {}
+  }
+
+  return [...links.values()]
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 2)
+}
+
+function splitSentences(text = '') {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length >= 60 && s.length <= 260)
+}
+
+function scoreSentence(sentence = '', keywords = []) {
+  const s = sentence.toLowerCase()
+  let score = 0
+  for (const keyword of keywords) {
+    if (s.includes(keyword)) score += keyword.includes(' ') ? 2 : 1
+  }
+  if (/\b(we help|we provide|leading|trusted|innovative|world-class)\b/i.test(sentence)) score -= 1
+  if (/\b(data|engineering|platform|pipeline|analytics|api|recruiting|staffing|talent|payments|risk|claims|cloud|integration)\b/i.test(sentence)) score += 2
+  return score
+}
+
+function dedupeStrings(items = []) {
+  const seen = new Set()
+  return items.filter(item => {
+    const key = item.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function buildResearchSummary(pages = [], campaignMode = '') {
+  const keywords = dedupeStrings([...(MODE_SIGNAL_KEYWORDS[campaignMode] || []), ...GENERAL_SIGNAL_KEYWORDS])
+  const pageLines = []
+  const snippets = []
+
+  for (const page of pages) {
+    const introBits = [page.title, page.description].filter(Boolean)
+    if (introBits.length > 0) {
+      pageLines.push(`${page.label}: ${introBits.join('. ')}`)
+    }
+
+    const ranked = splitSentences(page.text)
+      .map(sentence => ({ sentence, score: scoreSentence(sentence, keywords) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+
+    for (const item of ranked) snippets.push(item.sentence)
+  }
+
+  const bestSnippets = dedupeStrings(snippets).slice(0, 4)
+  const summaryParts = []
+
+  if (pageLines.length > 0) {
+    summaryParts.push(`PAGE SNAPSHOT\n${pageLines.slice(0, 3).join('\n')}`)
+  }
+  if (bestSnippets.length > 0) {
+    summaryParts.push(`RESEARCH SIGNALS\n- ${bestSnippets.join('\n- ')}`)
+  }
+
+  const summary = summaryParts.join('\n\n').slice(0, 1800)
+  return summary || pages.map(p => p.text.slice(0, 400)).join('\n').slice(0, 1200)
+}
+
 // ── Apollo generic proxy ──────────────────────────────────────────────────────
 
 // Allowlist of Apollo API paths this proxy is permitted to forward.
@@ -240,6 +401,79 @@ router.post('/fetch-site', async (req, res) => {
  *
  * Response: { text: string }
  */
+router.post('/fetch-company-research', async (req, res) => {
+  const { url, campaignMode = '' } = req.body
+
+  const check = validateOutboundUrl(url)
+  if (!check.safe) {
+    return res.status(400).json({ error: `Invalid URL: ${check.reason}` })
+  }
+
+  const tryFetch = async (target) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+    try {
+      const r = await fetch(target, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research-bot/1.0)' },
+        signal: controller.signal,
+        redirect: 'follow',
+      })
+      clearTimeout(timer)
+      return await r.text()
+    } catch (e) {
+      clearTimeout(timer)
+      throw e
+    }
+  }
+
+  try {
+    const base = normalizeBaseDomain(url)
+    let homepageUrl = `https://${base}`
+    let homepageHtml = ''
+    try {
+      homepageHtml = await tryFetch(homepageUrl)
+    } catch {
+      homepageUrl = `https://www.${base}`
+      homepageHtml = await tryFetch(homepageUrl)
+    }
+
+    const pages = [{
+      label: 'homepage',
+      url: homepageUrl,
+      title: extractTag(homepageHtml, 'title'),
+      description: extractMetaDescription(homepageHtml),
+      text: cleanHtmlToText(homepageHtml).slice(0, 2500),
+    }]
+
+    const extraLinks = extractInterestingLinks(homepageHtml, homepageUrl, campaignMode)
+    const extraPages = await Promise.all(extraLinks.map(async link => {
+      try {
+        const html = await tryFetch(link.url)
+        return {
+          label: link.label,
+          url: link.url,
+          title: extractTag(html, 'title'),
+          description: extractMetaDescription(html),
+          text: cleanHtmlToText(html).slice(0, 1800),
+        }
+      } catch {
+        return null
+      }
+    }))
+
+    pages.push(...extraPages.filter(Boolean))
+    const text = buildResearchSummary(pages, campaignMode)
+
+    res.json({
+      text,
+      url: base,
+      pages: pages.map(p => ({ label: p.label, url: p.url, title: p.title })),
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 router.get('/resume-text', async (req, res) => {
   try {
     const result = await mammoth.extractRawText({ path: RESUME_PATH })

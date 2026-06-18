@@ -35,6 +35,10 @@ export function parseJSON(text) {
   return JSON.parse(match[0])
 }
 
+function trimPromptBlock(text = '', maxChars = 1800) {
+  return text.replace(/\s+/g, ' ').trim().slice(0, maxChars)
+}
+
 // ── Prompt → Apollo search params ──────────────────────────────────────────
 export async function promptToApolloParams(userPrompt, aiConfig, campaignMode) {
   const modeHint = campaignMode?.promptHint || ''
@@ -117,14 +121,69 @@ WRITING RULES — follow without exception:
 - The Stranger Test: every sentence must contain information specific to this company. If it could appear in any other email with the nouns swapped, rewrite it.
 `
 
+const MODE_DRAFT_GUIDANCE = {
+  finance: `CAMPAIGN TYPE: Financial institutions
+- Recipient is a data or technology buyer inside a bank, insurer, asset manager, payments company, or similar regulated institution.
+- Personalization should anchor to one concrete signal from the website, product, hiring, or operating model.
+- Tie that signal to regulatory reporting, reconciliation, data quality, production reliability, migration risk, or enterprise ETL modernization.
+- Position the consultant as someone who has already worked in banking-grade environments and can step into complex delivery quickly.
+- Ask for a short conversation with the internal data/platform/risk technology team. Do not sound like a generic services pitch.`,
+
+  startup: `CAMPAIGN TYPE: AI startups
+- Recipient is usually a VP of Engineering, CTO, or infrastructure/platform leader at a scaling AI company.
+- Personalization should anchor to product architecture, integrations, data flows, evaluation pipelines, customer scale, or hiring signals.
+- Tie that signal to fragile pipelines, warehouse maturity, orchestration, production reliability, or moving from prototype systems into durable internal data infrastructure.
+- Position the consultant as senior contract capacity who can help mature the stack without long ramp-up.
+- Do not write like a recruiter outreach or a generic consulting brochure.`,
+
+  recruiting: `CAMPAIGN TYPE: Recruiting firms
+- Recipient works at a recruiting or staffing firm. They are not the end client for data engineering services.
+- Write to them as a placement channel for their clients, not as a company that needs its own ETL modernization.
+- Do NOT pitch data engineering work for the recruiting firm's internal systems.
+- Do NOT write as though you are applying for a job or asking for employment.
+- Make the fit scannable: senior ETL / data engineering contractor, enterprise ETL, Informatica / IICS, SQL, Python, Airflow, dbt, Snowflake, migration, production support.
+- It is fine to mention contract searches, placements, or the kinds of roles you usually fit.
+- Close with a simple ask: whether a quick 15-minute conversation makes sense, or whether someone else on their team handles these searches.
+- If website research is thin, fall back to what the firm places, their vertical focus, or their delivery model.`
+}
+
+const CATEGORY_GUIDANCE = {
+  financial_services: `CATEGORY ANGLE
+- Emphasize regulated data, reconciliation, reporting, controls, and reliability.
+- Mention banking or financial services experience when relevant.`,
+
+  insurance: `CATEGORY ANGLE
+- Emphasize regulated operational data, claims or policy workflows, validation, and reconciliation.`,
+
+  healthcare: `CATEGORY ANGLE
+- Emphasize reliable, compliant pipelines and validation in high-regulation environments.`,
+
+  saas: `CATEGORY ANGLE
+- Emphasize scaling data infrastructure, maturing warehouse design, orchestration, and production support.`,
+
+  logistics: `CATEGORY ANGLE
+- Emphasize high-volume operational data, integration complexity, and reliable reporting across systems.`,
+
+  recruiter: `CATEGORY ANGLE
+- This is recruiter-mode writing. Keep the firm description brief and make the candidate fit immediately legible.
+- Do not overdo internal technical diagnosis of the recruiter's own company.`,
+
+  direct_buyer: `CATEGORY ANGLE
+- Assume a direct buyer. Tie one business or product signal to an ETL, migration, reporting, data quality, or production reliability need.`
+}
+
 // ── Detect company category from industry or company type ──────────────────
-function detectCompanyCategory(company, recipientTitle = '') {
+function detectCompanyCategory(company = {}, recipientTitle = '', campaignMode = '') {
+  if (campaignMode === 'recruiting') return 'recruiter'
+
   const industry = (company.industry || '').toLowerCase()
-  const name = (company.name || '').toLowerCase()
-  const title = recipientTitle.toLowerCase()
+  const name = (company.name || company.company || '').toLowerCase()
+  const title = (recipientTitle || '').toLowerCase()
+  const website = (company.siteContent || '').toLowerCase()
+  const recruiterSignals = `${name} ${industry} ${title} ${website}`
 
   // Recruiter detection
-  if (title.includes('recruiter') || title.includes('talent') || title.includes('staffing')) {
+  if (/\b(recruiter|recruiting|staffing|talent acquisition|talent partner|client partner|account manager|delivery manager|delivery lead|practice lead|practice director|search consultant)\b/i.test(recruiterSignals)) {
     return 'recruiter'
   }
 
@@ -283,7 +342,12 @@ export function scoreEmail(subject, body, category = 'direct_buyer') {
 }
 
 // ── Build email system prompt using guidelines ────────────────────────────────
-function buildEmailSystem(category, resumeSnapshot) {
+function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText }) {
+  const modeGuidance = MODE_DRAFT_GUIDANCE[campaignMode] || MODE_DRAFT_GUIDANCE.startup
+  const categoryGuidance = CATEGORY_GUIDANCE[category] || CATEGORY_GUIDANCE.direct_buyer
+  const customPromptBlock = trimPromptBlock(customPrompt)
+  const resumeSourceBlock = trimPromptBlock(resumeText, 2500)
+
   return `You are writing a cold outreach email for a senior ETL / data engineering contractor.
 
 Goal:
@@ -297,6 +361,10 @@ The consultant helps companies modernize legacy ETL and data warehouse workflows
 
 Conversation preference:
 The consultant should not lead with availability, rate, or remote USD contract wording. The email should simply ask whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+
+${modeGuidance}
+
+${categoryGuidance}
 
 Instructions:
 1. Start with a specific reference to the company's website, business, hiring, product, industry, or data signal.
@@ -314,24 +382,38 @@ Instructions:
 13. Do not include large consulting firms, offshore IT firms, or subcontracting language unless the target is explicitly a recruiter.
 14. End with one clear CTA asking whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
 15. Do not use em dashes.
+16. Always write in first person as the consultant using "I". Never refer to the consultant in third person.
+17. If the campaign type is Recruiting firms, the recruiter is not buying internal data engineering from us. They are evaluating whether to place me with their clients.
+18. If website content is weak, use a true observable company fact. Do not invent technical stack details.
+19. Keep the opening sentence concrete. No "I was impressed", "I noticed you're innovative", or generic admiration.
 
 ${WRITING_RULES}
 
 Resume snapshot:
 ${resumeSnapshot}
 
+${resumeSourceBlock ? `Uploaded resume source material:
+${resumeSourceBlock}
+` : ''}
+
+${customPromptBlock ? `User-saved prompt guidance:
+${customPromptBlock}
+
+Treat the saved prompt guidance as additive only. Campaign-type rules above take precedence if there is a conflict.
+` : ''}
+
 Output format — return ONLY valid JSON, no markdown:
 {"subjects":["Subject 1","Subject 2","Subject 3"],"body":"Email body here"}`
 }
 
 // ── Fetch company website via server proxy ─────────────────────────────────
-export async function fetchSiteContent(domain) {
+export async function fetchSiteContent(domain, campaignMode = '') {
   if (!domain) return ''
   try {
-    const res = await fetch('/api/fetch-site', {
+    const res = await fetch('/api/fetch-company-research', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: domain })
+      body: JSON.stringify({ url: domain, campaignMode })
     })
     if (!res.ok) return ''
     const data = await res.json()
@@ -342,10 +424,24 @@ export async function fetchSiteContent(domain) {
 }
 
 // ── Draft one email with category detection and scoring ────────────────────
-export async function draftEmail(contact, aiConfig, companyData = {}) {
-  const category = detectCompanyCategory(companyData, contact.title)
+export async function draftEmail(contact, aiConfig, options = {}) {
+  const {
+    campaignMode = 'startup',
+    companyData = {},
+    siteContent = '',
+    customPrompt = '',
+    resumeText = '',
+  } = options
+
+  const normalizedCompanyData = {
+    ...companyData,
+    name: companyData.name || companyData.company || contact.co || contact.company || '',
+    siteContent: companyData.siteContent || siteContent || '',
+  }
+
+  const category = detectCompanyCategory(normalizedCompanyData, contact.title, campaignMode)
   const resumeSnapshot = getResumeSnapshot(category)
-  const system = buildEmailSystem(category, resumeSnapshot)
+  const system = buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText })
 
   const firstName = contact.first || contact.name?.split(' ')[0] || contact.name
   const title = contact.title ? `, ${contact.title}` : ''
@@ -355,17 +451,19 @@ export async function draftEmail(contact, aiConfig, companyData = {}) {
   let userMessage = `Draft a cold email to ${firstName}${title} at ${company} (${domain}).`
 
   // Add company context if available
-  if (companyData.industry) {
-    userMessage += ` Industry: ${companyData.industry}.`
+  if (normalizedCompanyData.industry) {
+    userMessage += ` Industry: ${normalizedCompanyData.industry}.`
+  }
+  if (normalizedCompanyData.description) {
+    userMessage += ` Company description: ${normalizedCompanyData.description}.`
   }
 
   // Add website signal if available
-  let siteSection = ''
-  const siteContent = companyData.siteContent || ''
-  if (siteContent) {
-    siteSection = `\n\nCOMPANY WEBSITE CONTENT (extract one specific technical or product detail for personalization):\n${siteContent.slice(0, 3500)}`
-    userMessage += siteSection
+  if (normalizedCompanyData.siteContent) {
+    userMessage += `\n\nCOMPANY RESEARCH SUMMARY (use one specific, true signal for personalization and do not invent stack details):\n${normalizedCompanyData.siteContent.slice(0, 3500)}`
   }
+
+  userMessage += `\n\nCAMPAIGN MODE: ${campaignMode}\nEMAIL CATEGORY: ${category}`
 
   const { text, tokens } = await callAI({ ...aiConfig, systemPrompt: system, userMessage })
 

@@ -1,0 +1,26 @@
+Campaign type: Recruiting firms
+
+Write to the recruiter or staffing partner as a placement channel for their clients.
+
+Rules:
+- Write in first person as Manmit using "I".
+- Do not pitch data engineering services to the recruiting firm's own internal team.
+- Do not sound like a job application.
+- Make the fit easy to scan: senior ETL / data engineering contractor, Informatica / IICS, SQL, Python, Airflow, dbt, Snowflake, migration, production support, enterprise data environments.
+- Use one real company signal if available, but keep recruiter emails lighter on internal technical diagnosis than direct-buyer emails.
+- Mention contract searches, placements, or the kinds of roles that are a fit when useful.
+- End with a simple CTA asking whether a quick conversation makes sense or whether someone else on the team handles these searches.
+
+Tone:
+- Direct
+- Senior
+- Specific
+- No hype
+- No generic admiration
+
+Avoid:
+- "I was impressed by your company"
+- "I typically work through recruiting partners"
+- "This aligns well"
+- Third-person references to Manmit
+

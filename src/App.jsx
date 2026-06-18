@@ -557,6 +557,21 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
   const log = msg => setDiscoverLog(l => [...l, { t: new Date().toLocaleTimeString(), msg }])
 
+  function buildDraftOptions(contact, siteContent = '', companyData = {}) {
+    return {
+      campaignMode,
+      siteContent,
+      companyData: {
+        ...companyData,
+        company: companyData.company || companyData.name || contact.co || contact.company || '',
+        name: companyData.name || companyData.company || contact.co || contact.company || '',
+        domain: companyData.domain || contact.domain || '',
+      },
+      customPrompt: userPrompt || '',
+      resumeText: userResumeText || '',
+    }
+  }
+
   // ── AI DISCOVERY (from prompt) ───────────────────────────────────────────
   async function runDiscover() {
     if (!discoverPrompt.trim()) return
@@ -880,8 +895,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setDraftProgress(i)
       try {
         // Fetch company website before drafting so the AI has real content to hook from
-        const siteContent = await fetchSiteContent(contact.domain || contact.co)
-        const { subjects, body, tokens } = await draftEmail(contact, aiConfig, campaignMode, siteContent)
+        const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode)
+        const { subjects, body, tokens } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
         tokRef.current += tokens || 0
         setTotalTokens(tokRef.current)
@@ -910,8 +925,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     if (!contact) return
     setRegenLoading(contact.id)
     try {
-      const siteContent = await fetchSiteContent(contact.domain || contact.co).catch(() => '')
-      const { subjects, body } = await draftEmail(contact, aiConfig, campaignMode, siteContent)
+      const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
+      const { subjects, body } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
       const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
       setDrafts(prev => ({ ...prev, [contact.id]: { subject, body, status: 'ready' } }))
       // Remove from flagged/approved so user reviews the new draft
@@ -932,9 +947,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const companyData = companyDataMap[contact.id] || {}
       setDraftProgress(i)
       try {
-        // Use new draftEmail signature with companyData for category detection
-        const siteContent = await fetchSiteContent(contact.domain || contact.co)
-        const { subjects, body, tokens, category, score, passed } = await draftEmail(contact, aiConfig, companyData, siteContent)
+        const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode)
+        const { subjects, body, tokens, category, score, passed } = await draftEmail(
+          contact,
+          aiConfig,
+          buildDraftOptions(contact, siteContent, companyData)
+        )
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
         tokRef.current += tokens || 0
         batch.push({

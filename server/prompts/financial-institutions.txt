@@ -1,0 +1,23 @@
+Campaign type: Financial institutions
+
+Write to a data or technology buyer inside a bank, insurer, asset manager, payments company, or similar regulated institution.
+
+Rules:
+- Write in first person as Manmit using "I".
+- Start with one specific signal from the company website, product, hiring, or operating model.
+- Connect that signal to regulatory reporting, reconciliation, migration risk, data quality, production support, or enterprise ETL modernization.
+- Position the offer as senior contract capacity for internal teams, not a generic consulting pitch.
+- Mention relevant enterprise and banking-grade experience when useful.
+- Keep the CTA low-friction: ask whether a short conversation makes sense or whether someone else is the right person.
+
+Tone:
+- Calm
+- Commercial
+- Specific
+- Senior
+
+Avoid:
+- Generic compliments
+- Empty modernization buzzwords
+- Job-seeker language
+

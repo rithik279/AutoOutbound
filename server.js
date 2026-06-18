@@ -119,24 +119,34 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')))
 }
 
-// ── Startup tasks ──────────────────────────────────────────────────────────────
-// Migrate users from users.json → Postgres (one-time, no-op if already done)
-await migratePasswordsIfNeeded()
-
-// Start pg-boss job queue workers (send-email + run-discovery)
-// and wire the daily discovery cron
-await startWorkers()
-
-// Rehydrate any emails that were pending before last shutdown into pg-boss
-await rehydrateQueue()
-
-// Log Outlook token health every 10 minutes
-setInterval(logTokenHealth, 10 * 60_000)
-
-// ── Start server ───────────────────────────────────────────────────────────────
+// ── Start server FIRST ───────────────────────────────────────────────────────
+// Listen immediately so /api/health responds and Render can promote this
+// instance. DB/queue init is deferred to the background below — if we blocked
+// on it and pg-boss couldn't connect (e.g. the old instance still holds
+// Supabase pooler connections during a deploy), the server would never listen,
+// health would never pass, the old instance would never be retired, and its
+// connections would never free — a boot deadlock.
 app.listen(PORT, () => {
   console.log(`✓ API server running on http://localhost:${PORT}`)
 })
+
+// ── Background startup tasks (retry, never crash the process) ──────────────────
+async function initBackgroundTasks(attempt = 1) {
+  try {
+    await migratePasswordsIfNeeded()   // one-time users.json → Postgres migration
+    await startWorkers()               // pg-boss workers + daily discovery cron
+    await rehydrateQueue()             // re-schedule emails pending before last shutdown
+    console.log('[server] Background tasks initialized')
+  } catch (e) {
+    const delay = Math.min(60_000, 5_000 * attempt)
+    console.error(`[server] Background init failed (attempt ${attempt}): ${e.message} — retrying in ${Math.round(delay / 1000)}s`)
+    setTimeout(() => initBackgroundTasks(attempt + 1), delay)
+  }
+}
+initBackgroundTasks()
+
+// Log Outlook token health every 10 minutes
+setInterval(logTokenHealth, 10 * 60_000)
 
 // ── Global error handlers ──────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason) => {

@@ -36,7 +36,11 @@ export async function getQueue() {
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) throw new Error('DATABASE_URL not set — cannot start job queue')
 
-  boss = new PgBoss({
+  // Build into a local first; only cache `boss` after a fully successful init.
+  // If start()/createQueue() fails (e.g. EMAXCONNSESSION when the old instance
+  // still holds Supabase pooler connections during a deploy), tear the instance
+  // down so we don't leak connections and so a retry starts clean.
+  const b = new PgBoss({
     connectionString: databaseUrl,
     max:              3,         // small pool — Supabase session pooler caps total clients at 15
     retryLimit:       3,
@@ -47,18 +51,24 @@ export async function getQueue() {
     monitorStateIntervalSeconds: 60,
   })
 
-  boss.on('error', e => console.error('[queue] pg-boss error:', e.message))
+  b.on('error', e => console.error('[queue] pg-boss error:', e.message))
 
-  await boss.start()
+  try {
+    await b.start()
 
-  // pg-boss v10+ requires queues to exist before send()/work(). Create them
-  // up front so both the producer and worker paths can use them. Ignore
-  // "already exists" on restarts.
-  for (const q of ['send-email', 'run-discovery']) {
-    try { await boss.createQueue(q) }
-    catch (e) { if (!/exist/i.test(e.message)) throw e }
+    // pg-boss v10+ requires queues to exist before send()/work(). Create them
+    // up front so both the producer and worker paths can use them. Ignore
+    // "already exists" on restarts.
+    for (const q of ['send-email', 'run-discovery']) {
+      try { await b.createQueue(q) }
+      catch (e) { if (!/exist/i.test(e.message)) throw e }
+    }
+  } catch (e) {
+    try { await b.stop({ graceful: false }) } catch {}
+    throw e
   }
 
+  boss = b
   console.log('[queue] pg-boss started')
   return boss
 }

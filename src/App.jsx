@@ -595,11 +595,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
       log(`Enriched ${enriched.length} contacts with emails`)
 
-      const results = enriched
-        .filter(p => extractEmail(p) && p.email_status !== 'unavailable' && isTitleRelevant(p.title, campaignMode))
+      // Everyone we enriched who has a usable email — saved to the DB regardless
+      // of campaign-mode title relevance, so no surfaced contact is ever lost and
+      // the user can revisit/email them later.
+      const withEmail = enriched
+        .filter(p => extractEmail(p) && p.email_status !== 'unavailable')
         .map((p, i) => ({
           id: i + 1,
-          name: p.name || `${p.first_name} ${p.last_name}`,
+          name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
           first: p.first_name || p.name?.split(' ')[0] || '',
           title: p.title || '',
           co: p.organization?.name || '',
@@ -610,8 +613,11 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           emailStatus: p.email_status
         }))
 
+      // Displayed/draftable list still respects the campaign mode's title relevance.
+      const results = withEmail.filter(p => isTitleRelevant(p.title, campaignMode))
+
       setDiscoverResults(results)
-      saveContactsToDb(results) // persist all surfaced contacts for later revisit
+      saveContactsToDb(withEmail) // persist every surfaced contact for later revisit
       log(`✓ Ready — ${results.length} contacts with verified emails`)
     } catch (e) {
       log(`Error: ${e.message}`)

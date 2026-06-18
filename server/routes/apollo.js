@@ -16,7 +16,7 @@
  *   per-user keys) or falls back to the server-wide APOLLO_KEY from .env.
  */
 
-import { Router }   from 'express'
+import express, { Router } from 'express'
 import fetch        from 'node-fetch'
 import mammoth      from 'mammoth'
 import { APOLLO_KEY, RESUME_PATH } from '../lib/config.js'
@@ -244,6 +244,28 @@ router.get('/resume-text', async (req, res) => {
     res.json({ text: result.value })
   } catch (e) {
     res.status(500).json({ error: `Resume not found: ${e.message}` })
+  }
+})
+
+/**
+ * POST /api/resume-text-upload
+ *
+ * Extracts plain text from an uploaded .docx sent as a raw binary body.
+ * The client posts the file's ArrayBuffer with Content-Type
+ * application/octet-stream — mammoth parses the buffer directly.
+ *
+ * Response: { text: string }
+ */
+router.post('/resume-text-upload', express.raw({ type: 'application/octet-stream', limit: '10mb' }), async (req, res) => {
+  try {
+    const buffer = req.body
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+      return res.status(400).json({ error: 'Empty or invalid upload body' })
+    }
+    const result = await mammoth.extractRawText({ buffer })
+    res.json({ text: result.value })
+  } catch (e) {
+    res.status(500).json({ error: `Failed to parse .docx: ${e.message}` })
   }
 })
 

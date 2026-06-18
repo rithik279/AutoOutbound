@@ -47,15 +47,22 @@ export default function SharedSettings({
     if (!file) return
     setResumeStatus('Extracting text…')
     try {
-      const text = await file.text()
-      let resumeText = text
+      let resumeText
       if (file.name.endsWith('.docx')) {
+        // .docx is a binary ZIP — send raw bytes, not file.text() (which corrupts them)
+        const buffer = await file.arrayBuffer()
         const res = await fetch(`${API_URL}/api/resume-text-upload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
-          body: text,
+          body: buffer,
         })
-        if (res.ok) resumeText = (await res.json()).text
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `Upload failed (${res.status})`)
+        }
+        resumeText = (await res.json()).text
+      } else {
+        resumeText = await file.text()
       }
       await onUpdateProfile({ resumeText })
       setResumeStatus(`Uploaded! ${resumeText.length} chars`)

@@ -55,7 +55,7 @@ export default function SharedSettings({
         const buffer = await file.arrayBuffer()
         const res = await fetch(`${API_URL}/api/resume-text-upload`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': file.name },
+          headers: { 'Content-Type': 'application/octet-stream' },
           body: buffer,
         })
         if (!res.ok) {

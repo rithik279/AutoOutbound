@@ -263,9 +263,13 @@ router.post('/resume-text-upload', express.raw({ type: 'application/octet-stream
     if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
       return res.status(400).json({ error: 'Empty or invalid upload body' })
     }
-    const filename = String(req.headers['x-filename'] || '').toLowerCase()
+    // Detect type by magic bytes — avoids a custom header (which would need a
+    // CORS preflight allowlist entry) and is more reliable than the filename.
+    // PDF starts with "%PDF"; .docx is a ZIP starting with "PK".
+    const isPdf = buffer.length >= 4 &&
+      buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46
     let text
-    if (filename.endsWith('.pdf')) {
+    if (isPdf) {
       const parser = new PDFParse({ data: buffer })
       try {
         const result = await parser.getText()

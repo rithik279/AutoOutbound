@@ -993,6 +993,18 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     return rows
   }
 
+  const regenQuickActions = [
+    { label: 'Fix contact info', instruction: 'Fix any incorrect contact details and use the most current phone number, email, and contact method consistently.' },
+    { label: 'Shorten CTA', instruction: 'Keep the same message, but shorten the CTA so it is one direct sentence.' },
+    { label: 'More recruiter-focused', instruction: 'Make this sound more recruiter-focused and placement-oriented, while keeping the same voice.' },
+    { label: 'Less salesy', instruction: 'Make the tone less salesy and more direct, while keeping the same positioning.' },
+    { label: 'Mention LinkedIn', instruction: 'Mention LinkedIn as the preferred follow-up contact option where it fits naturally.' },
+  ]
+
+  function applyRegenQuickAction(instruction) {
+    setRegenPrompt(prev => prev.trim() ? `${prev.trim()}\n${instruction}` : instruction)
+  }
+
   async function regenDraft(contact, instruction = '') {
     if (!contact) return
     setRegenLoading(contact.id)
@@ -1881,6 +1893,17 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
                 Apply one instruction across every drafted email while keeping the same voice and positioning.
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                {regenQuickActions.map(action => (
+                  <button
+                    key={`batch-${action.label}`}
+                    onClick={() => applyRegenQuickAction(action.instruction)}
+                    style={{ ...c.ghostBtn, padding: '6px 10px', fontSize: 11 }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
               <label style={c.label}>What should change in all emails?</label>
               <textarea
                 value={regenPrompt}
@@ -2585,6 +2608,17 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
                 Tell the AI exactly what to revise for {sel.name} at {sel.co || sel.company}.
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                {regenQuickActions.map(action => (
+                  <button
+                    key={`single-${action.label}`}
+                    onClick={() => applyRegenQuickAction(action.instruction)}
+                    style={{ ...c.ghostBtn, padding: '6px 10px', fontSize: 11 }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
               <label style={c.label}>Tailor your instruction</label>
               <textarea
                 value={regenPrompt}
@@ -2613,6 +2647,17 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
                 Apply one instruction across the full campaign while keeping the same voice and overall positioning.
               </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                {regenQuickActions.map(action => (
+                  <button
+                    key={`review-${action.label}`}
+                    onClick={() => applyRegenQuickAction(action.instruction)}
+                    style={{ ...c.ghostBtn, padding: '6px 10px', fontSize: 11 }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
               <label style={c.label}>What should change in all emails?</label>
               <textarea
                 value={regenPrompt}

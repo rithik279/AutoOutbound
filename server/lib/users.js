@@ -113,6 +113,8 @@ export async function migratePasswordsIfNeeded() {
           password,
           senderName:    u.senderName    || u.name || '',
           senderEmail:   u.senderEmail   || u.email || '',
+          linkedinUrl:   u.linkedinUrl   || null,
+          phoneNumber:   u.phoneNumber   || null,
           modelId:       u.modelId       || 'gpt-4o-mini',
           campaignMode:  u.campaignMode  || 'startup',
           emailProvider: u.emailProvider || 'gmail',

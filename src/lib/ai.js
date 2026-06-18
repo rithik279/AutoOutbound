@@ -39,6 +39,17 @@ function trimPromptBlock(text = '', maxChars = 1800) {
   return text.replace(/\s+/g, ' ').trim().slice(0, maxChars)
 }
 
+function buildAuthoritativeProfileBlock(profile = {}) {
+  const lines = [
+    profile.senderName ? `Name: ${profile.senderName}` : '',
+    profile.senderEmail ? `Email: ${profile.senderEmail}` : '',
+    profile.linkedinUrl ? `LinkedIn URL: ${profile.linkedinUrl}` : '',
+    profile.phoneNumber ? `Phone number: ${profile.phoneNumber}` : '',
+  ].filter(Boolean)
+
+  return lines.join('\n')
+}
+
 // ── Prompt → Apollo search params ──────────────────────────────────────────
 export async function promptToApolloParams(userPrompt, aiConfig, campaignMode) {
   const modeHint = campaignMode?.promptHint || ''
@@ -342,11 +353,12 @@ export function scoreEmail(subject, body, category = 'direct_buyer') {
 }
 
 // ── Build email system prompt using guidelines ────────────────────────────────
-function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText }) {
+function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText, authoritativeProfile }) {
   const modeGuidance = MODE_DRAFT_GUIDANCE[campaignMode] || MODE_DRAFT_GUIDANCE.startup
   const categoryGuidance = CATEGORY_GUIDANCE[category] || CATEGORY_GUIDANCE.direct_buyer
   const customPromptBlock = trimPromptBlock(customPrompt)
   const resumeSourceBlock = trimPromptBlock(resumeText, 2500)
+  const profileBlock = buildAuthoritativeProfileBlock(authoritativeProfile)
 
   return `You are writing a cold outreach email for a senior ETL / data engineering contractor.
 
@@ -392,6 +404,12 @@ ${WRITING_RULES}
 Resume snapshot:
 ${resumeSnapshot}
 
+${profileBlock ? `AUTHORITATIVE PROFILE DETAILS
+${profileBlock}
+
+If any profile detail conflicts with the resume text, use the profile detail as the source of truth.
+` : ''}
+
 ${resumeSourceBlock ? `Uploaded resume source material:
 ${resumeSourceBlock}
 ` : ''}
@@ -431,6 +449,7 @@ export async function draftEmail(contact, aiConfig, options = {}) {
     siteContent = '',
     customPrompt = '',
     resumeText = '',
+    authoritativeProfile = {},
   } = options
 
   const normalizedCompanyData = {
@@ -441,7 +460,14 @@ export async function draftEmail(contact, aiConfig, options = {}) {
 
   const category = detectCompanyCategory(normalizedCompanyData, contact.title, campaignMode)
   const resumeSnapshot = getResumeSnapshot(category)
-  const system = buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText })
+  const system = buildEmailSystem({
+    campaignMode,
+    category,
+    resumeSnapshot,
+    customPrompt,
+    resumeText,
+    authoritativeProfile,
+  })
 
   const firstName = contact.first || contact.name?.split(' ')[0] || contact.name
   const title = contact.title ? `, ${contact.title}` : ''

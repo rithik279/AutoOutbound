@@ -7,6 +7,7 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 
 export default function SharedSettings({
   profile, localSenderName, setLocalSenderName, localSenderEmail, setLocalSenderEmail,
+  localLinkedinUrl, setLocalLinkedinUrl, localPhoneNumber, setLocalPhoneNumber,
   onUpdateProfile, setCampaignModeFn, setModelIdFn, campaignMode, modelId,
   currentUser, emailProvider, setEmailProvider, setProfile,
 }) {
@@ -178,8 +179,31 @@ export default function SharedSettings({
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">LinkedIn URL</label>
+                <input
+                  value={localLinkedinUrl}
+                  onChange={e => setLocalLinkedinUrl(e.target.value)}
+                  placeholder="https://www.linkedin.com/in/your-profile"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Phone number</label>
+                <input
+                  value={localPhoneNumber}
+                  onChange={e => setLocalPhoneNumber(e.target.value)}
+                  placeholder="+1 416 555 1234"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                />
+              </div>
               <button
-                onClick={() => onUpdateProfile({ senderName: localSenderName, senderEmail: localSenderEmail })}
+                onClick={() => onUpdateProfile({
+                  senderName: localSenderName,
+                  senderEmail: localSenderEmail,
+                  linkedinUrl: localLinkedinUrl,
+                  phoneNumber: localPhoneNumber,
+                })}
                 className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
               >
                 Save profile

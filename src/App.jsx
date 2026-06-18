@@ -181,6 +181,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   // Apply user profile to app state
   const senderName = profile?.senderName || currentUser?.name || 'Manmit Singh'
   const senderEmail = profile?.senderEmail || currentUser?.email || ''
+  const linkedinUrl = profile?.linkedinUrl || ''
+  const phoneNumber = profile?.phoneNumber || ''
   const modelId = profile?.modelId || 'gpt-4o-mini'
   const campaignMode = profile?.campaignMode || 'startup'
   const userResumeText = profile?.resumeText || null
@@ -224,11 +226,15 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   // Settings local state (for editable fields)
   const [localSenderName, setLocalSenderName] = useState('')
   const [localSenderEmail, setLocalSenderEmail] = useState('')
+  const [localLinkedinUrl, setLocalLinkedinUrl] = useState('')
+  const [localPhoneNumber, setLocalPhoneNumber] = useState('')
   // Sync when profile loads
   useEffect(() => {
     if (profile) {
       setLocalSenderName(profile.senderName || currentUser?.name || '')
       setLocalSenderEmail(profile.senderEmail || currentUser?.email || '')
+      setLocalLinkedinUrl(profile.linkedinUrl || '')
+      setLocalPhoneNumber(profile.phoneNumber || '')
       if (profile.emailProvider) setEmailProvider(profile.emailProvider)
       // Trigger setup wizard on first login (friend only, one-time)
       if (isFriend && !setupCompleted && !showSetupWizard) {
@@ -569,6 +575,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       },
       customPrompt: userPrompt || '',
       resumeText: userResumeText || '',
+      authoritativeProfile: {
+        senderName,
+        senderEmail,
+        linkedinUrl,
+        phoneNumber,
+      },
     }
   }
 
@@ -1291,6 +1303,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         setLocalSenderName={setLocalSenderName}
         localSenderEmail={localSenderEmail}
         setLocalSenderEmail={setLocalSenderEmail}
+        localLinkedinUrl={localLinkedinUrl}
+        setLocalLinkedinUrl={setLocalLinkedinUrl}
+        localPhoneNumber={localPhoneNumber}
+        setLocalPhoneNumber={setLocalPhoneNumber}
         onUpdateProfile={updateProfile}
         setCampaignModeFn={setCampaignModeFn}
         setModelIdFn={setModelIdFn}

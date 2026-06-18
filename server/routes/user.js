@@ -78,6 +78,8 @@ router.get('/user/profile', requireAuth, async (req, res) => {
     email:           user.email,
     senderName:      user.senderName,
     senderEmail:     user.senderEmail,
+    linkedinUrl:     user.linkedinUrl || null,
+    phoneNumber:     user.phoneNumber || null,
     modelId:         user.modelId,
     campaignMode:    user.campaignMode,
     emailProvider:   user.emailProvider,
@@ -91,7 +93,7 @@ router.get('/user/profile', requireAuth, async (req, res) => {
 // ── Profile PUT ───────────────────────────────────────────────────────────────
 
 router.put('/user/profile', requireAuth, async (req, res) => {
-  const allowed = ['name', 'senderName', 'senderEmail', 'modelId', 'campaignMode', 'emailProvider', 'resumeText', 'prompt']
+  const allowed = ['name', 'senderName', 'senderEmail', 'linkedinUrl', 'phoneNumber', 'modelId', 'campaignMode', 'emailProvider', 'resumeText', 'prompt']
   const patch   = {}
   for (const key of allowed) {
     if (req.body[key] !== undefined) patch[key] = req.body[key]

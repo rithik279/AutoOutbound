@@ -352,6 +352,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [bulkRegenLoading, setBulkRegenLoading] = useState(false)
   const [regenModal, setRegenModal] = useState(null) // { scope: 'single' | 'all_review' | 'all_batch', contact? }
   const [regenPrompt, setRegenPrompt] = useState('')
+  const [regenPreview, setRegenPreview] = useState(null) // { scope, changes: [{...}] }
+  const [regenPreviewIndex, setRegenPreviewIndex] = useState(0)
 
   // Schedule state
   const [sendDate, setSendDate] = useState('')
@@ -961,6 +963,36 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setRegenPrompt('')
   }
 
+  function openRegenPreview(scope, changes) {
+    if (!changes?.length) return
+    setRegenPreview({ scope, changes })
+    setRegenPreviewIndex(0)
+  }
+
+  function closeRegenPreview() {
+    setRegenPreview(null)
+    setRegenPreviewIndex(0)
+  }
+
+  function buildDiffRows(beforeText = '', afterText = '') {
+    const beforeLines = String(beforeText).split('\n')
+    const afterLines = String(afterText).split('\n')
+    const len = Math.max(beforeLines.length, afterLines.length)
+    const rows = []
+
+    for (let i = 0; i < len; i++) {
+      const beforeLine = beforeLines[i] ?? ''
+      const afterLine = afterLines[i] ?? ''
+      rows.push({
+        before: beforeLine,
+        after: afterLine,
+        changed: beforeLine !== afterLine,
+      })
+    }
+
+    return rows
+  }
+
   async function regenDraft(contact, instruction = '') {
     if (!contact) return
     setRegenLoading(contact.id)
@@ -973,7 +1005,17 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
       )
       const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
-      setDrafts(prev => ({ ...prev, [contact.id]: { subject, body, status: 'ready' } }))
+      const nextDraft = { subject, body, status: 'ready' }
+      setDrafts(prev => ({ ...prev, [contact.id]: nextDraft }))
+      openRegenPreview('single', [{
+        id: contact.id,
+        name: contact.name,
+        company: contact.co || contact.company,
+        beforeSubject: currentDraft?.subject || '',
+        afterSubject: subject,
+        beforeBody: currentDraft?.body || '',
+        afterBody: body,
+      }])
       // Remove from flagged/approved so user reviews the new draft
       setFlagged(prev => { const s = new Set(prev); s.delete(contact.id); return s })
       setApproved(prev => { const s = new Set(prev); s.delete(contact.id); return s })
@@ -1044,6 +1086,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setBulkRegenLoading(true)
     try {
       const nextDrafts = {}
+      const previewChanges = []
       for (const contact of contacts) {
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
         const currentDraft = drafts[contact.id] || null
@@ -1054,11 +1097,21 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         )
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
         nextDrafts[contact.id] = { subject, body, status: 'ready' }
+        previewChanges.push({
+          id: contact.id,
+          name: contact.name,
+          company: contact.co || contact.company,
+          beforeSubject: currentDraft?.subject || '',
+          afterSubject: subject,
+          beforeBody: currentDraft?.body || '',
+          afterBody: body,
+        })
       }
       setDrafts(nextDrafts)
       draftsRef.current = nextDrafts
       setApproved(new Set())
       setFlagged(new Set())
+      openRegenPreview('all_review', previewChanges)
     } catch (e) {
       console.error('[regen-all-review] failed:', e.message)
     }
@@ -1070,6 +1123,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setBulkRegenLoading(true)
     try {
       const nextBatch = []
+      const previewChanges = []
       for (const draft of reviewBatch) {
         const contact = reviewBatchContacts.find(c => c.id === draft.id) || {
           id: draft.id,
@@ -1102,11 +1156,21 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           score: score || 0,
           passed: passed !== false,
         })
+        previewChanges.push({
+          id: draft.id,
+          name: draft.name,
+          company: draft.company,
+          beforeSubject: currentDraft.subject,
+          afterSubject: subject,
+          beforeBody: currentDraft.body,
+          afterBody: body,
+        })
       }
       setTotalTokens(tokRef.current)
       setReviewBatch(nextBatch)
       setReviewEdits({})
       setReviewApproved(new Set())
+      openRegenPreview('all_batch', previewChanges)
     } catch (e) {
       console.error('[regen-all-batch] failed:', e.message)
     }
@@ -1726,6 +1790,90 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </div>
         )}
 
+        {regenPreview && regenPreview.scope === 'all_batch' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+            <div style={{ ...c.card, width: '94%', maxWidth: 1100, maxHeight: '88vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <h2 style={{ ...c.h2, marginBottom: 6 }}>Regeneration preview</h2>
+                  <p style={{ ...c.muted, margin: 0 }}>
+                    {regenPreview.changes.length} drafts updated. Review the before/after diff before approving.
+                  </p>
+                </div>
+                <button onClick={closeRegenPreview} style={c.ghostBtn}>Close</button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={() => setRegenPreviewIndex(i => Math.max(0, i - 1))}
+                  disabled={regenPreviewIndex === 0}
+                  style={c.ghostBtn}
+                >
+                  ← Prev
+                </button>
+                <span style={{ ...c.muted, fontSize: 12 }}>
+                  {regenPreviewIndex + 1} / {regenPreview.changes.length} · {regenPreview.changes[regenPreviewIndex]?.name} · {regenPreview.changes[regenPreviewIndex]?.company}
+                </span>
+                <button
+                  onClick={() => setRegenPreviewIndex(i => Math.min(regenPreview.changes.length - 1, i + 1))}
+                  disabled={regenPreviewIndex >= regenPreview.changes.length - 1}
+                  style={c.ghostBtn}
+                >
+                  Next →
+                </button>
+              </div>
+              {(() => {
+                const change = regenPreview.changes[regenPreviewIndex]
+                const subjectRows = buildDiffRows(change?.beforeSubject || '', change?.afterSubject || '')
+                const bodyRows = buildDiffRows(change?.beforeBody || '', change?.afterBody || '')
+                return (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Before</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`bs-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.before || ' '}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>After</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`as-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.after || ' '}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body before</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`bb-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.before || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body after</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`ab-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.after || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
         {regenModal?.scope === 'all_batch' && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
@@ -1793,61 +1941,6 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </div>
         )}
 
-        {regenModal?.scope === 'single' && regenModal.contact?.id === sel?.id && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
-              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate this email</h2>
-              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
-                Tell the AI exactly what to revise for {sel.name} at {sel.co || sel.company}.
-              </p>
-              <label style={c.label}>Tailor your instruction</label>
-              <textarea
-                value={regenPrompt}
-                onChange={e => setRegenPrompt(e.target.value)}
-                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
-                placeholder={`Examples:\n- Use the correct phone number: +1 416 555 1234\n- Make the CTA less salesy\n- Focus more on their data platform hiring signal`}
-              />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
-                <button
-                  onClick={submitRegenRequest}
-                  disabled={!regenPrompt.trim() || regenLoading === sel.id}
-                  style={c.primaryBtn}
-                >
-                  {regenLoading === sel.id ? 'Regenerating…' : 'Regenerate email'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {regenModal?.scope === 'all_review' && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
-              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate all emails</h2>
-              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
-                Apply one instruction across the full campaign while keeping the same voice and overall positioning.
-              </p>
-              <label style={c.label}>What should change in all emails?</label>
-              <textarea
-                value={regenPrompt}
-                onChange={e => setRegenPrompt(e.target.value)}
-                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
-                placeholder={`Examples:\n- Replace the phone number with +1 416 555 1234\n- Use LinkedIn as the preferred contact method\n- Shorten every CTA to one sentence`}
-              />
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
-                <button
-                  onClick={submitRegenRequest}
-                  disabled={!regenPrompt.trim() || bulkRegenLoading}
-                  style={c.primaryBtn}
-                >
-                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate all'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     )
   }
@@ -2416,6 +2509,211 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {regenPreview && regenPreview.scope === 'single' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+            <div style={{ ...c.card, width: '94%', maxWidth: 1100, maxHeight: '88vh', overflowY: 'auto' }}>
+              {(() => {
+                const change = regenPreview.changes[regenPreviewIndex]
+                const subjectRows = buildDiffRows(change?.beforeSubject || '', change?.afterSubject || '')
+                const bodyRows = buildDiffRows(change?.beforeBody || '', change?.afterBody || '')
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <div>
+                        <h2 style={{ ...c.h2, marginBottom: 6 }}>Regeneration preview</h2>
+                        <p style={{ ...c.muted, margin: 0 }}>
+                          Review what changed for {change?.name} at {change?.company} before approving.
+                        </p>
+                      </div>
+                      <button onClick={closeRegenPreview} style={c.ghostBtn}>Close</button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Subject before</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`ssb-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.before || ' '}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Subject after</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`ssa-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.after || ' '}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body before</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`sbb-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.before || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body after</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`sba-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.after || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
+        {regenModal?.scope === 'single' && regenModal.contact?.id === sel?.id && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate this email</h2>
+              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
+                Tell the AI exactly what to revise for {sel.name} at {sel.co || sel.company}.
+              </p>
+              <label style={c.label}>Tailor your instruction</label>
+              <textarea
+                value={regenPrompt}
+                onChange={e => setRegenPrompt(e.target.value)}
+                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
+                placeholder={`Examples:\n- Use the correct phone number: +1 416 555 1234\n- Make the CTA less salesy\n- Focus more on their data platform hiring signal`}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={submitRegenRequest}
+                  disabled={!regenPrompt.trim() || regenLoading === sel.id}
+                  style={c.primaryBtn}
+                >
+                  {regenLoading === sel.id ? 'Regenerating…' : 'Regenerate email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {regenModal?.scope === 'all_review' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate all emails</h2>
+              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
+                Apply one instruction across the full campaign while keeping the same voice and overall positioning.
+              </p>
+              <label style={c.label}>What should change in all emails?</label>
+              <textarea
+                value={regenPrompt}
+                onChange={e => setRegenPrompt(e.target.value)}
+                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
+                placeholder={`Examples:\n- Replace the phone number with +1 416 555 1234\n- Use LinkedIn as the preferred contact method\n- Shorten every CTA to one sentence`}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={submitRegenRequest}
+                  disabled={!regenPrompt.trim() || bulkRegenLoading}
+                  style={c.primaryBtn}
+                >
+                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate all'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {regenPreview && regenPreview.scope === 'all_review' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+            <div style={{ ...c.card, width: '94%', maxWidth: 1100, maxHeight: '88vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <h2 style={{ ...c.h2, marginBottom: 6 }}>Regeneration preview</h2>
+                  <p style={{ ...c.muted, margin: 0 }}>
+                    {regenPreview.changes.length} emails updated. Review the before/after diff before approving.
+                  </p>
+                </div>
+                <button onClick={closeRegenPreview} style={c.ghostBtn}>Close</button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={() => setRegenPreviewIndex(i => Math.max(0, i - 1))}
+                  disabled={regenPreviewIndex === 0}
+                  style={c.ghostBtn}
+                >
+                  ← Prev
+                </button>
+                <span style={{ ...c.muted, fontSize: 12 }}>
+                  {regenPreviewIndex + 1} / {regenPreview.changes.length} · {regenPreview.changes[regenPreviewIndex]?.name} · {regenPreview.changes[regenPreviewIndex]?.company}
+                </span>
+                <button
+                  onClick={() => setRegenPreviewIndex(i => Math.min(regenPreview.changes.length - 1, i + 1))}
+                  disabled={regenPreviewIndex >= regenPreview.changes.length - 1}
+                  style={c.ghostBtn}
+                >
+                  Next →
+                </button>
+              </div>
+              {(() => {
+                const change = regenPreview.changes[regenPreviewIndex]
+                const subjectRows = buildDiffRows(change?.beforeSubject || '', change?.afterSubject || '')
+                const bodyRows = buildDiffRows(change?.beforeBody || '', change?.afterBody || '')
+                return (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Before</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`rb-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.before || ' '}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>After</div>
+                        {subjectRows.map((row, idx) => (
+                          <div key={`ra-${idx}`} style={{ fontSize: 13, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                            {row.after || ' '}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                      <div style={{ background: '#fff7f7', border: '1px solid #fecaca', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body before</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`rbb-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#fee2e2' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.before || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12 }}>
+                        <div style={{ ...c.label, marginBottom: 8 }}>Body after</div>
+                        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                          {bodyRows.map((row, idx) => (
+                            <div key={`rba-${idx}`} style={{ fontSize: 12.5, lineHeight: 1.7, padding: '4px 6px', background: row.changed ? '#dcfce7' : 'transparent', borderRadius: 6, whiteSpace: 'pre-wrap' }}>
+                              {row.after || ' '}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         )}

@@ -17,9 +17,39 @@ import OnboardingWizard from './components/OnboardingWizard.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
+// ── Activity feed ────────────────────────────────────────────────────────────
+// Clean, human-friendly progress panel that replaces the old terminal-style log.
+// Shows each step as a soft row with a status dot; the latest step is emphasized.
+function ActivityFeed({ items = [], busy = false }) {
+  if (!items.length) return null
+  return (
+    <div style={{
+      border: '1px solid #ECECEC', borderRadius: 12, background: '#FAFAFA',
+      padding: '8px 14px', marginBottom: 14, maxHeight: 240, overflowY: 'auto',
+    }}>
+      {items.map((l, i) => {
+        const last = i === items.length - 1
+        const ok   = /^✓|ready|added|found|resolved|enriched|complete|done/i.test(l.msg)
+        const dot  = ok ? '#16a34a' : (last && busy ? '#6366f1' : '#CBD5E1')
+        return (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0',
+            fontSize: 12.5, color: '#374151', opacity: last ? 1 : 0.85,
+            borderBottom: i < items.length - 1 ? '1px solid #F1F1EE' : 'none',
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontWeight: last ? 600 : 400 }}>{l.msg.replace(/^✓\s*/, '')}</span>
+            <span style={{ color: '#C7CDD6', fontSize: 11, flexShrink: 0 }}>{l.t}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── MAIN APP ───────────────────────────────────────────────────────────────
 // API keys live in server.js and .env — never in the browser bundle
-// The server proxy handles all OpenAI, Anthropic, and Apollo calls
+// The server proxy handles all model and data-provider calls
 const ENV_KEYS = { openai: true, anthropic: true, apollo: true }
 
 export default function App({ onPhaseChange, onPhaseControllerReady, onUserChange, currentUserOverride } = {}) {
@@ -336,7 +366,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     async function fetchStatus(attempt = 0) {
       try {
         const [authRes, schedRes, gmailRes] = await Promise.all([
-          fetch(`${API_URL}/api/token-health`),
+          fetch(`${API_URL}/api/token-health`, { headers: { 'x-user-id': currentUser.userId } }),
           fetch(`${API_URL}/api/schedule-status`),
           fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
         ])
@@ -362,7 +392,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
-        const res = await fetch(`/api/token-health?_=${Date.now()}`)
+        const res = await fetch(`/api/token-health?_=${Date.now()}`, { headers: { 'x-user-id': currentUser.userId } })
         const data = await res.json()
         console.log('[ReAuth] poll', i, data)
         if (data.ok) {
@@ -538,7 +568,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const mode = CAMPAIGN_MODES[campaignMode]
       log(`Parsing your prompt into search parameters… [${mode.label}]`)
       const params = await promptToApolloParams(discoverPrompt, aiConfig, mode)
-      log(`Searching Apollo: "${params.reasoning || 'finding matches'}"`)
+      log(`Searching: "${params.reasoning || 'finding matches'}"`)
 
       // Merge in mode's title/seniority defaults if the AI didn't specify them
       const searchParams = {
@@ -581,6 +611,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         }))
 
       setDiscoverResults(results)
+      saveContactsToDb(results) // persist all surfaced contacts for later revisit
       log(`✓ Ready — ${results.length} contacts with verified emails`)
     } catch (e) {
       log(`Error: ${e.message}`)
@@ -730,6 +761,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       if (i < companies.length - 1) await new Promise(r => setTimeout(r, 300))
     }
     logCompany(`Done. Total contacts found: ${found.length}`)
+    saveContactsToDb(found) // persist all surfaced contacts for later revisit
     setCompanySearching(false)
   }
 
@@ -765,7 +797,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     try {
       logOrg('Translating description to search parameters…')
       const params = await promptToApolloOrgParams(companyOrgPrompt, aiConfig)
-      logOrg(`Searching Apollo: "${params.reasoning || 'finding companies'}"`)
+      logOrg(`Searching: "${params.reasoning || 'finding companies'}"`)
       delete params.reasoning
 
       const data = await searchOrgs(params, '')
@@ -962,6 +994,34 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       console.error('Failed to load contacts:', e)
     }
     setLoadingContacts(false)
+  }
+
+  // ── AUTO-SAVE DISCOVERED CONTACTS ───────────────────────────────────────────
+  // Persist every surfaced contact (not just the ones that get emailed) so the
+  // user can revisit them in "My Contacts" and continue drafting later without
+  // re-running the same search. Idempotent on the server (upsert by email).
+  async function saveContactsToDb(list) {
+    const contacts = (list || [])
+      .filter(p => p && p.email)
+      .map(p => ({
+        email:    p.email,
+        name:     p.name || p.first || p.email.split('@')[0],
+        title:    p.title || null,
+        company:  p.company || p.co || null,
+        domain:   p.domain || null,
+        linkedin: p.linkedin || null,
+        source:   p.source || 'discovery',
+      }))
+    if (!contacts.length) return
+    try {
+      await fetch(`${API_URL}/api/contacts/bulk`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ contacts }),
+      })
+    } catch (e) {
+      console.error('Failed to auto-save contacts:', e)
+    }
   }
 
   // ── SCHEDULE SEND ───────────────────────────────────────────────────────
@@ -1273,7 +1333,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             setImportedValidating(false)
           }
         }} disabled={importedValidating || !importedCompanyText.trim()} style={c.primaryBtn}>
-          {importedValidating ? 'Validating…' : 'Validate with Apollo →'}
+          {importedValidating ? 'Validating…' : 'Validate →'}
         </button>
       </div>
 
@@ -1564,15 +1624,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
       </div>
 
-      {discoverLog.length > 0 && (
-        <div style={{ ...c.card, marginBottom: 14, background: '#1a1a1a', color: '#e5e5e5' }}>
-          {discoverLog.map((l, i) => (
-            <div key={i} style={{ fontSize: 12, fontFamily: 'monospace', lineHeight: 1.8 }}>
-              <span style={{ color: '#666', marginRight: 10 }}>{l.t}</span>{l.msg}
-            </div>
-          ))}
-        </div>
-      )}
+      <ActivityFeed items={discoverLog} busy={discoverLoading} />
 
       {discoverResults.length > 0 && (
         <>
@@ -1581,7 +1633,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               <h2 style={{ ...c.h2, margin: 0 }}>{discoverResults.length} contacts found</h2>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={runDiscover} style={c.ghostBtn}>Search again</button>
-                <button onClick={() => exportCSV(discoverResults, 'apollo-contacts')} style={c.ghostBtn}>Export CSV</button>
+                <button onClick={() => exportCSV(discoverResults, 'contacts')} style={c.ghostBtn}>Export CSV</button>
                 <button onClick={() => beginDrafting(discoverResults)} disabled={!canDraft} style={c.primaryBtn}>
                   Draft emails →
                 </button>
@@ -1622,7 +1674,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       {/* AI company discovery */}
       <div style={{ ...c.card, marginBottom: 14 }}>
         <h2 style={c.h2}>AI: Find companies</h2>
-        <p style={{ ...c.small, marginBottom: 10 }}>Describe the type of companies you want — AI searches Apollo and returns a company list you can use below</p>
+        <p style={{ ...c.small, marginBottom: 10 }}>Describe the type of companies you want — AI finds matching companies and returns a list you can use below</p>
         <textarea
           style={{ minHeight: 80, marginBottom: 10 }}
           placeholder={`Examples:\n"Series A/B AI startups in the US with 50–500 employees"\n"Canadian banks and asset managers with over 1,000 employees"\n"Fintech companies in New York focused on data infrastructure"`}
@@ -1636,15 +1688,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </button>
         </div>
 
-        {companyOrgLog.length > 0 && (
-          <div style={{ marginTop: 12, background: '#1a1a1a', borderRadius: 8, padding: '10px 14px' }}>
-            {companyOrgLog.map((l, i) => (
-              <div key={i} style={{ fontSize: 12, fontFamily: 'monospace', lineHeight: 1.8, color: '#e5e5e5' }}>
-                <span style={{ color: '#666', marginRight: 10 }}>{l.t}</span>{l.msg}
-              </div>
-            ))}
-          </div>
-        )}
+        <div style={{ marginTop: 12 }}>
+          <ActivityFeed items={companyOrgLog} busy={companyOrgSearching} />
+        </div>
 
         {companyOrgResults.length > 0 && (
           <div style={{ marginTop: 12 }}>
@@ -1750,22 +1796,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
       </div>
 
-      {companyLog.length > 0 && (
-        <div style={{ ...c.card, marginBottom: 14, background: '#1a1a1a', color: '#e5e5e5' }}>
-          {companyLog.map((l, i) => (
-            <div key={i} style={{ fontSize: 12, fontFamily: 'monospace', lineHeight: 1.8 }}>
-              <span style={{ color: '#666', marginRight: 10 }}>{l.t}</span>{l.msg}
-            </div>
-          ))}
-        </div>
-      )}
+      <ActivityFeed items={companyLog} busy={companySearching} />
 
       {companyContacts.length > 0 && (
         <div style={{ ...c.card, marginBottom: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <h2 style={{ ...c.h2, margin: 0 }}>{companyContacts.length} contacts found</h2>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => exportCSV(companyContacts, 'apollo-contacts')} style={c.ghostBtn}>Export CSV</button>
+              <button onClick={() => exportCSV(companyContacts, 'contacts')} style={c.ghostBtn}>Export CSV</button>
               <button onClick={() => beginDrafting(companyContacts)} disabled={!canDraft} style={c.primaryBtn}>Draft emails →</button>
             </div>
           </div>

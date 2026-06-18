@@ -79,6 +79,61 @@ router.post('/contacts', async (req, res) => {
 })
 
 /**
+ * POST /api/contacts/bulk
+ *
+ * Upserts a batch of discovered contacts so every person surfaced by a search
+ * is saved — even the ones the user didn't email — and can be revisited later
+ * without re-searching. Idempotent by email: re-running the same search never
+ * duplicates, and an existing contact's state/source is preserved (only
+ * metadata is refreshed).
+ *
+ * Body: { contacts: [{ email, name, title?, company?, domain?, linkedin?, source? }] }
+ * Response: { ok: true, saved: number, skipped: number }
+ */
+router.post('/contacts/bulk', async (req, res) => {
+  const { contacts } = req.body
+  if (!Array.isArray(contacts) || contacts.length === 0) {
+    return res.status(400).json({ error: 'contacts array required' })
+  }
+
+  let saved = 0
+  let skipped = 0
+  try {
+    for (const c of contacts) {
+      const email = typeof c?.email === 'string' ? c.email.trim().toLowerCase() : ''
+      const name  = typeof c?.name === 'string' ? c.name.trim() : ''
+      if (!email || !name) { skipped++; continue }
+
+      await prisma.contact.upsert({
+        where:  { email },
+        // Only refresh metadata on existing rows — never clobber state/source
+        update: {
+          ...(c.title    != null && { title:    c.title }),
+          ...(c.company  != null && { company:  c.company }),
+          ...(c.domain   != null && { domain:   c.domain }),
+          ...(c.linkedin != null && { linkedin: c.linkedin }),
+        },
+        create: {
+          email,
+          name,
+          title:    c.title    || null,
+          company:  c.company   || 'Unknown',
+          domain:   c.domain    || null,
+          linkedin: c.linkedin  || null,
+          state:    'new',
+          source:   c.source    || 'discovery',
+        },
+      })
+      saved++
+    }
+    res.json({ ok: true, saved, skipped })
+  } catch (err) {
+    console.error('[contacts] POST /contacts/bulk error:', err)
+    res.status(500).json({ error: err.message, saved, skipped })
+  }
+})
+
+/**
  * PUT /api/contacts/:id
  *
  * Partial update — only updates fields that are explicitly provided.

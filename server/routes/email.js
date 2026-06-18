@@ -62,7 +62,7 @@ router.post('/schedule-campaign', async (req, res) => {
   // Fail fast: verify the provider is authenticated before writing any DB records
   try {
     if (provider === 'gmail') await getGmailToken(userId)
-    else                       await getGraphToken()
+    else                       await getGraphToken(userId)
   } catch (e) {
     return res.status(503).json({ error: `${provider} not authenticated: ${e.message}` })
   }

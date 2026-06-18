@@ -450,6 +450,8 @@ export async function draftEmail(contact, aiConfig, options = {}) {
     customPrompt = '',
     resumeText = '',
     authoritativeProfile = {},
+    rewriteInstruction = '',
+    currentDraft = null,
   } = options
 
   const normalizedCompanyData = {
@@ -490,6 +492,14 @@ export async function draftEmail(contact, aiConfig, options = {}) {
   }
 
   userMessage += `\n\nCAMPAIGN MODE: ${campaignMode}\nEMAIL CATEGORY: ${category}`
+
+  if (currentDraft?.subject || currentDraft?.body) {
+    userMessage += `\n\nEXISTING DRAFT TO REVISE:\nSubject: ${currentDraft.subject || ''}\nBody:\n${currentDraft.body || ''}`
+  }
+
+  if (rewriteInstruction?.trim()) {
+    userMessage += `\n\nREWRITE REQUEST:\nApply this change while keeping the same voice, positioning, and personalization unless the instruction explicitly asks for a broader rewrite:\n${rewriteInstruction.trim()}`
+  }
 
   const { text, tokens } = await callAI({ ...aiConfig, systemPrompt: system, userMessage })
 

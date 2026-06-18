@@ -321,6 +321,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
   // Batch review state (for batch-drafted emails)
   const [reviewBatch, setReviewBatch] = useState([])
+  const [reviewBatchContacts, setReviewBatchContacts] = useState([])
+  const [reviewBatchCompanyDataMap, setReviewBatchCompanyDataMap] = useState({})
   const [reviewApproved, setReviewApproved] = useState(new Set())
   const [reviewEdits, setReviewEdits] = useState({})
   const [reviewStats, setReviewStats] = useState({ total: 0, approved: 0, avgScore: 0, lowScore: 0 })
@@ -347,6 +349,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [flagged, setFlagged] = useState(new Set())
   const [approved, setApproved] = useState(new Set())
   const [regenLoading, setRegenLoading] = useState(null) // contactId being regenerated
+  const [bulkRegenLoading, setBulkRegenLoading] = useState(false)
+  const [regenModal, setRegenModal] = useState(null) // { scope: 'single' | 'all_review' | 'all_batch', contact? }
+  const [regenPrompt, setRegenPrompt] = useState('')
 
   // Schedule state
   const [sendDate, setSendDate] = useState('')
@@ -574,7 +579,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
   const log = msg => setDiscoverLog(l => [...l, { t: new Date().toLocaleTimeString(), msg }])
 
-  function buildDraftOptions(contact, siteContent = '', companyData = {}) {
+  function buildDraftOptions(contact, siteContent = '', companyData = {}, rewriteInstruction = '', currentDraft = null) {
     return {
       campaignMode,
       siteContent,
@@ -592,6 +597,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         linkedinUrl,
         phoneNumber,
       },
+      rewriteInstruction,
+      currentDraft,
     }
   }
 
@@ -944,12 +951,27 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   }
 
   // ── REGENERATE SINGLE DRAFT ─────────────────────────────────────────────────
-  async function regenDraft(contact) {
+  function openRegenModal(scope, contact = null) {
+    setRegenModal({ scope, contact })
+    setRegenPrompt('')
+  }
+
+  function closeRegenModal() {
+    setRegenModal(null)
+    setRegenPrompt('')
+  }
+
+  async function regenDraft(contact, instruction = '') {
     if (!contact) return
     setRegenLoading(contact.id)
     try {
       const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
-      const { subjects, body } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
+      const currentDraft = drafts[contact.id] || null
+      const { subjects, body } = await draftEmail(
+        contact,
+        aiConfig,
+        buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
+      )
       const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
       setDrafts(prev => ({ ...prev, [contact.id]: { subject, body, status: 'ready' } }))
       // Remove from flagged/approved so user reviews the new draft
@@ -1008,11 +1030,102 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setTotalTokens(tokRef.current)
     }
     setReviewBatch(batch)
+    setReviewBatchContacts(contactList)
+    setReviewBatchCompanyDataMap(companyDataMap)
     setReviewApproved(new Set())
     setReviewEdits({})
     setDraftProgress(contactList.length)
     setDraftCurrent(null)
     setPhase('review_batch')
+  }
+
+  async function regenAllReviewDrafts(instruction = '') {
+    if (!instruction.trim() || contacts.length === 0) return
+    setBulkRegenLoading(true)
+    try {
+      const nextDrafts = {}
+      for (const contact of contacts) {
+        const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
+        const currentDraft = drafts[contact.id] || null
+        const { subjects, body } = await draftEmail(
+          contact,
+          aiConfig,
+          buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
+        )
+        const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
+        nextDrafts[contact.id] = { subject, body, status: 'ready' }
+      }
+      setDrafts(nextDrafts)
+      draftsRef.current = nextDrafts
+      setApproved(new Set())
+      setFlagged(new Set())
+    } catch (e) {
+      console.error('[regen-all-review] failed:', e.message)
+    }
+    setBulkRegenLoading(false)
+  }
+
+  async function regenAllBatchDrafts(instruction = '') {
+    if (!instruction.trim() || reviewBatch.length === 0) return
+    setBulkRegenLoading(true)
+    try {
+      const nextBatch = []
+      for (const draft of reviewBatch) {
+        const contact = reviewBatchContacts.find(c => c.id === draft.id) || {
+          id: draft.id,
+          name: draft.name,
+          first: draft.name?.split(' ')[0] || '',
+          email: draft.email,
+          title: draft.title,
+          company: draft.company,
+          co: draft.company,
+          domain: draft.domain || '',
+        }
+        const companyData = reviewBatchCompanyDataMap[draft.id] || {}
+        const siteContent = await fetchSiteContent(contact.domain || contact.co || contact.company, campaignMode).catch(() => '')
+        const currentDraft = {
+          subject: reviewEdits[draft.id]?.subject || draft.subject,
+          body: reviewEdits[draft.id]?.body || draft.body,
+        }
+        const { subjects, body, tokens, category, score, passed } = await draftEmail(
+          contact,
+          aiConfig,
+          buildDraftOptions(contact, siteContent, companyData, instruction, currentDraft)
+        )
+        const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
+        tokRef.current += tokens || 0
+        nextBatch.push({
+          ...draft,
+          subject,
+          body,
+          category,
+          score: score || 0,
+          passed: passed !== false,
+        })
+      }
+      setTotalTokens(tokRef.current)
+      setReviewBatch(nextBatch)
+      setReviewEdits({})
+      setReviewApproved(new Set())
+    } catch (e) {
+      console.error('[regen-all-batch] failed:', e.message)
+    }
+    setBulkRegenLoading(false)
+  }
+
+  async function submitRegenRequest() {
+    const instruction = regenPrompt.trim()
+    if (!instruction) return
+
+    if (regenModal?.scope === 'single' && regenModal.contact) {
+      await regenDraft(regenModal.contact, instruction)
+    } else if (regenModal?.scope === 'all_review') {
+      await regenAllReviewDrafts(instruction)
+    } else if (regenModal?.scope === 'all_batch') {
+      await regenAllBatchDrafts(instruction)
+    }
+
+    closeRegenModal()
   }
 
   // ── REVIEW HELPERS ──────────────────────────────────────────────────────
@@ -1456,6 +1569,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           <div style={{ display: 'flex', gap: 8 }}>
             {lowCount > 0 && <span style={{ ...c.muted, fontSize: 12, color: '#dc2626' }}>⚠️ {lowCount} low-score drafts</span>}
             <button
+              onClick={() => openRegenModal('all_batch')}
+              disabled={bulkRegenLoading || N === 0}
+              style={{ ...c.ghostBtn, opacity: bulkRegenLoading ? 0.6 : 1 }}
+            >
+              {bulkRegenLoading ? 'Rewriting…' : 'Regenerate all…'}
+            </button>
+            <button
               onClick={() => {
                 // Move approved drafts to regular drafts for scheduling
                 const approved = reviewBatch.filter(d => reviewApproved.has(d.id))
@@ -1606,6 +1726,34 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           </div>
         )}
 
+        {regenModal?.scope === 'all_batch' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate all drafts</h2>
+              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
+                Apply one instruction across every drafted email while keeping the same voice and positioning.
+              </p>
+              <label style={c.label}>What should change in all emails?</label>
+              <textarea
+                value={regenPrompt}
+                onChange={e => setRegenPrompt(e.target.value)}
+                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
+                placeholder={`Examples:\n- Replace the phone number with +1 416 555 1234\n- Mention LinkedIn instead of phone in the closing line\n- Remove rate language and make the CTA shorter`}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={submitRegenRequest}
+                  disabled={!regenPrompt.trim() || bulkRegenLoading}
+                  style={c.primaryBtn}
+                >
+                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate all'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Edit modal for batch review */}
         {reviewEditModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -1639,6 +1787,62 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   style={c.primaryBtn}
                 >
                   Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {regenModal?.scope === 'single' && regenModal.contact?.id === sel?.id && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate this email</h2>
+              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
+                Tell the AI exactly what to revise for {sel.name} at {sel.co || sel.company}.
+              </p>
+              <label style={c.label}>Tailor your instruction</label>
+              <textarea
+                value={regenPrompt}
+                onChange={e => setRegenPrompt(e.target.value)}
+                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
+                placeholder={`Examples:\n- Use the correct phone number: +1 416 555 1234\n- Make the CTA less salesy\n- Focus more on their data platform hiring signal`}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={submitRegenRequest}
+                  disabled={!regenPrompt.trim() || regenLoading === sel.id}
+                  style={c.primaryBtn}
+                >
+                  {regenLoading === sel.id ? 'Regenerating…' : 'Regenerate email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {regenModal?.scope === 'all_review' && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate all emails</h2>
+              <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
+                Apply one instruction across the full campaign while keeping the same voice and overall positioning.
+              </p>
+              <label style={c.label}>What should change in all emails?</label>
+              <textarea
+                value={regenPrompt}
+                onChange={e => setRegenPrompt(e.target.value)}
+                style={{ width: '100%', minHeight: 120, marginBottom: 14 }}
+                placeholder={`Examples:\n- Replace the phone number with +1 416 555 1234\n- Use LinkedIn as the preferred contact method\n- Shorten every CTA to one sentence`}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={closeRegenModal} style={c.ghostBtn}>Cancel</button>
+                <button
+                  onClick={submitRegenRequest}
+                  disabled={!regenPrompt.trim() || bulkRegenLoading}
+                  style={c.primaryBtn}
+                >
+                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate all'}
                 </button>
               </div>
             </div>
@@ -2089,6 +2293,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => openRegenModal('all_review')}
+                disabled={bulkRegenLoading || N === 0}
+                style={{ ...c.ghostBtn, opacity: bulkRegenLoading ? 0.6 : 1 }}
+              >
+                {bulkRegenLoading ? 'Rewriting…' : 'Regenerate all…'}
+              </button>
               <button onClick={approveAll} style={c.ghostBtn}>Approve all</button>
               <button onClick={() => setPhase('schedule')} disabled={approved.size === 0} style={c.primaryBtn}>
                 Schedule ({approved.size}) →
@@ -2188,12 +2399,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                       {flagged.has(sel.id) ? '⚑ Unflag' : 'Flag'}
                     </button>
                     <button
-                      onClick={() => regenDraft(sel)}
-                      disabled={regenLoading === sel.id}
+                      onClick={() => openRegenModal('single', sel)}
+                      disabled={regenLoading === sel.id || bulkRegenLoading}
                       title="AI regenerate email"
-                      style={{ ...c.ghostBtn, display: 'inline-flex', alignItems: 'center', gap: 5, opacity: regenLoading === sel.id ? 0.5 : 1 }}
+                      style={{ ...c.ghostBtn, display: 'inline-flex', alignItems: 'center', gap: 5, opacity: regenLoading === sel.id || bulkRegenLoading ? 0.5 : 1 }}
                     >
-                      {regenLoading === sel.id ? '⏳' : '✨'} {regenLoading === sel.id ? 'Rewriting…' : 'Regenerate'}
+                      {regenLoading === sel.id ? '⏳' : '✨'} {regenLoading === sel.id ? 'Rewriting…' : 'Regenerate…'}
                     </button>
                     <button onClick={() => startEdit(sel.id)} style={c.ghostBtn}>Edit</button>
                     <button

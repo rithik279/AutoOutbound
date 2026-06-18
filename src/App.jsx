@@ -324,6 +324,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [reviewBatchContacts, setReviewBatchContacts] = useState([])
   const [reviewBatchCompanyDataMap, setReviewBatchCompanyDataMap] = useState({})
   const [reviewApproved, setReviewApproved] = useState(new Set())
+  const [reviewSelectedRows, setReviewSelectedRows] = useState(new Set())
   const [reviewEdits, setReviewEdits] = useState({})
   const [reviewStats, setReviewStats] = useState({ total: 0, approved: 0, avgScore: 0, lowScore: 0 })
   const [reviewFilter, setReviewFilter] = useState({ category: 'all', scoreThreshold: 'all' })
@@ -352,6 +353,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const [bulkRegenLoading, setBulkRegenLoading] = useState(false)
   const [regenModal, setRegenModal] = useState(null) // { scope: 'single' | 'all_review' | 'all_batch', contact? }
   const [regenPrompt, setRegenPrompt] = useState('')
+  const [regenBatchScope, setRegenBatchScope] = useState('all')
   const [regenPreview, setRegenPreview] = useState(null) // { scope, changes: [{...}] }
   const [regenPreviewIndex, setRegenPreviewIndex] = useState(0)
 
@@ -956,6 +958,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   function openRegenModal(scope, contact = null) {
     setRegenModal({ scope, contact })
     setRegenPrompt('')
+    if (scope === 'all_batch') setRegenBatchScope('all')
   }
 
   function closeRegenModal() {
@@ -1087,6 +1090,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setReviewBatchContacts(contactList)
     setReviewBatchCompanyDataMap(companyDataMap)
     setReviewApproved(new Set())
+    setReviewSelectedRows(new Set())
     setReviewEdits({})
     setDraftProgress(contactList.length)
     setDraftCurrent(null)
@@ -1134,9 +1138,33 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     if (!instruction.trim() || reviewBatch.length === 0) return
     setBulkRegenLoading(true)
     try {
+      let targetIds
+      if (regenBatchScope === 'selected') targetIds = new Set(reviewSelectedRows)
+      else if (regenBatchScope === 'approved') targetIds = new Set(reviewApproved)
+      else if (regenBatchScope === 'low_score') targetIds = new Set(reviewBatch.filter(d => d.score < 18).map(d => d.id))
+      else if (regenBatchScope === 'current_filter') targetIds = new Set(reviewBatch.filter(d => {
+        const passCategory = reviewFilter.category === 'all' || d.category === reviewFilter.category
+        const passScore = reviewFilter.scoreThreshold === 'all'
+          ? true
+          : reviewFilter.scoreThreshold === '>=20' ? d.score >= 20
+            : reviewFilter.scoreThreshold === '>=18' ? d.score >= 18
+              : d.score < 18
+        return passCategory && passScore
+      }).map(d => d.id))
+      else targetIds = new Set(reviewBatch.map(d => d.id))
+
+      if (targetIds.size === 0) {
+        setBulkRegenLoading(false)
+        return
+      }
+
       const nextBatch = []
       const previewChanges = []
       for (const draft of reviewBatch) {
+        if (!targetIds.has(draft.id)) {
+          nextBatch.push(draft)
+          continue
+        }
         const contact = reviewBatchContacts.find(c => c.id === draft.id) || {
           id: draft.id,
           name: draft.name,
@@ -1208,6 +1236,11 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   const toggleFlag = id => setFlagged(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleApprove = id => setApproved(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const approveAll = () => setApproved(new Set(contacts.map(c => c.id)))
+  const toggleBatchRowSelected = id => setReviewSelectedRows(s => {
+    const n = new Set(s)
+    n.has(id) ? n.delete(id) : n.add(id)
+    return n
+  })
 
   function startEdit(id) {
     const d = drafts[id]; if (!d) return
@@ -1628,6 +1661,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     })
     const N = reviewBatch.length
     const appCount = reviewApproved.size
+    const selectedRowCount = reviewSelectedRows.size
     const avgScore = N > 0 ? (reviewBatch.reduce((s, d) => s + (d.score || 0), 0) / N).toFixed(1) : 0
     const lowCount = reviewBatch.filter(d => d.score < 18).length
     const categories = [...new Set(reviewBatch.map(d => d.category))].sort()
@@ -1640,7 +1674,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h1 style={c.h1}>Review drafted emails</h1>
-              <p style={{ ...c.muted, marginTop: 4 }}>{N} drafted · {appCount} approved · avg score {avgScore}/25</p>
+              <p style={{ ...c.muted, marginTop: 4 }}>{N} drafted · {selectedRowCount} selected · {appCount} approved · avg score {avgScore}/25</p>
             </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {lowCount > 0 && <span style={{ ...c.muted, fontSize: 12, color: '#dc2626' }}>⚠️ {lowCount} low-score drafts</span>}
@@ -1688,9 +1722,10 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
 
         {/* Stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
             { n: N, l: 'drafted', col: '#0066cc' },
+            { n: selectedRowCount, l: 'selected', col: '#4f46e5' },
             { n: appCount, l: 'approved', col: '#16a34a' },
             { n: `${avgScore}`, l: 'avg score', col: '#d97706' },
             { n: lowCount, l: 'low-score', col: '#dc2626' },
@@ -1740,6 +1775,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #e5e5e0', background: '#f7f7f5' }}>
+                  <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, width: 40 }}>◻</th>
                   <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, width: 40 }}>✓</th>
                   <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Company</th>
                   <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600 }}>Name</th>
@@ -1752,9 +1788,18 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               <tbody>
                 {filtered.map((draft, i) => {
                   const isApproved = reviewApproved.has(draft.id)
+                  const isSelectedForBatch = reviewSelectedRows.has(draft.id)
                   const scoreColor = draft.score >= 20 ? '#16a34a' : draft.score >= 18 ? '#d97706' : '#dc2626'
                   return wrap(
-                    <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isApproved ? '#f0fdf4' : 'transparent' }}>
+                    <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isSelectedForBatch ? '#eef2ff' : isApproved ? '#f0fdf4' : 'transparent' }}>
+                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelectedForBatch}
+                          onChange={() => toggleBatchRowSelected(draft.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
@@ -1889,9 +1934,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         {regenModal?.scope === 'all_batch' && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ ...c.card, maxWidth: 640, width: '92%' }}>
-              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate all drafts</h2>
+              <h2 style={{ ...c.h2, marginBottom: 10 }}>Regenerate batch drafts</h2>
               <p style={{ ...c.muted, marginTop: 0, marginBottom: 12 }}>
-                Apply one instruction across every drafted email while keeping the same voice and positioning.
+                Apply one instruction across a chosen set of drafted emails while keeping the same voice and positioning.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 {regenQuickActions.map(action => (
@@ -1904,7 +1949,34 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   </button>
                 ))}
               </div>
-              <label style={c.label}>What should change in all emails?</label>
+              <div style={{ marginBottom: 12 }}>
+                <label style={c.label}>Apply to</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
+                  {[
+                    { value: 'all', label: `All drafts (${reviewBatch.length})` },
+                    { value: 'selected', label: `Selected only (${reviewSelectedRows.size})` },
+                    { value: 'approved', label: `Approved only (${reviewApproved.size})` },
+                    { value: 'low_score', label: `Low-score only (${reviewBatch.filter(d => d.score < 18).length})` },
+                    { value: 'current_filter', label: `Current filter (${filtered.length})` },
+                  ].map(option => (
+                    <button
+                      key={option.value}
+                      onClick={() => setRegenBatchScope(option.value)}
+                      style={{
+                        ...c.ghostBtn,
+                        padding: '10px 12px',
+                        fontSize: 12,
+                        borderColor: regenBatchScope === option.value ? '#6366f1' : c.ghostBtn.borderColor,
+                        background: regenBatchScope === option.value ? '#eef2ff' : '#fff',
+                        color: regenBatchScope === option.value ? '#4338ca' : '#374151',
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label style={c.label}>What should change in the targeted emails?</label>
               <textarea
                 value={regenPrompt}
                 onChange={e => setRegenPrompt(e.target.value)}
@@ -1918,7 +1990,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   disabled={!regenPrompt.trim() || bulkRegenLoading}
                   style={c.primaryBtn}
                 >
-                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate all'}
+                  {bulkRegenLoading ? 'Regenerating…' : 'Regenerate batch'}
                 </button>
               </div>
             </div>

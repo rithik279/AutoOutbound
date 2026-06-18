@@ -14,14 +14,16 @@
 
 import fetch  from 'node-fetch'
 import { GMAIL } from './config.js'
-import { prisma } from './prisma.js'
+import { prisma, resolveUserId } from './prisma.js'
 import { buildTrackedHtml } from './email-tracking.js'
 
 // ── Token health ──────────────────────────────────────────────────────────────
 
 export async function getGmailTokenHealth(userId) {
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { gmailTokens: true } })
+    const id = await resolveUserId(userId)
+    if (!id) return { status: 'missing', minutesLeft: 0 }
+    const user = await prisma.user.findUnique({ where: { id }, select: { gmailTokens: true } })
     const t = user?.gmailTokens
     if (!t) return { status: 'missing', minutesLeft: 0 }
     const msLeft      = t.expiresAt - Date.now()
@@ -38,8 +40,10 @@ export async function getGmailTokenHealth(userId) {
 // ── Save tokens ───────────────────────────────────────────────────────────────
 
 export async function saveGmailTokens(userId, tokenData) {
+  const id = await resolveUserId(userId)
+  if (!id) throw new Error(`saveGmailTokens: no user for "${userId}"`)
   await prisma.user.update({
-    where: { id: userId },
+    where: { id },
     data:  { gmailTokens: tokenData, emailProvider: 'gmail' },
   })
 }
@@ -47,7 +51,9 @@ export async function saveGmailTokens(userId, tokenData) {
 // ── Token retrieval with auto-refresh ─────────────────────────────────────────
 
 export async function getGmailToken(userId) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { gmailTokens: true } })
+  const id = await resolveUserId(userId)
+  if (!id) throw new Error('Gmail not authorized — connect your Gmail account in Settings')
+  const user = await prisma.user.findUnique({ where: { id }, select: { gmailTokens: true } })
   const t    = user?.gmailTokens
 
   if (!t?.accessToken) {
@@ -92,7 +98,8 @@ export async function sendViaGmail({ to, subject, body, trackingId }, userId) {
   const accessToken = await getGmailToken(userId)
 
   // Build RFC 2822 message
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { senderName: true, senderEmail: true } })
+  const id   = await resolveUserId(userId)
+  const user = await prisma.user.findUnique({ where: { id }, select: { senderName: true, senderEmail: true } })
   const from = user?.senderEmail
     ? `${user.senderName || ''} <${user.senderEmail}>`.trim()
     : 'me'

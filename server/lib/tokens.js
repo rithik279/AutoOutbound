@@ -14,13 +14,15 @@
 
 import fetch   from 'node-fetch'
 import { OUTLOOK } from './config.js'
-import { prisma }  from './prisma.js'
+import { prisma, resolveUserId }  from './prisma.js'
 
 // ── Token health ──────────────────────────────────────────────────────────────
 
 export async function getOutlookTokenHealth(userId) {
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { outlookTokens: true } })
+    const id = await resolveUserId(userId)
+    if (!id) return { status: 'missing', minutesLeft: 0 }
+    const user = await prisma.user.findUnique({ where: { id }, select: { outlookTokens: true } })
     const t = user?.outlookTokens
     if (!t) return { status: 'missing', minutesLeft: 0 }
     const msLeft     = t.expiresAt - Date.now()
@@ -52,8 +54,10 @@ export async function logTokenHealth() {
 // ── Save tokens ───────────────────────────────────────────────────────────────
 
 export async function saveOutlookTokens(userId, tokenData) {
+  const id = await resolveUserId(userId)
+  if (!id) throw new Error(`saveOutlookTokens: no user for "${userId}"`)
   await prisma.user.update({
-    where:  { id: userId },
+    where:  { id },
     data:   { outlookTokens: tokenData, emailProvider: 'outlook' },
   })
 }
@@ -63,7 +67,9 @@ export async function saveOutlookTokens(userId, tokenData) {
 export async function getGraphToken(userId) {
   if (!userId) throw new Error('userId required for getGraphToken')
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { outlookTokens: true } })
+  const id = await resolveUserId(userId)
+  if (!id) throw new Error('Outlook not authorized — connect your Outlook account in Settings')
+  const user = await prisma.user.findUnique({ where: { id }, select: { outlookTokens: true } })
   const t = user?.outlookTokens
   if (!t?.accessToken) {
     throw new Error('Outlook not authorized — connect your Outlook account in Settings')

@@ -121,7 +121,14 @@ export default function SharedSettings({
       try {
         const res  = await fetch(`${API_URL}/api/gmail/token-health`, { headers: { 'x-user-id': currentUser.userId } })
         const data = await res.json()
-        if (data.ok) { setGmailStatus(data); break }
+        if (data.ok) {
+          setGmailStatus(data)
+          try {
+            const profileRes = await fetch(`${API_URL}/api/user/profile`, { headers: { 'x-user-id': currentUser.userId } })
+            if (profileRes.ok) setProfile(await profileRes.json())
+          } catch {}
+          break
+        }
       } catch {}
     }
     setGmailLoading(false)

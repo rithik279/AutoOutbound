@@ -396,6 +396,19 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     currentUser?.userId ? { 'x-user-id': currentUser.userId } : {}
   ), [currentUser?.userId])
 
+  const refreshUserProfile = useCallback(async () => {
+    if (!currentUser?.userId) return null
+    try {
+      const res = await fetch(`${API_URL}/api/user/profile`, { headers: getUserHeaders() })
+      if (!res.ok) return null
+      const nextProfile = await res.json()
+      setProfile(nextProfile)
+      return nextProfile
+    } catch {
+      return null
+    }
+  }, [API_URL, currentUser?.userId, getUserHeaders])
+
   const refreshStatusSnapshot = useCallback(async () => {
     if (!currentUser?.userId) return null
 
@@ -449,13 +462,14 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         setAuthStatus(snapshot.auth)
         setGmailAuthStatus(snapshot.gmail)
         if (snapshot.sched?.pending !== undefined) setScheduleStatus(snapshot.sched)
+        await refreshUserProfile()
       } catch {}
       setReAuthLoading(false)
     }
 
     window.addEventListener('message', handleOAuthMessage)
     return () => window.removeEventListener('message', handleOAuthMessage)
-  }, [currentUser?.userId, refreshStatusSnapshot])
+  }, [currentUser?.userId, refreshStatusSnapshot, refreshUserProfile])
 
   async function runProviderReAuth(provider = 'outlook') {
     if (!currentUser?.userId) return
@@ -482,6 +496,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
           const snapshot = await refreshStatusSnapshot()
           if (snapshot?.sched?.pending !== undefined) setScheduleStatus(snapshot.sched)
+          await refreshUserProfile()
           setReAuthLoading(false)
           return
         }
@@ -584,6 +599,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   // Auth is problematic when it's warning/critical/expired AND the provider is connected
   const gmailProblem = gmailAuthStatus && gmailAuthStatus.status !== 'ok'
   const outlookProblem = authStatus && authStatus.status !== 'ok'
+  const authProviderWithProblem = gmailProblem ? 'gmail' : outlookProblem ? 'outlook' : null
   const authProblem = gmailProblem || outlookProblem
   // Only show the bar when there's something actionable
   const showStatusBar = hasFailed || hasPending || authProblem
@@ -610,13 +626,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: authColor, flexShrink: 0 }} />
             <span className="text-amber-800 font-medium">{authMsg}</span>
             <button
-              onClick={() => {
-                if (isFriend && emailProvider === 'gmail') {
-                  runProviderReAuth('gmail')
-                } else {
-                  runProviderReAuth(emailProvider === 'gmail' ? 'gmail' : 'outlook')
-                }
-              }}
+              onClick={() => runProviderReAuth(authProviderWithProblem || (emailProvider === 'gmail' ? 'gmail' : 'outlook'))}
               disabled={reAuthLoading}
               className="px-2 py-0.5 bg-amber-700 text-white rounded-md text-[11px] font-medium hover:bg-amber-800 transition-colors disabled:opacity-40"
             >

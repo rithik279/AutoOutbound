@@ -167,6 +167,16 @@ async function runResearchAgent({ name, title, company, domain, linkedin, yc, ca
   return null
 }
 
+// Web search results arrive with inline markdown citations like
+// "([ycombinator.com](https://...utm_source=openai))" — strip them so they
+// never leak into a drafted email.
+function stripCitations(s = '') {
+  return String(s)
+    .replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .trim()
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 router.post('/prospect-research', aiLimiter, async (req, res) => {
@@ -192,9 +202,9 @@ router.post('/prospect-research', aiLimiter, async (req, res) => {
 
   res.json({
     yc,
-    personSignals: Array.isArray(signals?.person_signals) ? signals.person_signals : [],
-    companySignals: Array.isArray(signals?.company_signals) ? signals.company_signals : [],
-    bestHook: typeof signals?.best_hook === 'string' ? signals.best_hook : '',
+    personSignals: (Array.isArray(signals?.person_signals) ? signals.person_signals : []).map(stripCitations),
+    companySignals: (Array.isArray(signals?.company_signals) ? signals.company_signals : []).map(stripCitations),
+    bestHook: stripCitations(typeof signals?.best_hook === 'string' ? signals.best_hook : ''),
   })
 })
 

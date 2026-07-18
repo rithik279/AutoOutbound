@@ -35,6 +35,7 @@
  */
 
 import 'dotenv/config'
+import './server/polyfill.js'
 import express  from 'express'
 import { join } from 'path'
 import { fileURLToPath } from 'url'

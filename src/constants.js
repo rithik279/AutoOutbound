@@ -1,24 +1,25 @@
 // Campaign modes, AI models, and entry-level options used throughout the app.
 
 export const MODELS = [
-  { id: 'gpt-4o-mini',              label: 'GPT-4o Mini',     provider: 'openai',     color: '#d97706', cost: '~$0.01', note: 'Cheapest'     },
-  { id: 'gpt-4o',                   label: 'GPT-4o',          provider: 'openai',     color: '#16a34a', cost: '~$0.10', note: 'Best OpenAI'  },
-  { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic',  color: '#0066cc', cost: '~$0.13', note: 'Best quality' },
+  { id: 'gpt-4o-mini',              label: 'GPT-4o Mini',     provider: 'openai',     color: '#0a0a0a', cost: '~$0.01', note: 'Cheapest'     },
+  { id: 'gpt-4o',                   label: 'GPT-4o',          provider: 'openai',     color: '#404040', cost: '~$0.10', note: 'Best OpenAI'  },
+  { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', provider: 'anthropic',  color: '#737373', cost: '~$0.13', note: 'Best quality' },
 ]
 
 export const ENTRY_LEVELS = [
-  { id: 'scratch',     emoji: '🔍', label: 'From a prompt',            desc: 'Describe who you want to reach — AI finds companies + decision makers',             badge: '#7c3aed' },
-  { id: 'companies',  emoji: '🏢', label: 'Company list',              desc: 'Paste company names or domains — we find the right people and enrich emails',         badge: '#0891b2' },
-  { id: 'bulk_import', emoji: '📊', label: 'Bulk import (500+ companies)', desc: 'Upload CSV of companies → daily auto-discovery → auto-draft → review → auto-send',         badge: '#ec4899' },
+  { id: 'scratch',     emoji: '🔍', label: 'From a prompt',            desc: 'Describe who you want to reach — AI finds companies + decision makers',             badge: '#0a0a0a' },
+  { id: 'companies',  emoji: '🏢', label: 'Company list',              desc: 'Paste company names or domains — we find the right people and enrich emails',         badge: '#404040' },
+  { id: 'bulk_import', emoji: '📊', label: 'Bulk import (500+ companies)', desc: 'Upload CSV of companies → daily auto-discovery → auto-draft → review → auto-send',         badge: '#737373' },
 ]
 
 // Avatar background/text color pairs, cycled by first char code of name.
+// Monochrome ramp — subtle grayscale tiles instead of colored badges.
 export const AVATAR_COLORS = [
-  ['#dbeafe', '#1d4ed8'],
-  ['#dcfce7', '#166534'],
-  ['#fef3c7', '#92400e'],
-  ['#fce7f3', '#9d174d'],
-  ['#ede9fe', '#5b21b6'],
+  ['#f5f5f5', '#0a0a0a'],
+  ['#ececec', '#171717'],
+  ['#e5e5e5', '#262626'],
+  ['#0a0a0a', '#ffffff'],
+  ['#404040', '#ffffff'],
 ]
 
 // Recruiter-mode title list — exact/partial title matches to include.
@@ -56,7 +57,7 @@ export const CAMPAIGN_MODES = {
     id: 'finance',
     label: 'Financial institutions',
     desc: 'Banks, asset managers, insurers — VP/Director of Data Engineering, Head of Data Platforms, Risk Technology',
-    color: '#1d4ed8',
+    color: '#0a0a0a',
     titles: [
       'Director of Data Engineering', 'VP of Data Engineering', 'VP Data Engineering',
       'Head of Data Engineering', 'Head of Data Platforms', 'Director of Data Platforms',
@@ -70,7 +71,7 @@ export const CAMPAIGN_MODES = {
     id: 'startup',
     label: 'AI startups',
     desc: "Series A/B AI companies — VP of Engineering or CTO (most haven't hired a Head of Data yet)",
-    color: '#7c3aed',
+    color: '#404040',
     titles: [
       'VP of Engineering', 'VP Engineering', 'Head of Engineering',
       'CTO', 'Chief Technology Officer', 'Co-Founder & CTO',
@@ -83,7 +84,7 @@ export const CAMPAIGN_MODES = {
     id: 'recruiting',
     label: 'Recruiting firms',
     desc: 'Data/tech recruiters, account managers, delivery leads — help place you at their clients',
-    color: '#059669',
+    color: '#737373',
     titles: RECRUITER_MODE_TITLES,
     seniorities: ['senior', 'manager', 'director', 'vp', 'head', 'c_suite'],
     promptHint: 'Target US-based recruiting/staffing firms that place data, analytics, or technical contractors. Reach Data Recruiters, Account Managers, Client Partners, Delivery Managers, and Practice Leads. NOT generic HR, coordinators, or info@ emails.',

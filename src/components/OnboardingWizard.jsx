@@ -119,28 +119,28 @@ export default function OnboardingWizard({ currentUser, onComplete, onUpdateProf
             <p className="text-sm text-gray-400 mb-4">FirstShot sends from your own account — not a shared domain.</p>
 
             {/* .edu insight callout */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-5">
-              <p className="text-xs font-semibold text-blue-700 mb-0.5">🎓 Using a .edu email? Use Outlook.</p>
-              <p className="text-xs text-blue-500 leading-relaxed">Your university email is your unfair advantage — it signals legitimacy instantly. Prospects open emails from students at a far higher rate than from generic domains.</p>
+            <div className="bg-neutral-100 border border-neutral-200 rounded-xl px-4 py-3 mb-5">
+              <p className="text-xs font-semibold text-neutral-900 mb-0.5">🎓 Using a .edu email? Use Outlook.</p>
+              <p className="text-xs text-neutral-700 leading-relaxed">Your university email is your unfair advantage — it signals legitimacy instantly. Prospects open emails from students at a far higher rate than from generic domains.</p>
             </div>
 
             <div className="space-y-3 mb-6">
               {/* Outlook — recommended first */}
               <button
                 onClick={handleConnectOutlook}
-                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-blue-400 bg-blue-50 hover:bg-blue-100 transition-all group relative"
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-neutral-500 bg-neutral-100 hover:bg-neutral-200 transition-all group relative"
               >
-                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <Mail size={18} className="text-blue-600" />
+                <div className="w-9 h-9 rounded-lg bg-neutral-200 flex items-center justify-center flex-shrink-0">
+                  <Mail size={18} className="text-neutral-800" />
                 </div>
                 <div className="text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-800">Connect Outlook</span>
-                    <span className="text-[10px] font-bold bg-blue-500 text-white px-1.5 py-0.5 rounded-full">Recommended</span>
+                    <span className="text-[10px] font-bold bg-neutral-700 text-white px-1.5 py-0.5 rounded-full">Recommended</span>
                   </div>
-                  <div className="text-xs text-blue-500">University .edu · Microsoft 365 · Outlook.com</div>
+                  <div className="text-xs text-neutral-700">University .edu · Microsoft 365 · Outlook.com</div>
                 </div>
-                <ArrowRight size={14} className="ml-auto text-blue-300 group-hover:text-blue-500 transition-colors" />
+                <ArrowRight size={14} className="ml-auto text-neutral-400 group-hover:text-neutral-700 transition-colors" />
               </button>
 
               <button

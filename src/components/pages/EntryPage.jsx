@@ -90,9 +90,9 @@ export default function EntryPage({
         <span className="text-xs text-gray-300 flex-shrink-0">or start from</span>
         <button
           onClick={() => { setEntryLevel('companies'); setPhase('settings') }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-100 bg-white hover:border-violet-200 hover:bg-violet-50 text-xs font-medium text-gray-500 hover:text-violet-600 transition-all duration-150"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-100 bg-white hover:border-neutral-300 hover:bg-neutral-100 text-xs font-medium text-gray-500 hover:text-neutral-800 transition-all duration-150"
         >
-          <FileText size={13} className="text-violet-400" />
+          <FileText size={13} className="text-neutral-500" />
           Company list
         </button>
         <button

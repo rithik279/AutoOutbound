@@ -30,7 +30,7 @@ function ActivityFeed({ items = [], busy = false }) {
       {items.map((l, i) => {
         const last = i === items.length - 1
         const ok   = /^✓|ready|added|found|resolved|enriched|complete|done/i.test(l.msg)
-        const dot  = ok ? '#16a34a' : (last && busy ? '#6366f1' : '#CBD5E1')
+        const dot  = ok ? '#16a34a' : (last && busy ? '#0a0a0a' : '#CBD5E1')
         return (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0',
@@ -1620,7 +1620,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     <div className="min-h-screen bg-navy-900 flex items-center justify-center px-4">
       {/* Background orbs */}
       <div className="fixed top-[-100px] left-[-200px] w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-[80px] pointer-events-none" />
-      <div className="fixed bottom-[-80px] right-[-100px] w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[80px] pointer-events-none" />
+      <div className="fixed bottom-[-80px] right-[-100px] w-[400px] h-[400px] rounded-full bg-neutral-800/10 blur-[80px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
@@ -2006,11 +2006,11 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
 
         {globalEditRule && (
-          <div style={{ ...c.card, marginBottom: 14, background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+          <div style={{ ...c.card, marginBottom: 14, background: '#f5f5f5', border: '1px solid #e5e5e5' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
               <div>
-                <div style={{ ...c.label, marginBottom: 6, color: '#4338ca' }}>Global edit rule active</div>
-                <div style={{ fontSize: 13, color: '#312e81', lineHeight: 1.6 }}>
+                <div style={{ ...c.label, marginBottom: 6, color: '#0a0a0a' }}>Global edit rule active</div>
+                <div style={{ fontSize: 13, color: '#404040', lineHeight: 1.6 }}>
                   <strong>{globalEditRule.label}:</strong> {globalEditRule.instruction}
                 </div>
                 <div style={{ marginTop: 6, fontSize: 11, color: '#5b6475' }}>
@@ -2026,7 +2026,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
             { n: N, l: 'drafted', col: '#0066cc' },
-            { n: selectedRowCount, l: 'selected', col: '#4f46e5' },
+            { n: selectedRowCount, l: 'selected', col: '#000000' },
             { n: appCount, l: 'approved', col: '#16a34a' },
             { n: `${avgScore}`, l: 'avg score', col: '#d97706' },
             { n: lowCount, l: 'low-score', col: '#dc2626' },
@@ -2092,7 +2092,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   const isSelectedForBatch = reviewSelectedRows.has(draft.id)
                   const scoreColor = draft.score >= 20 ? '#16a34a' : draft.score >= 18 ? '#d97706' : '#dc2626'
                   return wrap(
-                    <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isSelectedForBatch ? '#eef2ff' : isApproved ? '#f0fdf4' : 'transparent' }}>
+                    <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isSelectedForBatch ? '#f5f5f5' : isApproved ? '#f0fdf4' : 'transparent' }}>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
@@ -2126,7 +2126,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                         </div>
                         {draft.researchSignal && (
                           <div style={{ marginTop: 6, fontSize: 11, lineHeight: 1.45, color: '#5b6475' }}>
-                            <span style={{ fontWeight: 600, color: '#4338ca' }}>Signal:</span> {draft.researchSignal}
+                            <span style={{ fontWeight: 600, color: '#0a0a0a' }}>Signal:</span> {draft.researchSignal}
                           </div>
                         )}
                       </td>
@@ -2276,9 +2276,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                         ...c.ghostBtn,
                         padding: '10px 12px',
                         fontSize: 12,
-                        borderColor: regenBatchScope === option.value ? '#6366f1' : c.ghostBtn.borderColor,
-                        background: regenBatchScope === option.value ? '#eef2ff' : '#fff',
-                        color: regenBatchScope === option.value ? '#4338ca' : '#374151',
+                        borderColor: regenBatchScope === option.value ? '#0a0a0a' : c.ghostBtn.borderColor,
+                        background: regenBatchScope === option.value ? '#f5f5f5' : '#fff',
+                        color: regenBatchScope === option.value ? '#0a0a0a' : '#374151',
                       }}
                     >
                       {option.label}
@@ -2313,9 +2313,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
             <div style={{ ...c.card, maxWidth: 600, maxHeight: '80vh', overflowY: 'auto', width: '90%' }}>
               <h2 style={{ ...c.h2, marginBottom: 16 }}>Edit email</h2>
               {reviewBatch.find(d => d.id === reviewEditModal)?.researchSignal && (
-                <div style={{ marginBottom: 14, padding: '10px 14px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10 }}>
-                  <div style={{ ...c.label, marginBottom: 4, color: '#4338ca' }}>Research signal used</div>
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: '#312e81' }}>
+                <div style={{ marginBottom: 14, padding: '10px 14px', background: '#f5f5f5', border: '1px solid #e5e5e5', borderRadius: 10 }}>
+                  <div style={{ ...c.label, marginBottom: 4, color: '#0a0a0a' }}>Research signal used</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: '#404040' }}>
                     {reviewBatch.find(d => d.id === reviewEditModal)?.researchSignal}
                   </div>
                 </div>
@@ -2394,15 +2394,15 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                 }}
                 style={{
                   textAlign: 'left',
-                  border: `2px solid ${isActive ? '#6366f1' : '#e5e7eb'}`,
-                  background: isActive ? '#eef2ff' : '#ffffff',
+                  border: `2px solid ${isActive ? '#0a0a0a' : '#e5e7eb'}`,
+                  background: isActive ? '#f5f5f5' : '#ffffff',
                   borderRadius: 12,
                   padding: '14px 16px',
                   cursor: 'pointer',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? '#4338ca' : '#111827' }}>{level.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: isActive ? '#0a0a0a' : '#111827' }}>{level.label}</span>
                   <span style={{ ...c.pill(level.badge), fontSize: 10 }}>{isActive ? 'Current' : 'Switch'}</span>
                 </div>
                 <div style={{ fontSize: 12, lineHeight: 1.55, color: '#6b7280' }}>{level.desc}</div>
@@ -2831,11 +2831,11 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         </div>
 
         {globalEditRule && (
-          <div style={{ marginBottom: 14, padding: '12px 16px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 14 }}>
+          <div style={{ marginBottom: 14, padding: '12px 16px', background: '#f5f5f5', border: '1px solid #e5e5e5', borderRadius: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
               <div>
-                <div style={{ ...c.label, marginBottom: 6, color: '#4338ca' }}>Global edit rule active</div>
-                <div style={{ fontSize: 13, color: '#312e81', lineHeight: 1.6 }}>
+                <div style={{ ...c.label, marginBottom: 6, color: '#0a0a0a' }}>Global edit rule active</div>
+                <div style={{ fontSize: 13, color: '#404040', lineHeight: 1.6 }}>
                   <strong>{globalEditRule.label}:</strong> {globalEditRule.instruction}
                 </div>
                 <div style={{ marginTop: 6, fontSize: 11, color: '#5b6475' }}>
@@ -2897,9 +2897,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                 ) : (
                   <>
                     {selDraft.researchSignal && (
-                      <div style={{ marginBottom: 12, padding: '10px 14px', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 10 }}>
-                        <div style={{ ...c.label, marginBottom: 4, color: '#4338ca' }}>Research signal used</div>
-                        <div style={{ fontSize: 13, lineHeight: 1.6, color: '#312e81' }}>{selDraft.researchSignal}</div>
+                      <div style={{ marginBottom: 12, padding: '10px 14px', background: '#f5f5f5', border: '1px solid #e5e5e5', borderRadius: 10 }}>
+                        <div style={{ ...c.label, marginBottom: 4, color: '#0a0a0a' }}>Research signal used</div>
+                        <div style={{ fontSize: 13, lineHeight: 1.6, color: '#404040' }}>{selDraft.researchSignal}</div>
                       </div>
                     )}
                     <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, padding: '10px 14px', background: '#f7f7f5', borderRadius: 10 }}>
@@ -3270,9 +3270,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                 flex: 1,
                 padding: '12px 16px',
                 borderRadius: 8,
-                border: selectedProvider === 'gmail' ? '2px solid #2563eb' : '1px solid #d1d5db',
-                background: selectedProvider === 'gmail' ? '#eff6ff' : '#fff',
-                color: selectedProvider === 'gmail' ? '#1e40af' : '#666',
+                border: selectedProvider === 'gmail' ? '2px solid #0a0a0a' : '1px solid #d1d5db',
+                background: selectedProvider === 'gmail' ? '#f5f5f5' : '#fff',
+                color: selectedProvider === 'gmail' ? '#0a0a0a' : '#666',
                 fontWeight: selectedProvider === 'gmail' ? 600 : 500,
                 cursor: 'pointer',
                 fontSize: 13,
@@ -3287,9 +3287,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                 flex: 1,
                 padding: '12px 16px',
                 borderRadius: 8,
-                border: selectedProvider === 'outlook' ? '2px solid #2563eb' : '1px solid #d1d5db',
-                background: selectedProvider === 'outlook' ? '#eff6ff' : '#fff',
-                color: selectedProvider === 'outlook' ? '#1e40af' : '#666',
+                border: selectedProvider === 'outlook' ? '2px solid #0a0a0a' : '1px solid #d1d5db',
+                background: selectedProvider === 'outlook' ? '#f5f5f5' : '#fff',
+                color: selectedProvider === 'outlook' ? '#0a0a0a' : '#666',
                 fontWeight: selectedProvider === 'outlook' ? 600 : 500,
                 cursor: 'pointer',
                 fontSize: 13,

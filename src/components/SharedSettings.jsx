@@ -376,9 +376,9 @@ export default function SharedSettings({
           <p className="text-xs text-gray-400 mb-4">Choose your email provider and connect your account.</p>
 
           {/* .edu insight */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3 mb-4">
-            <p className="text-xs font-semibold text-blue-700 mb-0.5">🎓 Have a university .edu email? Use Outlook.</p>
-            <p className="text-xs text-blue-500 leading-relaxed">A .edu address gives you instant credibility — prospects open emails from students at a significantly higher rate. Connect your university Outlook below.</p>
+          <div className="bg-neutral-100 border border-neutral-200 rounded-xl px-3.5 py-3 mb-4">
+            <p className="text-xs font-semibold text-neutral-900 mb-0.5">🎓 Have a university .edu email? Use Outlook.</p>
+            <p className="text-xs text-neutral-700 leading-relaxed">A .edu address gives you instant credibility — prospects open emails from students at a significantly higher rate. Connect your university Outlook below.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -393,11 +393,11 @@ export default function SharedSettings({
                   key={opt.id}
                   onClick={() => setEmailProvider(opt.id)}
                   className={`p-4 rounded-xl border-2 text-center transition-all relative ${
-                    isActive ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-200'
+                    isActive ? 'border-neutral-500 bg-neutral-100' : 'border-gray-100 hover:border-gray-200'
                   }`}
                 >
                   {opt.recommended && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Recommended</span>
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-neutral-700 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Recommended</span>
                   )}
                   <div className="text-2xl mb-2 mt-1">{opt.icon}</div>
                   <div className="font-bold text-sm text-gray-900">{opt.label}</div>

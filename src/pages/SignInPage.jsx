@@ -27,7 +27,7 @@ export default function SignInPage() {
           afterSignUpUrl="/app"
           appearance={{
             variables: {
-              colorPrimary:       '#6366f1',
+              colorPrimary:       '#0a0a0a',
               colorBackground:    '#ffffff',
               colorText:          '#111827',
               colorInputBackground: '#f9fafb',

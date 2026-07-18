@@ -32,7 +32,7 @@ const EMAIL_CARDS = [
     name: 'Marcus Webb',
     role: 'Head of Eng',
     company: 'Rippling',
-    color: '#6366F1',
+    color: '#d4d4d4',
     preview: "Hi Marcus, saw Rippling's latest payroll infra post — the distributed approach you described is exactly the kind of problem I've been working on in my side projects...",
     pos: 'top-12 right-4',
   },
@@ -40,7 +40,7 @@ const EMAIL_CARDS = [
     name: 'Aisha Okonkwo',
     role: 'Partner',
     company: 'Y Combinator',
-    color: '#f97316',
+    color: '#a3a3a3',
     preview: "Hi Aisha, I came across your essay on founder-market fit and it completely reframed how I think about my projects. I'm a first-year CS student building...",
     pos: 'top-48 left-0',
   },
@@ -48,7 +48,7 @@ const EMAIL_CARDS = [
     name: 'Daniel Cho',
     role: 'CTO',
     company: 'Deel',
-    color: '#10b981',
+    color: '#e5e5e5',
     preview: "Hi Daniel, noticed Deel just crossed $500M ARR — the compliance infrastructure challenge at that scale is fascinating. I'd love to learn how your team...",
     pos: 'bottom-24 right-8',
   },
@@ -56,7 +56,7 @@ const EMAIL_CARDS = [
     name: 'Priya Mehta',
     role: 'Eng Lead',
     company: 'Notion',
-    color: '#8b5cf6',
+    color: '#737373',
     preview: "Hi Priya, your talk on block-based architecture was genuinely the clearest explanation I've seen. I'm a first-year studying CS and I've been experimenting with...",
     pos: 'bottom-44 left-2',
   },
@@ -133,12 +133,12 @@ function SpotlightBackground() {
       <div
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
         style={{
-          background: `radial-gradient(600px circle at ${pos.x}% ${pos.y}%, rgba(99,102,241,0.10), transparent 70%)`,
+          background: `radial-gradient(600px circle at ${pos.x}% ${pos.y}%, rgba(255,255,255,0.06), transparent 70%)`,
         }}
       />
       {/* Static orbs */}
-      <div className="pointer-events-none fixed top-[-120px] left-[-200px] w-[700px] h-[700px] rounded-full bg-brand-500/10 blur-[120px]" />
-      <div className="pointer-events-none fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[100px]" />
+      <div className="pointer-events-none fixed top-[-120px] left-[-200px] w-[700px] h-[700px] rounded-full bg-white/[0.06] blur-[120px]" />
+      <div className="pointer-events-none fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] rounded-full bg-white/[0.04] blur-[100px]" />
       {/* Grid */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.035]"
@@ -234,7 +234,7 @@ export default function Landing() {
             >
               Take your
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-violet-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-500">
                 shot.
               </span>
             </motion.h1>
@@ -372,7 +372,7 @@ export default function Landing() {
               <div className="group relative rounded-2xl p-7 h-full border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] hover:border-brand-500/25 transition-all duration-300 cursor-default">
                 {/* Hover glow */}
                 <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ background: 'radial-gradient(400px circle at 50% 0%, rgba(99,102,241,0.06), transparent)' }} />
+                  style={{ background: 'radial-gradient(400px circle at 50% 0%, rgba(255,255,255,0.05), transparent)' }} />
                 <div className="relative">
                   <div className="flex items-start justify-between mb-6">
                     <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
@@ -400,8 +400,8 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { icon: <BarChart2 size={18} />, label: 'Finance', desc: 'Investment banking, asset management, fintech, VC — reach the people who actually make hiring decisions.', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'group-hover:border-blue-500/20' },
-              { icon: <Code size={18} />,      label: 'Tech & Startups', desc: 'Software engineering, product, data science — target YC companies, Series A startups, and fast-moving teams.', color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'group-hover:border-violet-500/20' },
+              { icon: <BarChart2 size={18} />, label: 'Finance', desc: 'Investment banking, asset management, fintech, VC — reach the people who actually make hiring decisions.', color: 'text-neutral-500', bg: 'bg-neutral-700/10', border: 'group-hover:border-neutral-700/20' },
+              { icon: <Code size={18} />,      label: 'Tech & Startups', desc: 'Software engineering, product, data science — target YC companies, Series A startups, and fast-moving teams.', color: 'text-neutral-500', bg: 'bg-neutral-700/10', border: 'group-hover:border-neutral-700/20' },
               { icon: <Briefcase size={18} />, label: 'Consulting', desc: 'Strategy, boutique advisory, management consulting — find the right senior partners and reach them directly.', color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'group-hover:border-amber-500/20' },
             ].map(s => (
               <Section key={s.label}>
@@ -420,11 +420,11 @@ export default function Landing() {
       <section className="max-w-4xl mx-auto px-6 py-28 text-center">
         <Section>
           <div className="relative rounded-2xl overflow-hidden p-14 border border-brand-500/20"
-            style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(109,40,217,0.12) 100%)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)' }}
           >
             {/* Glow */}
             <div className="absolute inset-0 rounded-2xl pointer-events-none"
-              style={{ background: 'radial-gradient(600px at 50% 0%, rgba(99,102,241,0.15), transparent)' }} />
+              style={{ background: 'radial-gradient(600px at 50% 0%, rgba(255,255,255,0.10), transparent)' }} />
             <div className="relative z-10">
               <div className="inline-flex items-center gap-2 bg-brand-500/15 border border-brand-500/25 rounded-full px-3 py-1 text-[11px] text-brand-300 font-medium mb-6 tracking-wide">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />

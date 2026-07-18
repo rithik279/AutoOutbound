@@ -86,8 +86,8 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
             { icon: <Mail size={15} />, value: stats.totalSent, label: 'Sent', color: 'text-gray-600' },
-            { icon: <Eye size={15} />, value: `${stats.openRate}%`, label: `${stats.totalOpened} opened`, color: 'text-blue-600' },
-            { icon: <MousePointer size={15} />, value: `${stats.clickRate}%`, label: `${stats.totalClicked} clicked`, color: 'text-purple-600' },
+            { icon: <Eye size={15} />, value: `${stats.openRate}%`, label: `${stats.totalOpened} opened`, color: 'text-neutral-800' },
+            { icon: <MousePointer size={15} />, value: `${stats.clickRate}%`, label: `${stats.totalClicked} clicked`, color: 'text-neutral-800' },
           ].map(s => (
             <div key={s.label} className="bg-white border border-gray-100 rounded-xl p-4 text-center">
               <div className={`flex justify-center mb-1 ${s.color}`}>{s.icon}</div>
@@ -145,13 +145,13 @@ export default function SentHistoryPage({ sentHistory, setPhase, statusBar, user
                   </div>
                 )}
                 {email.openCount > 0 && (
-                  <div className="flex items-center gap-1 bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  <div className="flex items-center gap-1 bg-neutral-100 text-neutral-800 rounded-full px-2 py-0.5 text-[11px] font-medium">
                     <Eye size={10} />
                     {email.openCount}
                   </div>
                 )}
                 {email.clickCount > 0 && (
-                  <div className="flex items-center gap-1 bg-purple-50 text-purple-600 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                  <div className="flex items-center gap-1 bg-neutral-100 text-neutral-800 rounded-full px-2 py-0.5 text-[11px] font-medium">
                     <MousePointer size={10} />
                     {email.clickCount}
                   </div>

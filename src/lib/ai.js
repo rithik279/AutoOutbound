@@ -441,6 +441,63 @@ export async function fetchSiteContent(domain, campaignMode = '') {
   }
 }
 
+// ── Deep prospect research (person + company + YC directory) ───────────────
+// Cached per contact so regenerates and rewrites don't re-pay the research
+// cost — the server call runs a web-search agent and can take 15-60s.
+const _prospectResearchCache = new Map()
+
+export async function fetchProspectResearch(contact, campaignMode = '') {
+  const domain = contact.domain || ''
+  const company = contact.co || contact.company || ''
+  if (!domain && !company) return null
+
+  const key = `${contact.id || ''}|${domain}|${company}|${contact.name || ''}`
+  if (_prospectResearchCache.has(key)) return _prospectResearchCache.get(key)
+
+  const promise = (async () => {
+    try {
+      const res = await fetch('/api/prospect-research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: contact.name || `${contact.first || ''} ${contact.last || ''}`.trim(),
+          title: contact.title || '',
+          company,
+          domain,
+          linkedin: contact.linkedin || '',
+          campaignMode,
+        }),
+      })
+      if (!res.ok) return null
+      return await res.json()
+    } catch {
+      return null
+    }
+  })()
+  _prospectResearchCache.set(key, promise)
+  promise.then(v => _prospectResearchCache.set(key, v))
+  return promise
+}
+
+function formatProspectResearch(research, firstName) {
+  if (!research) return ''
+  const lines = []
+  if (research.yc) {
+    lines.push(`YC COMPANY PROFILE: ${research.yc.name} (YC ${research.yc.batch}) — ${research.yc.oneLiner}`)
+    if (research.yc.description) lines.push(research.yc.description)
+  }
+  if (research.personSignals?.length) {
+    lines.push(`ABOUT ${firstName ? String(firstName).toUpperCase() : 'THE RECIPIENT'} (found via web search):`)
+    for (const s of research.personSignals) lines.push(`- ${s}`)
+  }
+  if (research.companySignals?.length) {
+    lines.push('COMPANY SIGNALS (found via web search):')
+    for (const s of research.companySignals) lines.push(`- ${s}`)
+  }
+  if (research.bestHook) lines.push(`BEST HOOK: ${research.bestHook}`)
+  return lines.join('\n')
+}
+
 // ── Draft one email with category detection and scoring ────────────────────
 export async function draftEmail(contact, aiConfig, options = {}) {
   const {
@@ -452,6 +509,7 @@ export async function draftEmail(contact, aiConfig, options = {}) {
     authoritativeProfile = {},
     rewriteInstruction = '',
     currentDraft = null,
+    deepResearch = true,
   } = options
 
   const normalizedCompanyData = {
@@ -476,6 +534,13 @@ export async function draftEmail(contact, aiConfig, options = {}) {
   const company = contact.co || contact.company || 'their company'
   const domain = contact.domain || 'unknown domain'
 
+  // Deep research: person signals (LinkedIn/web footprint), company signals,
+  // and YC directory info. Cached per contact; null on any failure.
+  const prospectResearch = deepResearch
+    ? await fetchProspectResearch(contact, campaignMode).catch(() => null)
+    : null
+  const researchBlock = formatProspectResearch(prospectResearch, firstName)
+
   let userMessage = `Draft a cold email to ${firstName}${title} at ${company} (${domain}).`
 
   // Add company context if available
@@ -489,6 +554,10 @@ export async function draftEmail(contact, aiConfig, options = {}) {
   // Add website signal if available
   if (normalizedCompanyData.siteContent) {
     userMessage += `\n\nCOMPANY RESEARCH SUMMARY (use one specific, true signal for personalization and do not invent stack details):\n${normalizedCompanyData.siteContent.slice(0, 3500)}`
+  }
+
+  if (researchBlock) {
+    userMessage += `\n\nDEEP PROSPECT RESEARCH (person + company, gathered via web search):\n${researchBlock}\n\nOpen the email by referencing ONE specific item from the research above — ideally something ${firstName} personally worked on, or a specific feature, launch, or part of the company that is genuinely interesting. Quote the fact accurately; do not embellish beyond what the research says. If the research conflicts with the website summary, trust the research.`
   }
 
   userMessage += `\n\nCAMPAIGN MODE: ${campaignMode}\nEMAIL CATEGORY: ${category}`
@@ -518,7 +587,9 @@ export async function draftEmail(contact, aiConfig, options = {}) {
       tokens,
       score,
       category,
-      passed: score >= 18
+      passed: score >= 18,
+      researchHook: prospectResearch?.bestHook || '',
+      researchText: researchBlock,
     }
   } catch (e) {
     console.error('Failed to parse email draft:', e)
@@ -529,7 +600,9 @@ export async function draftEmail(contact, aiConfig, options = {}) {
       score: 0,
       category,
       passed: false,
-      error: e.message
+      error: e.message,
+      researchHook: prospectResearch?.bestHook || '',
+      researchText: researchBlock,
     }
   }
 }

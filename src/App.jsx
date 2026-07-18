@@ -1007,12 +1007,12 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       try {
         // Fetch company website before drafting so the AI has real content to hook from
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode)
-        const { subjects, body, tokens } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
+        const { subjects, body, tokens, researchHook, researchText } = await draftEmail(contact, aiConfig, buildDraftOptions(contact, siteContent))
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
-        const researchSignal = extractResearchSignal(siteContent)
+        const researchSignal = researchHook || extractResearchSignal(siteContent)
         tokRef.current += tokens || 0
         setTotalTokens(tokRef.current)
-        draftsRef.current[contact.id] = { subject, body, status: 'ready', researchSignal, researchSummary: siteContent }
+        draftsRef.current[contact.id] = { subject, body, status: 'ready', researchSignal, researchSummary: [researchText, siteContent].filter(Boolean).join('\n\n') }
       } catch (e) {
         draftsRef.current[contact.id] = {
           subject: campaignMode === 'recruiting'
@@ -1244,7 +1244,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
       const currentDraft = drafts[contact.id] || null
       pushDraftHistoryEntry(contact.id, currentDraft)
-      const { subjects, body } = await draftEmail(
+      const { subjects, body, researchHook, researchText } = await draftEmail(
         contact,
         aiConfig,
         buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
@@ -1254,8 +1254,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         subject,
         body,
         status: 'ready',
-        researchSignal: extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
-        researchSummary: siteContent || currentDraft?.researchSummary || '',
+        researchSignal: researchHook || extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
+        researchSummary: [researchText, siteContent].filter(Boolean).join('\n\n') || currentDraft?.researchSummary || '',
       }
       setDrafts(prev => ({ ...prev, [contact.id]: nextDraft }))
       openRegenPreview('single', [{
@@ -1286,13 +1286,13 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       setDraftProgress(i)
       try {
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode)
-        const { subjects, body, tokens, category, score, passed } = await draftEmail(
+        const { subjects, body, tokens, category, score, passed, researchHook, researchText } = await draftEmail(
           contact,
           aiConfig,
           buildDraftOptions(contact, siteContent, companyData)
         )
         const subject = (Array.isArray(subjects) ? subjects[0] : subjects) || ''
-        const researchSignal = extractResearchSignal(siteContent)
+        const researchSignal = researchHook || extractResearchSignal(siteContent)
         tokRef.current += tokens || 0
         batch.push({
           id: contact.id,
@@ -1306,7 +1306,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           score: score || 0,
           passed: passed !== false,
           researchSignal,
-          researchSummary: siteContent,
+          researchSummary: [researchText, siteContent].filter(Boolean).join('\n\n'),
         })
       } catch (e) {
         // Fallback: create low-score draft
@@ -1352,7 +1352,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         const siteContent = await fetchSiteContent(contact.domain || contact.co, campaignMode).catch(() => '')
         const currentDraft = drafts[contact.id] || null
         pushDraftHistoryEntry(contact.id, currentDraft)
-        const { subjects, body } = await draftEmail(
+        const { subjects, body, researchHook, researchText } = await draftEmail(
           contact,
           aiConfig,
           buildDraftOptions(contact, siteContent, {}, instruction, currentDraft)
@@ -1362,8 +1362,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           subject,
           body,
           status: 'ready',
-          researchSignal: extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
-          researchSummary: siteContent || currentDraft?.researchSummary || '',
+          researchSignal: researchHook || extractResearchSignal(siteContent) || currentDraft?.researchSignal || '',
+          researchSummary: [researchText, siteContent].filter(Boolean).join('\n\n') || currentDraft?.researchSummary || '',
         }
         undoItems.push({ id: contact.id, snapshot: { ...(currentDraft || {}) } })
         previewChanges.push({
@@ -1448,7 +1448,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           passed: draft.passed,
         }
         pushBatchHistoryEntry(draft.id, currentDraft)
-        const { subjects, body, tokens, category, score, passed } = await draftEmail(
+        const { subjects, body, tokens, category, score, passed, researchHook, researchText } = await draftEmail(
           contact,
           aiConfig,
           buildDraftOptions(contact, siteContent, companyData, instruction, currentDraft)
@@ -1462,8 +1462,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
           category,
           score: score || 0,
           passed: passed !== false,
-          researchSignal: extractResearchSignal(siteContent) || draft.researchSignal || '',
-          researchSummary: siteContent || draft.researchSummary || '',
+          researchSignal: researchHook || extractResearchSignal(siteContent) || draft.researchSignal || '',
+          researchSummary: [researchText, siteContent].filter(Boolean).join('\n\n') || draft.researchSummary || '',
         })
         undoItems.push({ id: draft.id, snapshot: { ...currentDraft } })
         previewChanges.push({

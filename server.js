@@ -55,6 +55,7 @@ import contactsRouter  from './server/routes/contacts.js'
 import userRouter      from './server/routes/user.js'
 import discoveryRouter from './server/routes/discovery.js'
 import trackingRouter  from './server/routes/tracking.js'
+import researchRouter  from './server/routes/research.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app       = express()
@@ -110,6 +111,7 @@ app.use('/api', requireAuth, apolloRouter)
 app.use('/api', requireAuth, emailRouter)
 app.use('/api', requireAuth, contactsRouter)
 app.use('/api', requireAuth, discoveryRouter)
+app.use('/api', requireAuth, researchRouter)
 
 // ── Serve built frontend in production ─────────────────────────────────────────
 // In development, Vite serves the frontend on its own port (3000/5173).

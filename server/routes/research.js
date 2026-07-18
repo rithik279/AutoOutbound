@@ -7,12 +7,12 @@
  *   1. YC directory (yc-oss static JSON, cached in memory for 24h) — batch,
  *      one-liner, and description for Y Combinator companies, matched by
  *      domain or exact company name.
- *   2. A Claude web-search research pass over the person and company —
+ *   2. An OpenAI web-search research pass over the person and company —
  *      what the recipient has built/launched/spoken about (public LinkedIn
  *      info surfaced via search, GitHub, talks, YC launch posts) and one or
  *      two specific company features worth referencing in an email.
  *
- * The web-search pass runs only when ANTHROPIC_KEY is configured; the route
+ * The web-search pass runs only when OPENAI_KEY is configured; the route
  * degrades gracefully to YC-directory-only (or empty) results otherwise.
  *
  * Route:
@@ -23,13 +23,13 @@
 
 import { Router } from 'express'
 import { httpFetch } from '../lib/http.js'
-import { ANTHROPIC_KEY } from '../lib/config.js'
+import { OPENAI_KEY } from '../lib/config.js'
 import { aiLimiter } from '../lib/middleware.js'
 
 const router = Router()
 
-// Overridable so research can run on a cheaper model without a code change
-const RESEARCH_MODEL = process.env.RESEARCH_MODEL || 'claude-opus-4-8'
+// Cheapest OpenAI model that supports the web_search tool; overridable
+const RESEARCH_MODEL = process.env.RESEARCH_MODEL || 'gpt-4o-mini'
 
 // ── YC directory (yc-oss.github.io static JSON, MIT-licensed, updated daily) ──
 
@@ -102,7 +102,7 @@ async function findYcCompany(domain, companyName) {
   }
 }
 
-// ── Claude web-search research pass ───────────────────────────────────────────
+// ── OpenAI web-search research pass ───────────────────────────────────────────
 
 const RESEARCH_SYSTEM = `You research one prospect before a cold email so the email can open with something specific and true.
 
@@ -130,38 +130,36 @@ async function runResearchAgent({ name, title, company, domain, linkedin, yc, ca
   }
   if (campaignMode) user += `\nOutreach context: ${campaignMode} campaign for a senior data-engineering contractor.`
 
-  const messages = [{ role: 'user', content: user }]
-
-  // pause_turn means the server-side web-search loop hit its iteration cap —
-  // resume by echoing the partial assistant turn back
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const r = await httpFetch('https://api.anthropic.com/v1/messages', {
+  // OpenAI Responses API with the built-in web_search tool. Some accounts
+  // expose the tool as web_search_preview — fall back to that on a tool error.
+  for (const toolType of ['web_search', 'web_search_preview']) {
+    const r = await httpFetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
+        Authorization: `Bearer ${OPENAI_KEY}`,
       },
       body: JSON.stringify({
         model: RESEARCH_MODEL,
-        max_tokens: 8000,
-        thinking: { type: 'adaptive' },
-        system: RESEARCH_SYSTEM,
-        tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
-        messages,
+        instructions: RESEARCH_SYSTEM,
+        input: user,
+        tools: [{ type: toolType }],
+        max_output_tokens: 4000,
       }),
     }, { timeoutMs: 180_000, retries: 1, label: 'research' })
 
     const data = await r.json()
-    if (!r.ok) throw new Error(data?.error?.message || `Anthropic ${r.status}`)
-
-    if (data.stop_reason === 'pause_turn') {
-      messages.push({ role: 'assistant', content: data.content })
-      continue
+    if (!r.ok) {
+      if (toolType === 'web_search' && /web_search/i.test(data?.error?.message || '')) continue
+      throw new Error(data?.error?.message || `OpenAI ${r.status}`)
     }
-    if (data.stop_reason === 'refusal') return null
 
-    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('')
+    const text = (data.output || [])
+      .filter(item => item.type === 'message')
+      .flatMap(item => item.content || [])
+      .filter(c => c.type === 'output_text')
+      .map(c => c.text)
+      .join('')
     const match = text.match(/\{[\s\S]*\}/)
     if (!match) return null
     return JSON.parse(match[0])
@@ -184,7 +182,7 @@ router.post('/prospect-research', aiLimiter, async (req, res) => {
   const yc = await findYcCompany(domain, company)
 
   let signals = null
-  if (ANTHROPIC_KEY) {
+  if (OPENAI_KEY) {
     try {
       signals = await runResearchAgent({ name, title, company, domain, linkedin, yc, campaignMode })
     } catch (e) {

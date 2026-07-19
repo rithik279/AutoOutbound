@@ -15,9 +15,11 @@ import { PrismaClient } from '@prisma/client'
 // to 15; with pg-boss also connecting and the old instance overlapping during a
 // deploy, an unbounded Prisma pool exhausts the limit and crashes boot
 // (EMAXCONNSESSION). connection_limit=3 keeps the footprint small.
+// pool_timeout=30 rides out transient pooler stalls (Supabase free-tier
+// restarts) instead of throwing "Timed out fetching a new connection" at 10s.
 const rawUrl = process.env.DATABASE_URL || ''
 const dbUrl  = rawUrl && !/[?&]connection_limit=/.test(rawUrl)
-  ? rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'connection_limit=3'
+  ? rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'connection_limit=3&pool_timeout=30'
   : rawUrl
 
 export const prisma = dbUrl

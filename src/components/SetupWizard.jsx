@@ -27,10 +27,13 @@ export default function SetupWizard({ currentUser, onComplete }) {
 
   async function handleConnect() {
     setAuthLoading(true)
-    const authUrl   = provider === 'gmail' ? `/api/gmail/auth-start?userId=${currentUser.userId}` : '/api/auth-start'
+    const authUrl   = provider === 'gmail' ? `${API_URL}/api/gmail/auth-start` : `${API_URL}/api/auth-start`
     const healthUrl = provider === 'gmail' ? '/api/gmail/token-health' : '/api/token-health'
-    const headers   = provider === 'gmail' ? { 'x-user-id': currentUser.userId } : {}
-    window.open(authUrl, '_blank')
+    const headers   = {}
+    const popup = window.open('about:blank', '_blank')
+    const start = await fetch(authUrl).then(r => r.json()).catch(() => null)
+    if (popup && start?.url) popup.location = start.url
+    else popup?.close()
     for (let i = 0; i < 40; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {

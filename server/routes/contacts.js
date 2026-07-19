@@ -27,8 +27,9 @@ const router = Router()
  */
 router.get('/contacts', async (req, res) => {
   try {
-    const userId = req.userId || req.headers['x-user-id'] || 'friend'
+    const userId = req.userId
     const contacts = await prisma.contact.findMany({
+      where:    { userId },
       include:  {
         emails: {
           where:   { userId },
@@ -75,7 +76,8 @@ router.post('/contacts', async (req, res) => {
   }
 
   try {
-    const existing = await prisma.contact.findUnique({ where: { email } })
+    const userId = req.userId
+    const existing = await prisma.contact.findUnique({ where: { userId_email: { userId, email } } })
     if (existing) {
       return res.status(409).json({ error: 'Contact already exists', contact: existing })
     }
@@ -83,6 +85,7 @@ router.post('/contacts', async (req, res) => {
     const contact = await prisma.contact.create({
       data: {
         email,
+        userId,
         name,
         title:    title    || null,
         company:  company  || 'Unknown',
@@ -120,13 +123,14 @@ router.post('/contacts/bulk', async (req, res) => {
   let saved = 0
   let skipped = 0
   try {
+    const userId = req.userId
     for (const c of contacts) {
       const email = typeof c?.email === 'string' ? c.email.trim().toLowerCase() : ''
       const name  = typeof c?.name === 'string' ? c.name.trim() : ''
       if (!email || !name) { skipped++; continue }
 
       await prisma.contact.upsert({
-        where:  { email },
+        where:  { userId_email: { userId, email } },
         // Only refresh metadata on existing rows — never clobber state/source
         update: {
           ...(c.title    != null && { title:    c.title }),
@@ -136,6 +140,7 @@ router.post('/contacts/bulk', async (req, res) => {
         },
         create: {
           email,
+          userId,
           name,
           title:    c.title    || null,
           company:  c.company   || 'Unknown',
@@ -167,14 +172,19 @@ router.put('/contacts/:id', async (req, res) => {
   const { state, title, company } = req.body
 
   try {
-    const contact = await prisma.contact.update({
-      where: { id: parseInt(id, 10) },
+    // updateMany + ownership filter: a user can only mutate their own contacts
+    const result = await prisma.contact.updateMany({
+      where: { id: parseInt(id, 10), userId: req.userId },
       data:  {
         ...(state   !== undefined && { state }),
         ...(title   !== undefined && { title }),
         ...(company !== undefined && { company }),
       },
     })
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Contact not found' })
+    }
+    const contact = await prisma.contact.findUnique({ where: { id: parseInt(id, 10) } })
     res.json({ contact })
   } catch (err) {
     console.error(`[contacts] PUT /contacts/${id} error:`, err)
@@ -190,7 +200,7 @@ router.put('/contacts/:id', async (req, res) => {
 router.get('/contacts/:id/emails', async (req, res) => {
   const { id } = req.params
   try {
-    const userId = req.userId || req.headers['x-user-id'] || 'friend'
+    const userId = req.userId
     const emails = await prisma.email.findMany({
       where:   { contactId: parseInt(id, 10), userId },
       orderBy: { createdAt: 'desc' },

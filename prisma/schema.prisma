@@ -12,7 +12,8 @@ datasource db {
 
 model Contact {
   id        Int     @id @default(autoincrement())
-  email     String  @unique
+  email     String
+  userId    String  // owner — contacts are per-user, never shared
   name      String
   title     String?
   company   String
@@ -23,6 +24,9 @@ model Contact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   emails    Email[]
+
+  @@unique([userId, email])
+  @@index([userId])
 }
 
 model Email {

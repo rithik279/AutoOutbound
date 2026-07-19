@@ -6,7 +6,7 @@ export default function SignInPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center px-4 overflow-hidden">
+    <div className="min-h-screen bg-navy-900 flex flex-col items-center justify-center px-4 overflow-hidden">
       <div className="w-full max-w-md flex flex-col items-center">
         {/* Brand mark */}
         <button

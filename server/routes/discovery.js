@@ -58,8 +58,8 @@ export async function runDiscovery(userId, limit = 50) {
     return { found: 0, contacted: 0, skipped: 0 }
   }
 
-  // Build a set of already-emailed addresses to deduplicate
-  const contacted      = await prisma.contact.findMany({ where: { source: 'discovery' }, select: { email: true } })
+  // Build a set of already-emailed addresses to deduplicate (per user)
+  const contacted      = await prisma.contact.findMany({ where: { userId, source: 'discovery' }, select: { email: true } })
   const contactedEmails = new Set(contacted.map(c => c.email))
 
   let found   = 0
@@ -100,6 +100,7 @@ export async function runDiscovery(userId, limit = 50) {
         await prisma.contact.create({
           data: {
             email:    person.email,
+            userId,
             name:     `${person.first_name || ''} ${person.last_name || ''}`.trim(),
             title:    person.title       || '',
             company:  co.name,
@@ -141,7 +142,7 @@ export async function runDiscovery(userId, limit = 50) {
  * Headers: x-user-id
  */
 router.post('/discovery/run', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || req.body.userId
+  const userId = req.userId
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
   try {
@@ -161,14 +162,14 @@ router.post('/discovery/run', async (req, res) => {
  *             pendingCompanies, discoveredContacts }
  */
 router.get('/discovery/status', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id']
+  const userId = req.userId
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 
   try {
     const [config, companies, contacts] = await Promise.all([
       prisma.scheduledDiscovery.findUnique({ where: { userId } }),
       prisma.importedCompany.count({ where: { userId, status: { in: ['pending', 'discovered'] } } }),
-      prisma.contact.count({ where: { source: 'discovery' } }),
+      prisma.contact.count({ where: { userId, source: 'discovery' } }),
     ])
 
     res.json({
@@ -194,7 +195,7 @@ router.get('/discovery/status', async (req, res) => {
  * Body: { runTime: 'HH:MM', dailyQuota: number, enabled: boolean }
  */
 router.post('/discovery/config', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id']
+  const userId = req.userId
   const { runTime, dailyQuota, enabled } = req.body
   if (!userId) return res.status(400).json({ error: 'Missing userId' })
 

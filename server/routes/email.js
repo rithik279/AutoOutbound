@@ -48,7 +48,7 @@ const router = Router()
  */
 router.post('/schedule-campaign', async (req, res) => {
   const { emails, provider } = req.body
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+  const userId = req.userId
 
   if (!Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({ error: 'Missing or empty emails array' })
@@ -82,11 +82,12 @@ router.post('/schedule-campaign', async (req, res) => {
           }
 
           // Find or create the contact record so every email has a linked contact
-          let contact = await prisma.contact.findUnique({ where: { email: to } })
+          let contact = await prisma.contact.findUnique({ where: { userId_email: { userId, email: to } } })
           if (!contact) {
             contact = await prisma.contact.create({
               data: {
                 email:   to,
+                userId,
                 name:    to.split('@')[0],
                 company: company || 'Unknown',
                 state:   'new',
@@ -144,7 +145,7 @@ router.post('/schedule-campaign', async (req, res) => {
  * Response: { total, sent, pending, failed }
  */
 router.get('/schedule-status', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+  const userId = req.userId
   try {
     const [sent, pending, failed, total] = await Promise.all([
       prisma.email.count({ where: { userId, sentAt:   { not: null } } }),
@@ -170,7 +171,7 @@ router.get('/schedule-status', async (req, res) => {
  * Response: { emails: [{ id, to, subject, company, sentAt, failed, error }] }
  */
 router.get('/sent-emails', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+  const userId = req.userId
   try {
     const emails = await prisma.email.findMany({
       where:   { userId, sentAt: { not: null } },
@@ -208,15 +209,22 @@ router.get('/sent-emails', async (req, res) => {
  * Response: { ok: true, count: number }
  */
 router.post('/schedule-retry', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
-  // Verify auth before retrying — if the token is still expired retries will fail again
-  try { await getGraphToken(userId) }
-  catch (e) { return res.status(503).json({ error: e.message }) }
+  const userId = req.userId
   try {
     const failed = await prisma.email.findMany({
       where: { userId, failedAt: { not: null } },
     })
     if (!failed.length) return res.json({ ok: true, count: 0 })
+
+    // Verify auth only for the providers actually present in the retry set —
+    // a Gmail-only user must not be blocked by a missing Outlook token.
+    const providers = new Set(failed.map(e => e.provider || 'gmail'))
+    try {
+      if (providers.has('outlook')) await getGraphToken(userId)
+      if (providers.has('gmail'))   await getGmailToken(userId)
+    } catch (e) {
+      return res.status(503).json({ error: e.message })
+    }
 
     // Stagger retries 2 minutes apart, clear failedAt so pg-boss will accept the job
     for (const [i, email] of failed.entries()) {
@@ -260,7 +268,7 @@ router.post('/schedule-retry', async (req, res) => {
  * Response: { ok: true, repliesFound: number }
  */
 router.post('/check-replies', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+  const userId = req.userId
   try {
     const repliesFound = await checkRepliesForUser(userId)
     console.log(`[replies] Check complete: ${repliesFound} new replies for user ${userId}`)

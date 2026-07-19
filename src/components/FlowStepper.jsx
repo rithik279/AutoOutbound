@@ -41,7 +41,7 @@ export default function FlowStepper({ current }) {
             </div>
             {/* Connector line */}
             {i < STEPS.length - 1 && (
-              <div className={`w-12 h-0.5 mb-4 mx-1 transition-all ${done ? 'bg-brand-400' : 'bg-gray-150'}`} />
+              <div className={`w-12 h-0.5 mb-4 mx-1 transition-all ${done ? 'bg-brand-400' : 'bg-gray-200'}`} />
             )}
           </div>
         )

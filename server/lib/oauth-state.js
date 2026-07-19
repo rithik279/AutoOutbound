@@ -20,3 +20,18 @@
  */
 
 export const oauthVerifiers = new Map()
+
+// Abandoned flows never hit the callback, so entries would accumulate
+// forever. Stamp entries on insert and sweep anything older than 10 minutes
+// (a legit flow completes in seconds).
+const VERIFIER_TTL_MS = 10 * 60_000
+
+const _origSet = oauthVerifiers.set.bind(oauthVerifiers)
+oauthVerifiers.set = (key, value) => _origSet(key, { ...value, _createdAt: Date.now() })
+
+setInterval(() => {
+  const cutoff = Date.now() - VERIFIER_TTL_MS
+  for (const [key, value] of oauthVerifiers) {
+    if ((value?._createdAt || 0) < cutoff) oauthVerifiers.delete(key)
+  }
+}, 60_000).unref()

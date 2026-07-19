@@ -133,8 +133,15 @@ export async function startWorkers() {
       console.log(`[queue] Sending email ${id} to ${to} via ${provider}`)
 
       try {
-        // Fetch trackingId from DB — it's generated at email creation time
-        const emailRecord = await prisma.email.findUnique({ where: { id }, select: { trackingId: true } })
+        // Fetch trackingId + sentAt — the sentAt check is the idempotency
+        // guard: on a pg-boss retry (e.g. a sibling in this batch threw, or
+        // the post-send DB update failed last time), already-sent emails are
+        // skipped instead of being delivered again.
+        const emailRecord = await prisma.email.findUnique({ where: { id }, select: { trackingId: true, sentAt: true } })
+        if (emailRecord?.sentAt) {
+          console.log(`[queue] Email ${id} already sent — skipping duplicate delivery`)
+          continue
+        }
         const trackingId  = emailRecord?.trackingId || null
 
         let gmailMessageId = null, gmailThreadId = null
@@ -150,17 +157,25 @@ export async function startWorkers() {
           outlookConversationId = result?.outlookConversationId || null
         }
 
-        // Mark sent in DB, store provider thread/conversation IDs for reply detection
-        await prisma.email.update({
-          where: { id },
-          data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId, outlookMessageId, outlookConversationId },
-        })
+        // Delivery succeeded past this point — bookkeeping failures must not
+        // bubble up into a pg-boss retry (that would re-send the email).
+        try {
+          // Mark sent in DB, store provider thread/conversation IDs for reply detection
+          await prisma.email.update({
+            where: { id },
+            data:  { sentAt: new Date(), failedAt: null, error: null, gmailMessageId, gmailThreadId, outlookMessageId, outlookConversationId },
+          })
 
-        // Update contact state to 'emailed'
-        await prisma.contact.updateMany({
-          where: { emails: { some: { id } } },
-          data:  { state: 'emailed' },
-        })
+          // Update contact state to 'emailed'
+          await prisma.contact.updateMany({
+            where: { emails: { some: { id } } },
+            data:  { state: 'emailed' },
+          })
+        } catch (bookkeepingErr) {
+          // The email WAS delivered — never rethrow here, or pg-boss would
+          // retry the job and the recipient would get a duplicate.
+          console.error(`[queue] Email ${id} sent but bookkeeping failed: ${bookkeepingErr.message}`)
+        }
 
         console.log(`[queue] ✓ Sent email ${id} to ${to}`)
       } catch (e) {
@@ -170,7 +185,7 @@ export async function startWorkers() {
         await prisma.email.update({
           where: { id },
           data:  { failedAt: new Date(), error: e.message },
-        })
+        }).catch(() => {})
 
         // Re-throw so pg-boss knows to retry
         throw e

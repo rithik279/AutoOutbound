@@ -2,13 +2,12 @@
  * server/lib/middleware.js
  *
  * Shared Express middleware:
- *   - requireAuth    — verify x-user-id header against known users
+ *   - requireAuth    — verify the Clerk session token (Authorization: Bearer)
  *   - loginLimiter   — rate-limit login/signup to 10 req/min per IP
  *   - aiLimiter      — rate-limit AI proxy to 30 req/min per user
  *   - isPrivateIP    — block SSRF to private/loopback ranges
  */
 
-import { getUser, createUser } from './users.js'
 import { createClerkClient, verifyToken as clerkVerifyToken } from '@clerk/backend'
 import { prisma } from './prisma.js'
 
@@ -66,7 +65,7 @@ export const loginLimiter = makeRateLimiter({
 export const aiLimiter = makeRateLimiter({
   windowMs: 60_000,
   max:      30,
-  keyFn:    req => `ai:${req.headers['x-user-id'] || req.ip}`,
+  keyFn:    req => `ai:${req.userId || req.ip}`,
   message:  'AI rate limit exceeded — try again in a minute.',
 })
 
@@ -74,19 +73,16 @@ export const aiLimiter = makeRateLimiter({
 export const apolloLimiter = makeRateLimiter({
   windowMs: 60_000,
   max:      60,
-  keyFn:    req => `apollo:${req.headers['x-user-id'] || req.ip}`,
+  keyFn:    req => `apollo:${req.userId || req.ip}`,
   message:  'Apollo rate limit exceeded.',
 })
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 
 /**
- * requireAuth — verify that x-user-id header refers to an existing user.
- *
- * This is a lightweight check. For higher security, replace localStorage
- * userId with a signed JWT and verify the signature here instead.
- *
- * Skips auth for /api/user/login and /api/user/signup (handled separately).
+ * requireAuth — verify the Clerk session JWT from the Authorization header
+ * and resolve it to a local user record (auto-provisioning on first login).
+ * Requests without a valid token are rejected; there is no header fallback.
  */
 export async function requireAuth(req, res, next) {
   // ── Clerk JWT path (preferred) ───────────────────────────────────────────
@@ -141,19 +137,10 @@ export async function requireAuth(req, res, next) {
     }
   }
 
-  // ── Legacy x-user-id path (backward compat during migration) ───────────
-  const userId = req.headers['x-user-id']
-  if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  const user = await getUser(userId)
-  if (!user) {
-    return res.status(401).json({ error: 'Unknown user — please log in again.' })
-  }
-
-  req.userId = userId
-  next()
+  // No verified Clerk session — reject. The old x-user-id fallback trusted a
+  // client-supplied header with no verification, letting anyone act as any
+  // user whose ID they knew; it is intentionally gone.
+  return res.status(401).json({ error: 'Unauthorized — please log in again.' })
 }
 
 // ── SSRF protection ───────────────────────────────────────────────────────────
@@ -197,4 +184,48 @@ export function validateOutboundUrl(url) {
   }
 
   return { safe: true, normalised: parsed.hostname }
+}
+
+/** True if a literal IP address (v4 or v6) is private/loopback/link-local. */
+function isPrivateAddress(addr) {
+  const a = String(addr).toLowerCase().replace(/^\[|\]$/g, '')
+  if (a.includes(':')) {
+    if (a.startsWith('::ffff:')) return isPrivateAddress(a.slice(7))
+    return a === '::1' || a === '::' || a.startsWith('fe80') || a.startsWith('fc') || a.startsWith('fd')
+  }
+  const parts = a.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(n => Number.isNaN(n) || n < 0 || n > 255)) return true
+  const [p1, p2] = parts
+  return (
+    p1 === 0 || p1 === 10 || p1 === 127 ||
+    (p1 === 100 && p2 >= 64 && p2 <= 127) ||
+    (p1 === 169 && p2 === 254) ||
+    (p1 === 172 && p2 >= 16 && p2 <= 31) ||
+    (p1 === 192 && p2 === 168)
+  )
+}
+
+/**
+ * Resolve a hostname and throw if it (or any of its addresses) is private.
+ * Complements validateOutboundUrl, which only pattern-matches the hostname
+ * string — a public-looking domain can still have an A record pointing at
+ * 127.0.0.1 or the cloud metadata service.
+ */
+export async function assertPublicHost(hostname) {
+  const host = String(hostname).replace(/^\[|\]$/g, '')
+  if (PRIVATE_IP_RE.test(host)) throw new Error('Private/loopback host not allowed')
+
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host.includes(':')) {
+    if (isPrivateAddress(host)) throw new Error('Private IP address not allowed')
+    return
+  }
+
+  const { lookup } = await import('dns/promises')
+  const addrs = await lookup(host, { all: true, verbatim: true })
+  if (!addrs.length) throw new Error(`Could not resolve ${host}`)
+  for (const { address } of addrs) {
+    if (isPrivateAddress(address)) {
+      throw new Error(`Host ${host} resolves to a private address`)
+    }
+  }
 }

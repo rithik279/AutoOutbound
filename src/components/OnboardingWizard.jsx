@@ -28,14 +28,20 @@ export default function OnboardingWizard({ currentUser, onComplete, onUpdateProf
     setStep(1)
   }
 
-  function handleConnectGmail() {
-    window.open(`${API_URL}/api/gmail/auth-start?userId=${currentUser?.userId}`, '_blank')
+  async function handleConnectGmail() {
+    const popup = window.open('about:blank', '_blank')
+    const start = await fetch(`${API_URL}/api/gmail/auth-start`).then(r => r.json()).catch(() => null)
+    if (popup && start?.url) popup.location = start.url
+    else popup?.close()
     // Give it a moment then advance — they can always re-connect in Settings
     setTimeout(() => setStep(2), 1500)
   }
 
-  function handleConnectOutlook() {
-    window.open(`${API_URL}/api/auth-start`, '_blank')
+  async function handleConnectOutlook() {
+    const popup = window.open('about:blank', '_blank')
+    const start = await fetch(`${API_URL}/api/auth-start`).then(r => r.json()).catch(() => null)
+    if (popup && start?.url) popup.location = start.url
+    else popup?.close()
     setTimeout(() => setStep(2), 1500)
   }
 

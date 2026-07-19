@@ -20,6 +20,7 @@ import { oauthVerifiers }        from '../lib/oauth-state.js'
 import { getOutlookTokenHealth, saveOutlookTokens } from '../lib/tokens.js'
 import { getGmailTokenHealth, saveGmailTokens }     from '../lib/gmail.js'
 import { OUTLOOK, GMAIL }        from '../lib/config.js'
+import { requireAuth }           from '../lib/middleware.js'
 
 const router = Router()
 
@@ -48,8 +49,11 @@ function buildOAuthSuccessPage(provider, userId = '') {
 
 // ── Outlook / Microsoft Graph ─────────────────────────────────────────────────
 
-router.get('/auth-start', async (req, res) => {
-  const userId       = req.query.userId
+// Auth required: the OAuth state is bound to the *verified* user, so nobody
+// can start a flow that plants mailbox tokens on someone else's account.
+// Returns JSON { url } — the client opens it in a new tab.
+router.get('/auth-start', requireAuth, async (req, res) => {
+  const userId       = req.userId
   const clientId     = OUTLOOK.clientId
   const clientSecret = OUTLOOK.clientSecret
   const port         = 3333
@@ -77,7 +81,7 @@ router.get('/auth-start', async (req, res) => {
   })}`
 
   if (isProd) {
-    res.redirect(authUrl)
+    res.json({ url: authUrl })
   } else {
     const { createServer } = await import('http')
     const server = createServer((req, res) => {
@@ -107,7 +111,7 @@ router.get('/auth-start', async (req, res) => {
     })
     server.on('error', e => console.error(`[auth] Dev callback server error: ${e.message}`))
     server.listen(port, () => console.log(`[auth] Dev callback server listening on :${port}`))
-    res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Microsoft sign-in…</p></body></html>`)
+    res.json({ url: authUrl })
   }
 })
 
@@ -127,8 +131,9 @@ router.get('/auth-callback', async (req, res) => {
   oauthVerifiers.delete(state)
   const { verifier, clientId, clientSecret, redirect, userId } = stored
 
-  res.end(buildOAuthSuccessPage('outlook', userId))
-
+  // Exchange the code BEFORE rendering the result page — showing "Authorized"
+  // while the exchange silently fails leaves the user thinking they're
+  // connected when no tokens were ever saved.
   try {
     const tokenRes = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
       method:  'POST',
@@ -142,23 +147,25 @@ router.get('/auth-callback', async (req, res) => {
         expiresAt: Date.now() + data.expires_in * 1000,
       })
       console.log(`[auth] Outlook authorized for ${userId} (production)`)
-    } else {
-      console.error('[auth] Outlook token exchange failed:', data)
+      return res.end(buildOAuthSuccessPage('outlook', userId))
     }
+    console.error('[auth] Outlook token exchange failed:', data)
+    res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorization failed.</h2><p>Microsoft did not accept the sign-in. Close this tab and try connecting again.</p></body></html>')
   } catch (e) {
     console.error('[auth] Outlook callback error:', e.message)
+    res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorization failed.</h2><p>Something went wrong finishing the sign-in. Close this tab and try again.</p></body></html>')
   }
 })
 
-router.get('/token-health', async (req, res) => {
-  const userId = req.headers['x-user-id'] || req.query.userId || 'friend'
-  const h = await getOutlookTokenHealth(userId)
+router.get('/token-health', requireAuth, async (req, res) => {
+  const h = await getOutlookTokenHealth(req.userId)
   res.json({ ok: h.status === 'ok' || h.status === 'warning', ...h })
 })
 
 // ── Gmail / Google OAuth ──────────────────────────────────────────────────────
 
-router.get('/gmail/auth-start', async (req, res) => {
+// Auth required — see /auth-start above. Returns JSON { url }.
+router.get('/gmail/auth-start', requireAuth, async (req, res) => {
   const clientId = GMAIL.clientId
   const redirect = GMAIL.redirectUri
 
@@ -166,7 +173,7 @@ router.get('/gmail/auth-start', async (req, res) => {
     return res.status(503).json({ error: 'Gmail OAuth not configured — set GMAIL_CLIENT_ID in .env' })
   }
 
-  const userId    = req.query.userId || 'friend'
+  const userId    = req.userId
   const verifier  = crypto.randomBytes(32).toString('base64url')
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
   const state     = `${userId}:${crypto.randomBytes(8).toString('hex')}`
@@ -188,7 +195,7 @@ router.get('/gmail/auth-start', async (req, res) => {
   const isProd = process.env.NODE_ENV === 'production'
 
   if (isProd) {
-    res.redirect(authUrl)
+    res.json({ url: authUrl })
   } else {
     const port = 3334
     const { createServer } = await import('http')
@@ -219,7 +226,7 @@ router.get('/gmail/auth-start', async (req, res) => {
     })
     server.on('error', e => console.error(`[auth] Gmail dev callback server error: ${e.message}`))
     server.listen(port, () => console.log(`[auth] Gmail dev callback server listening on :${port}`))
-    res.send(`<html><body><script>window.location="${authUrl}"</script><p>Opening Google sign-in…</p></body></html>`)
+    res.json({ url: authUrl })
   }
 })
 
@@ -239,8 +246,7 @@ router.get('/gmail/auth-callback', async (req, res) => {
   oauthVerifiers.delete(state)
   const { verifier, clientId, userId, redirect } = stored
 
-  res.end(buildOAuthSuccessPage('gmail', userId))
-
+  // Exchange first, then report honestly — see the Outlook callback above.
   try {
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method:  'POST',
@@ -254,17 +260,18 @@ router.get('/gmail/auth-callback', async (req, res) => {
         expiresAt: Date.now() + data.expires_in * 1000,
       })
       console.log(`[auth] Gmail authorized for ${userId} (production)`)
-    } else {
-      console.error('[auth] Gmail token exchange failed:', data)
+      return res.end(buildOAuthSuccessPage('gmail', userId))
     }
+    console.error('[auth] Gmail token exchange failed:', data)
+    res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorization failed.</h2><p>Google did not accept the sign-in. Close this tab and try connecting again.</p></body></html>')
   } catch (e) {
     console.error('[auth] Gmail callback error:', e.message)
+    res.end('<html><body style="font-family:sans-serif;padding:40px"><h2>Authorization failed.</h2><p>Something went wrong finishing the sign-in. Close this tab and try again.</p></body></html>')
   }
 })
 
-router.get('/gmail/token-health', async (req, res) => {
-  const userId = req.headers['x-user-id'] || 'friend'
-  const h      = await getGmailTokenHealth(userId)
+router.get('/gmail/token-health', requireAuth, async (req, res) => {
+  const h = await getGmailTokenHealth(req.userId)
   res.json({ ok: h.status === 'ok' || h.status === 'warning', ...h })
 })
 

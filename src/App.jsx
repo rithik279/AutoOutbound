@@ -477,13 +477,18 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
     setReAuthLoading(true)
     const headers = getUserHeaders()
     const authUrl = provider === 'gmail'
-      ? `/api/gmail/auth-start?userId=${currentUser.userId}`
-      : `/api/auth-start?userId=${currentUser.userId}`
+      ? `${API_URL}/api/gmail/auth-start`
+      : `${API_URL}/api/auth-start`
     const healthUrl = provider === 'gmail'
       ? `${API_URL}/api/gmail/token-health`
       : `${API_URL}/api/token-health`
 
-    window.open(authUrl, '_blank')
+    // Open the tab synchronously (popup blockers), then point it at the OAuth
+    // URL once the authenticated auth-start call returns it.
+    const popup = window.open('about:blank', '_blank')
+    const start = await fetch(authUrl).then(r => r.json()).catch(() => null)
+    if (popup && start?.url) popup.location = start.url
+    else popup?.close()
 
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
@@ -1993,6 +1998,9 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   co: d.company
                 }))
                 setContacts(approvedContacts)
+                // The schedule phase and scheduleSend filter by the `approved`
+                // Set — without this, the timeline shows 0 and nothing sends.
+                setApproved(new Set(approvedContacts.map(ct => ct.id)))
                 setSelected(null)
                 setPhase('schedule')
               }}
@@ -2025,7 +2033,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 14 }}>
           {[
-            { n: N, l: 'drafted', col: '#0066cc' },
+            { n: N, l: 'drafted', col: '#404040' },
             { n: selectedRowCount, l: 'selected', col: '#000000' },
             { n: appCount, l: 'approved', col: '#16a34a' },
             { n: `${avgScore}`, l: 'avg score', col: '#d97706' },
@@ -2091,7 +2099,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
                   const isApproved = reviewApproved.has(draft.id)
                   const isSelectedForBatch = reviewSelectedRows.has(draft.id)
                   const scoreColor = draft.score >= 20 ? '#16a34a' : draft.score >= 18 ? '#d97706' : '#dc2626'
-                  return wrap(
+                  return (
                     <tr key={draft.id} style={{ borderBottom: '1px solid #f0f0ec', background: isSelectedForBatch ? '#f5f5f5' : isApproved ? '#f0fdf4' : 'transparent' }}>
                       <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                         <input
@@ -2757,7 +2765,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
           {contacts.slice(0, draftProgress + 1).reverse().map(ct => {
             const d = drafts[ct.id]
-            return wrap(
+            return (
               <div key={ct.id} style={{ ...c.card, padding: '9px 14px', display: 'flex', gap: 10, alignItems: 'center', opacity: d ? 1 : 0.5 }}>
                 <Avatar name={ct.name} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -3244,7 +3252,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
               const tm = sh * 60 + sm + i * gap
               const hh = Math.floor(tm / 60) % 24, mm = tm % 60
               const d = drafts[ct.id]
-              return wrap(
+              return (
                 <div key={ct.id} style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, padding: '6px 0', borderBottom: '1px solid #f0f0ec' }}>
                   <span style={{ ...c.muted, minWidth: 40, fontFamily: 'monospace', fontSize: 11 }}>{String(hh).padStart(2, '0')}:{String(mm).padStart(2, '0')}</span>
                   <Avatar name={ct.name} size={20} />

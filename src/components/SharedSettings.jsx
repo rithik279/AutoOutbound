@@ -115,7 +115,10 @@ export default function SharedSettings({
 
   async function handleConnectGmail() {
     setGmailLoading(true)
-    window.open(`/api/gmail/auth-start?userId=${currentUser.userId}`, '_blank')
+    const popup = window.open('about:blank', '_blank')
+    const start = await fetch(`${API_URL}/api/gmail/auth-start`).then(r => r.json()).catch(() => null)
+    if (popup && start?.url) popup.location = start.url
+    else popup?.close()
     for (let i = 0; i < 30; i++) {
       await new Promise(r => setTimeout(r, 2000))
       try {
@@ -418,7 +421,10 @@ export default function SharedSettings({
                 await handleConnectGmail()
               } else {
                 setGmailLoading(true)
-                window.open(`/api/auth-start?userId=${currentUser.userId}`, '_blank')
+                const popup = window.open('about:blank', '_blank')
+                const start = await fetch(`${API_URL}/api/auth-start`).then(r => r.json()).catch(() => null)
+                if (popup && start?.url) popup.location = start.url
+                else popup?.close()
                 for (let i = 0; i < 30; i++) {
                   await new Promise(r => setTimeout(r, 2000))
                   try {

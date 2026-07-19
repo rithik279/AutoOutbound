@@ -23,7 +23,46 @@ import mammoth      from 'mammoth'
 import { PDFParse } from 'pdf-parse'
 import { APOLLO_KEY, RESUME_PATH } from '../lib/config.js'
 import { prisma }   from '../lib/prisma.js'
-import { validateOutboundUrl, apolloLimiter } from '../lib/middleware.js'
+import { validateOutboundUrl, assertPublicHost, apolloLimiter } from '../lib/middleware.js'
+
+/**
+ * Fetch a user-influenced URL safely: every hop (including redirects) has its
+ * hostname DNS-resolved and rejected if any address is private/loopback.
+ * Redirects are followed manually so a public page can't 302 the server into
+ * the cloud metadata service or localhost.
+ */
+async function fetchPublicUrl(target, timeoutMs = 8000) {
+  let current = target
+  for (let hop = 0; hop < 3; hop++) {
+    const u = new URL(current)
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+      throw new Error('Only http/https allowed')
+    }
+    await assertPublicHost(u.hostname)
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const r = await fetch(current, {
+        headers:  { 'User-Agent': 'Mozilla/5.0 (compatible; research-bot/1.0)' },
+        signal:   controller.signal,
+        redirect: 'manual',
+      })
+      clearTimeout(timer)
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get('location')
+        if (!loc) throw new Error(`Redirect without location from ${u.hostname}`)
+        current = new URL(loc, current).toString()
+        continue
+      }
+      return await r.text()
+    } catch (e) {
+      clearTimeout(timer)
+      throw e
+    }
+  }
+  throw new Error('Too many redirects')
+}
 
 const router = Router()
 
@@ -205,7 +244,12 @@ const APOLLO_PATH_ALLOWLIST = [
 
 router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
   const reqPath = req.params.path
-  const allowed = APOLLO_PATH_ALLOWLIST.some(p => reqPath.startsWith(p))
+  // Normalize before the allowlist check — "mixed_people/api_search/../../x"
+  // passes startsWith but URL-normalizes to a different endpoint.
+  if (reqPath.includes('..') || reqPath.includes('//') || reqPath.includes('\\')) {
+    return res.status(403).json({ error: `Apollo path not allowed: ${reqPath}` })
+  }
+  const allowed = APOLLO_PATH_ALLOWLIST.some(p => reqPath === p || reqPath.startsWith(`${p}/`) || reqPath.startsWith(`${p}?`))
   if (!allowed) {
     return res.status(403).json({ error: `Apollo path not allowed: ${reqPath}` })
   }
@@ -252,7 +296,10 @@ router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
  * Response: { validatedCount, notFoundCount, validated, notFound }
  */
 router.post('/companies/validate-batch', async (req, res) => {
-  const { companies, userId } = req.body
+  const { companies } = req.body
+  // Owner comes from the verified session — never from the request body,
+  // which would let one user write companies into another user's pipeline.
+  const userId = req.userId
   if (!Array.isArray(companies) || companies.length === 0) {
     return res.status(400).json({ error: 'Missing or empty companies array' })
   }
@@ -346,23 +393,8 @@ router.post('/fetch-site', async (req, res) => {
     return res.status(400).json({ error: `Invalid URL: ${check.reason}` })
   }
 
-  /** Fetch with an 8-second timeout. */
-  const tryFetch = async (target) => {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
-    try {
-      const r = await fetch(target, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research-bot/1.0)' },
-        signal:  controller.signal,
-        redirect: 'follow',
-      })
-      clearTimeout(timer)
-      return await r.text()
-    } catch (e) {
-      clearTimeout(timer)
-      throw e
-    }
-  }
+  /** Fetch with an 8-second timeout, SSRF-validated on every redirect hop. */
+  const tryFetch = target => fetchPublicUrl(target, 8000)
 
   try {
     // Strip protocol and path, try both bare domain and www. prefix
@@ -409,22 +441,7 @@ router.post('/fetch-company-research', async (req, res) => {
     return res.status(400).json({ error: `Invalid URL: ${check.reason}` })
   }
 
-  const tryFetch = async (target) => {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 8000)
-    try {
-      const r = await fetch(target, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research-bot/1.0)' },
-        signal: controller.signal,
-        redirect: 'follow',
-      })
-      clearTimeout(timer)
-      return await r.text()
-    } catch (e) {
-      clearTimeout(timer)
-      throw e
-    }
-  }
+  const tryFetch = target => fetchPublicUrl(target, 8000)
 
   try {
     const base = normalizeBaseDomain(url)

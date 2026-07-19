@@ -17,6 +17,7 @@
 
 import { Router } from 'express'
 import { prisma }  from '../lib/prisma.js'
+import { requireAuth } from '../lib/middleware.js'
 
 const router = Router()
 
@@ -148,8 +149,8 @@ router.get('/track/click/:trackingId/:linkId', async (req, res) => {
  *
  * Response: { totalSent, totalOpened, totalClicked, openRate, clickRate }
  */
-router.get('/track/stats', async (req, res) => {
-  const userId = req.userId || req.headers['x-user-id'] || 'friend'
+router.get('/track/stats', requireAuth, async (req, res) => {
+  const userId = req.userId
   try {
     const [totalSent, totalOpened, totalClicked] = await Promise.all([
       prisma.email.count({ where: { userId, sentAt: { not: null } } }),

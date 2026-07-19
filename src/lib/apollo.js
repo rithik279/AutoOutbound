@@ -33,6 +33,45 @@ export async function bulkEnrich(people, apiKey) {
   }, apiKey)
 }
 
+// Discover decision makers via server-side web search — replacement for the
+// Apollo people-search API, which (like ALL Apollo API endpoints) is blocked
+// on free plans. Returns [{ first_name, last_name, title, company, domain,
+// linkedin_url }] with no emails; feed each result to findEmailViaWeb.
+export async function findPeopleViaWeb(params) {
+  const res = await fetch('/api/find-people', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || err?.message || `find-people ${res.status}`)
+  }
+  const data = await res.json()
+  return data.people || []
+}
+
+// Find a person's work email from public web sources (published addresses or
+// the company's email pattern). Returns { email, method, confidence, evidence }
+// with email '' when nothing was found.
+export async function findEmailViaWeb(person) {
+  const res = await fetch('/api/find-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      first_name: person.first_name,
+      last_name: person.last_name,
+      company: person.company || '',
+      domain: person.domain || ''
+    })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || err?.message || `find-email ${res.status}`)
+  }
+  return res.json()
+}
+
 // Search organisations
 export async function searchOrgs(params, apiKey) {
   return apolloPost('mixed_companies/search', {

@@ -353,12 +353,26 @@ export function scoreEmail(subject, body, category = 'direct_buyer') {
 }
 
 // ── Build email system prompt using guidelines ────────────────────────────────
-function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText, authoritativeProfile }) {
+function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt, resumeText, authoritativeProfile, personalContext, emailPreferences }) {
   const modeGuidance = MODE_DRAFT_GUIDANCE[campaignMode] || MODE_DRAFT_GUIDANCE.startup
   const categoryGuidance = CATEGORY_GUIDANCE[category] || CATEGORY_GUIDANCE.direct_buyer
   const customPromptBlock = trimPromptBlock(customPrompt)
   const resumeSourceBlock = trimPromptBlock(resumeText, 2500)
   const profileBlock = buildAuthoritativeProfileBlock(authoritativeProfile)
+  const personalContextBlock = trimPromptBlock(personalContext, 2000)
+
+  // Build email preferences overrides
+  const prefs = emailPreferences || {}
+  const prefRules = []
+  if (prefs.greeting) prefRules.push(`Use this greeting style: "${prefs.greeting}"`)
+  if (prefs.signOff) prefRules.push(`Sign off with: "${prefs.signOff}"`)
+  if (prefs.tone === 'formal') prefRules.push('Use a formal, professional tone throughout.')
+  else if (prefs.tone === 'casual') prefRules.push('Use a casual, conversational tone while remaining professional.')
+  else if (prefs.tone === 'direct') prefRules.push('Use a very direct, no-fluff tone. Get to the point quickly.')
+  if (prefs.maxWords) prefRules.push(`Keep the body under ${prefs.maxWords} words.`)
+  if (prefs.customCTA) prefRules.push(`Use this CTA instead of the default: "${prefs.customCTA}"`)
+  if (prefs.formatNotes) prefRules.push(`Additional formatting: ${prefs.formatNotes}`)
+  const prefsBlock = prefRules.length > 0 ? prefRules.join('\n') : ''
 
   return `You are writing a cold outreach email for a senior ETL / data engineering contractor.
 
@@ -414,10 +428,20 @@ ${resumeSourceBlock ? `Uploaded resume source material:
 ${resumeSourceBlock}
 ` : ''}
 
+${personalContextBlock ? `PERSONAL CONTEXT (specific things to weave into the email when relevant):
+${personalContextBlock}
+
+Use this context naturally when it adds genuine value. Do not force-fit every point into every email.
+` : ''}
+
 ${customPromptBlock ? `User-saved prompt guidance:
 ${customPromptBlock}
 
 Treat the saved prompt guidance as additive only. Campaign-type rules above take precedence if there is a conflict.
+` : ''}
+
+${prefsBlock ? `EMAIL FORMATTING PREFERENCES (override defaults):
+${prefsBlock}
 ` : ''}
 
 Output format — return ONLY valid JSON, no markdown:
@@ -510,6 +534,8 @@ export async function draftEmail(contact, aiConfig, options = {}) {
     rewriteInstruction = '',
     currentDraft = null,
     deepResearch = true,
+    personalContext = '',
+    emailPreferences = null,
   } = options
 
   const normalizedCompanyData = {
@@ -527,6 +553,8 @@ export async function draftEmail(contact, aiConfig, options = {}) {
     customPrompt,
     resumeText,
     authoritativeProfile,
+    personalContext,
+    emailPreferences,
   })
 
   const firstName = contact.first || contact.name?.split(' ')[0] || contact.name

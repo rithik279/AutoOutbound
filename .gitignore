@@ -11,3 +11,6 @@ gmail_tokens.json
 .code-review-graph/
 .env
 .env.render
+
+# Ignore claude configuration and worktrees
+.claude/

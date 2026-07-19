@@ -18,6 +18,8 @@
  *   import { getQueue, scheduleEmailJob, startWorkers } from './queue.js'
  */
 
+import { syncOutreachToSheet } from './sheets.js'
+
 import { PgBoss } from 'pg-boss'
 import { prisma }        from './prisma.js'
 import { sendViaGmail }  from './gmail.js'
@@ -178,6 +180,15 @@ export async function startWorkers() {
         }
 
         console.log(`[queue] ✓ Sent email ${id} to ${to}`)
+
+        // Fire-and-forget: sync outreach tracker to Google Sheets
+        // Never blocks or fails the email send — errors are logged and swallowed
+        syncOutreachToSheet(userId).catch(e => {
+          // Expected to fail silently if user hasn't connected Gmail/Sheets
+          if (!/not authorized|not found/i.test(e.message)) {
+            console.warn(`[queue] Sheets sync skipped for ${userId}: ${e.message}`)
+          }
+        })
       } catch (e) {
         console.error(`[queue] ✗ Failed email ${id} to ${to}: ${e.message}`)
 

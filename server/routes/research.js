@@ -208,4 +208,183 @@ router.post('/prospect-research', aiLimiter, async (req, res) => {
   })
 })
 
+// ── Web-search people discovery ───────────────────────────────────────────────
+//
+// Free-plan replacement for Apollo's people-search API (paywalled): find
+// decision makers from public web sources, then let the client enrich the
+// names via Apollo people/bulk_match (which free plans CAN use).
+
+const FIND_PEOPLE_SYSTEM = `You find decision makers at companies for B2B outreach, using web search.
+
+You are given either a specific company or a description of target companies, plus the job titles to look for. Use web search (company team/about pages, press releases, conference bios, podcast appearances, public LinkedIn results) to identify real, currently-employed people in those roles.
+
+Rules:
+- Only include people whose name AND role at that company are confirmed by search results. Never guess or invent names.
+- Prefer exact title matches; otherwise the closest senior equivalent (e.g. CTO when no VP of Engineering exists).
+- Skip people the search results suggest have left the company.
+- For each person, include the company's primary website domain, bare, like "acme.com".
+- If you cannot confirm anyone at a company, return fewer people or none. Do not pad.
+
+Return ONLY valid JSON, no markdown fences:
+{"people":[{"first_name":"","last_name":"","title":"","company":"","domain":"","linkedin_url":""}]}`
+
+router.post('/find-people', aiLimiter, async (req, res) => {
+  const {
+    query = '', company = '', domain = '',
+    titles = [], count = 3, maxCompanies = 5,
+  } = req.body || {}
+
+  if (!query && !company && !domain) {
+    return res.status(400).json({ error: 'query, company, or domain required' })
+  }
+  if (!OPENAI_KEY) {
+    return res.status(500).json({ error: 'OPENAI_KEY not configured' })
+  }
+
+  let user
+  if (company || domain) {
+    user = `Find up to ${Math.min(count, 5)} decision makers at ${company || domain}${domain ? ` (${domain})` : ''}.`
+  } else {
+    user = `Find companies matching this description, then their decision makers: "${query}".\nUp to ${Math.min(maxCompanies, 8)} companies, 1-2 decision makers each.`
+  }
+  if (titles.length > 0) user += `\nTarget titles: ${titles.join(', ')}.`
+
+  try {
+    let parsed = null
+    for (const toolType of ['web_search', 'web_search_preview']) {
+      const r = await httpFetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_KEY}`,
+        },
+        body: JSON.stringify({
+          model: RESEARCH_MODEL,
+          instructions: FIND_PEOPLE_SYSTEM,
+          input: user,
+          tools: [{ type: toolType }],
+          max_output_tokens: 4000,
+        }),
+      }, { timeoutMs: 180_000, retries: 1, label: 'find-people' })
+
+      const data = await r.json()
+      if (!r.ok) {
+        if (toolType === 'web_search' && /web_search/i.test(data?.error?.message || '')) continue
+        throw new Error(data?.error?.message || `OpenAI ${r.status}`)
+      }
+
+      const text = (data.output || [])
+        .filter(item => item.type === 'message')
+        .flatMap(item => item.content || [])
+        .filter(c => c.type === 'output_text')
+        .map(c => c.text)
+        .join('')
+      const match = text.match(/\{[\s\S]*\}/)
+      if (match) parsed = JSON.parse(match[0])
+      break
+    }
+
+    const people = (Array.isArray(parsed?.people) ? parsed.people : [])
+      .map(p => ({
+        first_name:   stripCitations(p.first_name),
+        last_name:    stripCitations(p.last_name),
+        title:        stripCitations(p.title),
+        company:      stripCitations(p.company) || company,
+        domain:       normalizeDomain(stripCitations(p.domain) || domain),
+        linkedin_url: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i.test(p.linkedin_url || '') ? p.linkedin_url : '',
+      }))
+      .filter(p => p.first_name && p.last_name)
+      .slice(0, 16)
+
+    res.json({ people })
+  } catch (e) {
+    console.warn('[research] find-people failed:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ── Web-search email discovery ────────────────────────────────────────────────
+//
+// Apollo's free plan blocks ALL API endpoints (search and enrichment), so
+// emails are found from public web sources instead: directly published
+// addresses first, then the company's email pattern.
+
+const FIND_EMAIL_SYSTEM = `You find a person's work email address using web search, for B2B outreach.
+
+Strategy, in order:
+1. Search for the person's directly published work email — conference speaker pages, press releases, GitHub profiles and commits, personal sites, company contact or team pages, published papers.
+2. If not found, determine the company's email address format from public evidence (published addresses of coworkers at the same domain, "email format" listings), then construct the person's address from that pattern.
+
+Rules:
+- Only report a directly published email if it appears verbatim in search results.
+- A constructed email must be based on evidence of the company's actual pattern. Only if no evidence exists, fall back to the most common convention (first.last@domain) and mark confidence "low".
+- Return the address lowercase, at the company's primary domain.
+
+Return ONLY valid JSON, no markdown fences:
+{"email":"","method":"published|pattern|convention|none","confidence":"high|medium|low","evidence":"one short sentence citing what you found"}
+If nothing can be determined, return method "none" with an empty email.`
+
+router.post('/find-email', aiLimiter, async (req, res) => {
+  const { first_name = '', last_name = '', company = '', domain = '' } = req.body || {}
+
+  if (!first_name || !last_name || !domain) {
+    return res.status(400).json({ error: 'first_name, last_name, and domain required' })
+  }
+  if (!OPENAI_KEY) {
+    return res.status(500).json({ error: 'OPENAI_KEY not configured' })
+  }
+
+  const user = `Find the work email address of ${first_name} ${last_name}, ${company || domain} (${domain}).`
+
+  try {
+    let parsed = null
+    for (const toolType of ['web_search', 'web_search_preview']) {
+      const r = await httpFetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_KEY}`,
+        },
+        body: JSON.stringify({
+          model: RESEARCH_MODEL,
+          instructions: FIND_EMAIL_SYSTEM,
+          input: user,
+          tools: [{ type: toolType }],
+          max_output_tokens: 2000,
+        }),
+      }, { timeoutMs: 120_000, retries: 1, label: 'find-email' })
+
+      const data = await r.json()
+      if (!r.ok) {
+        if (toolType === 'web_search' && /web_search/i.test(data?.error?.message || '')) continue
+        throw new Error(data?.error?.message || `OpenAI ${r.status}`)
+      }
+
+      const text = (data.output || [])
+        .filter(item => item.type === 'message')
+        .flatMap(item => item.content || [])
+        .filter(c => c.type === 'output_text')
+        .map(c => c.text)
+        .join('')
+      const match = text.match(/\{[\s\S]*\}/)
+      if (match) parsed = JSON.parse(match[0])
+      break
+    }
+
+    const email = stripCitations(parsed?.email || '').toLowerCase()
+    if (!/^[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) {
+      return res.json({ email: '', method: 'none', confidence: 'low', evidence: '' })
+    }
+    res.json({
+      email,
+      method:     ['published', 'pattern', 'convention'].includes(parsed?.method) ? parsed.method : 'pattern',
+      confidence: ['high', 'medium', 'low'].includes(parsed?.confidence) ? parsed.confidence : 'low',
+      evidence:   stripCitations(parsed?.evidence || ''),
+    })
+  } catch (e) {
+    console.warn('[research] find-email failed:', e.message)
+    res.status(500).json({ error: e.message })
+  }
+})
+
 export default router

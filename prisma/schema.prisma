@@ -94,6 +94,10 @@ model User {
   emailProvider String   @default("gmail")
   resumeText    String?
   prompt        String?
+  personalContext   String?    // Free-text: projects, talking points, unique value props
+  emailPreferences  Json?      // { signOff, greeting, tone, maxWords, customCTA, formatNotes }
+  gsheetId          String?    // Google Sheet ID for outreach tracker sync
+  gsheetSyncedAt    DateTime?  // Last successful Google Sheets sync
   // OAuth tokens stored as JSON blobs — survive deploys, no filesystem dependency
   gmailTokens   Json?    // { clientId, accessToken, refreshToken, expiresAt }
   outlookTokens Json?    // { clientId, accessToken, refreshToken, expiresAt }

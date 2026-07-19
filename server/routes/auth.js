@@ -184,7 +184,7 @@ router.get('/gmail/auth-start', requireAuth, async (req, res) => {
     client_id:             clientId,
     response_type:         'code',
     redirect_uri:          redirect,
-    scope:                 'https://www.googleapis.com/auth/gmail.send',
+    scope:                 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/spreadsheets',
     access_type:           'offline',
     code_challenge:        challenge,
     code_challenge_method: 'S256',

@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { searchPeople, bulkEnrich, searchOrgs } from './lib/apollo.js'
-import { draftEmail, fetchSiteContent, promptToApolloParams, promptToApolloOrgParams } from './lib/ai.js'
+import { findPeopleViaWeb, findEmailViaWeb, searchOrgs } from './lib/apollo.js'
+import { draftEmail, fetchSiteContent, promptToApolloOrgParams } from './lib/ai.js'
 import { parseCSV, parseCompanyList, parseResearchCSV } from './lib/csv.js'
 import c from './styles.js'
 import { MODELS, CAMPAIGN_MODES, ENTRY_LEVELS } from './constants.js'
-import { normalizeDomain, extractDomainFromOrgResponse, extractEmail, extractEnrichedMatches, uniqueBy, exportCSV, isTitleRelevant } from './utils.js'
+import { normalizeDomain, exportCSV, isTitleRelevant } from './utils.js'
 import Avatar from './components/Avatar.jsx'
 import SharedSettings from './components/SharedSettings.jsx'
 import SetupWizard from './components/SetupWizard.jsx'
@@ -12,6 +12,7 @@ import EntryPage from './components/pages/EntryPage.jsx'
 import SentPage from './components/pages/SentPage.jsx'
 import MyContactsPage from './components/pages/MyContactsPage.jsx'
 import SentHistoryPage from './components/pages/SentHistoryPage.jsx'
+import OutreachTracker from './components/pages/OutreachTracker.jsx'
 import FlowStepper from './components/FlowStepper.jsx'
 import OnboardingWizard from './components/OnboardingWizard.jsx'
 
@@ -255,7 +256,7 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
   }, [profile, currentUser])
 
   // Config
-  const [phase, setPhaseRaw] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history | my_contacts
+  const [phase, setPhaseRaw] = useState('entry') // entry | settings | discover | companies | csv | contacts | drafting | review | schedule | sent | sent_history | my_contacts | outreach_tracker
   const setPhase = useCallback((p) => {
     setPhaseRaw(p)
     onPhaseChange?.(p)
@@ -682,6 +683,8 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       },
       rewriteInstruction,
       currentDraft,
+      personalContext: profile?.personalContext || '',
+      emailPreferences: profile?.emailPreferences || null,
     }
   }
 
@@ -694,52 +697,48 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
 
     try {
       const mode = CAMPAIGN_MODES[campaignMode]
-      log(`Parsing your prompt into search parameters… [${mode.label}]`)
-      const params = await promptToApolloParams(discoverPrompt, aiConfig, mode)
-      log(`Searching: "${params.reasoning || 'finding matches'}"`)
-
-      // Merge in mode's title/seniority defaults if the AI didn't specify them
-      const searchParams = {
-        person_titles: mode.titles,
-        person_seniorities: mode.seniorities,
-        ...params,
-        per_page: params.per_page || 5
-      }
-      const data = await searchPeople(searchParams, '')
-      const people = data.people || []
-      log(`Found ${people.length} candidates — enriching to get emails…`)
+      log(`Searching the web for decision makers… [${mode.label}]`)
+      const people = await findPeopleViaWeb({
+        query: `${discoverPrompt}. ${mode.promptHint}`,
+        titles: mode.titles,
+        maxCompanies: 5
+      })
+      log(`Found ${people.length} candidates — finding their emails from public sources…`)
 
       if (people.length === 0) { log('No results — try broadening your prompt'); setDiscoverLoading(false); return }
 
-      const ids = people.map(p => p.id).filter(Boolean)
-      const batches = []
-      for (let i = 0; i < ids.length; i += 10) batches.push(ids.slice(i, i + 10))
-
-      const enriched = []
-      for (const batch of batches) {
-        const res = await bulkEnrich(batch.map(id => ({ id })), '')
-        enriched.push(...extractEnrichedMatches(res).filter(Boolean))
+      // Everyone with a found email — saved to the DB regardless of
+      // campaign-mode title relevance, so no surfaced contact is ever lost and
+      // the user can revisit/email them later.
+      const withEmail = []
+      for (const p of people) {
+        if (!p.domain) continue
+        try {
+          const hit = await findEmailViaWeb(p)
+          if (hit.email) {
+            log(`✓ ${p.first_name} ${p.last_name} (${p.company}) — ${hit.method}, ${hit.confidence} confidence`)
+            withEmail.push({
+              id: withEmail.length + 1,
+              name: `${p.first_name} ${p.last_name}`,
+              first: p.first_name,
+              title: p.title || '',
+              co: p.company || '',
+              company: p.company || '',
+              email: hit.email,
+              domain: p.domain,
+              linkedin: p.linkedin_url || '',
+              source: 'web',
+              emailStatus: hit.method === 'published' ? 'verified' : `${hit.confidence} (${hit.method})`
+            })
+          } else {
+            log(`✗ ${p.first_name} ${p.last_name} — no email found`)
+          }
+        } catch (e) {
+          log(`✗ ${p.first_name} ${p.last_name} — ${e.message}`)
+        }
       }
 
-      log(`Enriched ${enriched.length} contacts with emails`)
-
-      // Everyone we enriched who has a usable email — saved to the DB regardless
-      // of campaign-mode title relevance, so no surfaced contact is ever lost and
-      // the user can revisit/email them later.
-      const withEmail = enriched
-        .filter(p => extractEmail(p) && p.email_status !== 'unavailable')
-        .map((p, i) => ({
-          id: i + 1,
-          name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-          first: p.first_name || p.name?.split(' ')[0] || '',
-          title: p.title || '',
-          co: p.organization?.name || '',
-          company: p.organization?.name || '',
-          email: extractEmail(p),
-          domain: p.organization?.primary_domain || '',
-          source: 'apollo',
-          emailStatus: p.email_status
-        }))
+      log(`Found emails for ${withEmail.length} of ${people.length} contacts`)
 
       // Displayed/draftable list still respects the campaign mode's title relevance.
       const results = withEmail.filter(p => isTitleRelevant(p.title, campaignMode))
@@ -770,123 +769,64 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       const co = companies[i]
       setCompanyProgress(i + 1)
       try {
-        logCompany(`[${co.co}] resolving domain...`)
-        let resolvedDomain = normalizeDomain(co.domain)
-        let resolvedOrgId = null
-        if (!resolvedDomain) {
-          try {
-            const orgs = await searchOrgs({ q_organization_name: co.co, per_page: 3 }, '')
-            const candidates = [
-              ...(orgs?.organizations || []),
-              ...(orgs?.accounts || []),
-              ...(orgs?.companies || []),
-              ...(orgs?.results || [])
-            ]
-            if (candidates.length > 0) {
-              resolvedOrgId = candidates[0]?.id || null
-              resolvedDomain = extractDomainFromOrgResponse(orgs)
-            }
-            if (resolvedDomain) logCompany(`[${co.co}] resolved domain: ${resolvedDomain}`)
-            else if (resolvedOrgId) logCompany(`[${co.co}] resolved org ID: ${resolvedOrgId}`)
-          } catch {
-            // Continue with fallback people search by name if org search fails.
-          }
-        }
-        if (!resolvedDomain && !resolvedOrgId) {
-          logCompany(`[${co.co}] skipped — could not resolve domain or org ID`)
+        logCompany(`[${co.co}] searching the web for decision makers...`)
+        const resolvedDomain = normalizeDomain(co.domain)
+
+        const mode = CAMPAIGN_MODES[campaignMode]
+
+        // Steer web discovery with the roleHint from the research CSV, falling
+        // back to the campaign mode's standard titles.
+        const roleHint = (co.roleHint || '').toLowerCase()
+        const isFounderHint = roleHint.includes('founder')
+        const isEngHint = roleHint.includes('engineer') || roleHint.includes('head of eng') || roleHint.includes('cto')
+        const hintTitles = isFounderHint
+          ? ['Co-Founder', 'Founder', 'CEO']
+          : isEngHint
+            ? ['CTO', 'Chief Technology Officer', 'VP of Engineering', 'Head of Engineering']
+            : mode.titles
+
+        const webPeople = await findPeopleViaWeb({
+          company: co.co,
+          domain: resolvedDomain || undefined,
+          titles: hintTitles,
+          count: 3
+        })
+        logCompany(`[${co.co}] web candidates: ${webPeople.length}`)
+
+        if (webPeople.length === 0) {
+          logCompany(`[${co.co}] no people found`)
           continue
         }
 
-        const mode = CAMPAIGN_MODES[campaignMode]
-        const orgFilter = resolvedDomain
-          ? { q_organization_domains_list: [resolvedDomain] }
-          : { organization_ids: [resolvedOrgId] }
-
-        // Build tiers based on roleHint from research CSV, falling back to standard mode titles.
-        const roleHint = (co.roleHint || '').toLowerCase()
-        const isFounderHint = roleHint.includes('founder')
-        const isDataHint = roleHint.includes('data')
-        const isEngHint = roleHint.includes('engineer') || roleHint.includes('head of eng') || roleHint.includes('cto')
-
-        const tierFounder = { label: 'Founder', params: { person_titles: ['Co-Founder', 'Founder', 'Founding Partner'], person_seniorities: ['c_suite', 'founder', 'owner', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierCTO = { label: 'CTO / VP Eng', params: { person_titles: ['CTO', 'Chief Technology Officer', 'VP of Engineering', 'VP Engineering', 'Head of Engineering'], person_seniorities: ['c_suite', 'vp', 'head'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierCEO = { label: 'CEO', params: { person_titles: ['CEO', 'Chief Executive Officer'], person_seniorities: ['c_suite'], per_page: 3, ...orgFilter }, useFilter: false }
-        const tierMode = { label: 'mode titles', params: { person_titles: mode.titles, person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
-        const tierBroad = { label: 'broad seniority', params: { person_seniorities: mode.seniorities, per_page: 5, ...orgFilter }, useFilter: true }
-
-        // Recruiter mode: add a relaxed fallback that skips title filter entirely (company context is enough)
-        const isRecruiting = campaignMode === 'recruiting'
-        const tierRelaxed = isRecruiting
-          ? { label: 'recruiter relaxed', params: { person_titles: ['Recruiter', 'Consultant', 'Account Manager', 'Director', 'VP', 'Manager', 'Senior Associate', 'Lead', 'Partner'], person_seniorities: ['senior', 'manager', 'director', 'vp', 'head', 'c_suite', 'founder', 'partner'], per_page: 8, ...orgFilter }, useFilter: false }
-          : null
-
-        // C-suite catch-all — separate from other tiers, always searched last
-        const tierCSuite = { label: 'any C-suite', params: { person_seniorities: ['c_suite', 'owner', 'founder', 'partner'], per_page: 3, ...orgFilter }, useFilter: false }
-
-        // Order: hint-specific first, then standard tiers, then recruiter relaxed, then C-suite
-        let tiers
-        if (isFounderHint) tiers = [tierFounder, tierCTO, tierMode, tierBroad, tierRelaxed, tierCEO, tierCSuite].filter(Boolean)
-        else if (isEngHint) tiers = [tierCTO, tierMode, tierBroad, tierRelaxed, tierFounder, tierCEO, tierCSuite].filter(Boolean)
-        else if (isDataHint) tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
-        else tiers = [tierMode, tierBroad, tierRelaxed, tierCTO, tierCEO, tierFounder, tierCSuite].filter(Boolean)
-
-        let topPeople = []
-        for (const tier of tiers) {
-          const res = await searchPeople(tier.params, '')
-          let people = uniqueBy(res.people || [], p => p.id || `${p.first_name}|${p.last_name}`)
-          if (tier.useFilter) people = people.filter(p => isTitleRelevant(p.title, campaignMode))
-          logCompany(`[${co.co}] ${tier.label}: ${people.length} relevant`)
-          if (people.length > 0) { topPeople = people.slice(0, 1); break }
+        // Find an email one candidate at a time — stop at the first hit.
+        const contacts = []
+        for (const person of webPeople.slice(0, 3)) {
+          if (!person.domain) continue
+          const hit = await findEmailViaWeb(person).catch(() => null)
+          if (!hit?.email) { logCompany(`[${co.co}] ${person.first_name} ${person.last_name}: no email found`); continue }
+          logCompany(`[${co.co}] ${person.first_name} ${person.last_name}: ${hit.method} email, ${hit.confidence} confidence`)
+          contacts.push({
+            id: found.length + 1,
+            name: `${person.first_name} ${person.last_name}`,
+            first: person.first_name,
+            title: person.title || '',
+            co: person.company || co.co,
+            company: person.company || co.co,
+            email: hit.email,
+            domain: normalizeDomain(person.domain || resolvedDomain || co.domain),
+            linkedin: person.linkedin_url || '',
+            source: 'web',
+            emailStatus: hit.method === 'published' ? 'verified' : `${hit.confidence} (${hit.method})`
+          })
+          break
         }
 
-        if (topPeople.length > 0) {
-          const directContacts = topPeople
-            .map(p => ({
-              name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-              first: p.first_name || p.name?.split(' ')[0] || '',
-              title: p.title || '',
-              co: p.organization?.name || co.co,
-              company: p.organization?.name || co.co,
-              email: extractEmail(p),
-              domain: normalizeDomain(p.organization?.primary_domain || resolvedDomain || co.domain),
-              linkedin: p.linkedin_url || ''
-            }))
-            .filter(p => p.email)
-
-          logCompany(`[${co.co}] direct emails from search: ${directContacts.length}`)
-
-          const toEnrich = topPeople.filter(p => !extractEmail(p) && p.id)
-          let enrichedContacts = []
-          if (toEnrich.length > 0) {
-            const enriched = await bulkEnrich(toEnrich.map(p => ({ id: p.id })), '')
-            const matches = extractEnrichedMatches(enriched)
-            enrichedContacts = matches
-              .map(p => ({
-                name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim(),
-                first: p.first_name || p.name?.split(' ')[0] || '',
-                title: p.title || '',
-                co: p.organization?.name || co.co,
-                company: p.organization?.name || co.co,
-                email: extractEmail(p),
-                domain: normalizeDomain(p.organization?.primary_domain || resolvedDomain || co.domain),
-                linkedin: p.linkedin_url || ''
-              }))
-              .filter(p => p.email)
-            logCompany(`[${co.co}] enriched emails: ${enrichedContacts.length}`)
-          }
-
-          const merged = uniqueBy(directContacts.concat(enrichedContacts), p => p.email.toLowerCase())
-            .map((p, idx) => ({ id: found.length + idx + 1, ...p, source: 'apollo' }))
-
-          if (merged.length === 0) {
-            logCompany(`[${co.co}] no email returned for matched people (possible credit/permission constraint)`)
-          } else {
-            logCompany(`[${co.co}] added ${merged.length} contact${merged.length === 1 ? '' : 's'}`)
-            found.push(...merged)
-            setCompanyContacts([...found])
-          }
+        if (contacts.length === 0) {
+          logCompany(`[${co.co}] no email found from public sources`)
         } else {
-          logCompany(`[${co.co}] no people found`)
+          logCompany(`[${co.co}] added ${contacts.length} contact${contacts.length === 1 ? '' : 's'}`)
+          found.push(...contacts)
+          setCompanyContacts([...found])
         }
       } catch (e) {
         logCompany(`[${co.co}] error: ${e.message}`)
@@ -3352,6 +3292,19 @@ export default function App({ onPhaseChange, onPhaseControllerReady, onUserChang
       userId={currentUser?.userId}
       onRefresh={fetchSentHistory}
     />
+  )
+
+  // ── OUTREACH TRACKER ─────────────────────────────────────────────────────
+  if (phase === 'outreach_tracker') return wrap(
+    <div>
+      {statusBar()}
+      <div style={{ marginBottom: 24 }}>
+        <button onClick={() => setPhase('entry')} style={{ ...c.ghostBtn, marginBottom: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>← Back</button>
+        <h1 style={c.h1}>Outreach Tracker</h1>
+        <p style={{ ...c.muted, marginTop: 4 }}>Track everyone you've contacted, synced to Google Sheets</p>
+      </div>
+      <OutreachTracker currentUser={currentUser} profile={profile} />
+    </div>
   )
 
   // ── DRAFT CONFIRMATION (friend: use existing or edit before drafting) ──

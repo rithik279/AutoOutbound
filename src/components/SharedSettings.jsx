@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import c from '../styles.js'
 import { MODELS, CAMPAIGN_MODES } from '../constants.js'
-import { User, FileText, Zap, Mail, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
+import { User, FileText, Zap, Mail, RefreshCw, CheckCircle, AlertCircle, Palette } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -32,8 +32,20 @@ export default function SharedSettings({
   const [discoverySaving, setDiscoverySaving] = useState(false)
   const [discoveryStatus, setDiscoveryStatus] = useState(null)
 
+  // Personal context state
+  const [localPersonalContext, setLocalPersonalContext] = useState(profile?.personalContext || '')
+
+  // Email preferences state
+  const [emailPrefs, setEmailPrefs] = useState({
+    signOff: '', greeting: '', tone: '', maxWords: 180, customCTA: '', formatNotes: '',
+    ...(profile?.emailPreferences || {}),
+  })
+  const [prefsSaveStatus, setPrefsSaveStatus] = useState('')
+
   useEffect(() => {
     if (profile?.prompt) setEditPrompt(profile.prompt)
+    if (profile?.personalContext != null) setLocalPersonalContext(profile.personalContext || '')
+    if (profile?.emailPreferences) setEmailPrefs(p => ({ ...p, ...profile.emailPreferences }))
   }, [profile])
 
   useEffect(() => {
@@ -140,6 +152,7 @@ export default function SharedSettings({
   const tabs = [
     { id: 'profile',   label: 'Profile',        icon: <User size={14} /> },
     { id: 'resume',    label: 'Resume',          icon: <FileText size={14} /> },
+    { id: 'emailstyle',label: 'Email Style',     icon: <Palette size={14} /> },
     { id: 'prompt',    label: 'AI Prompt',       icon: <Zap size={14} /> },
     { id: 'email',     label: 'Email Account',   icon: <Mail size={14} /> },
     { id: 'discovery', label: 'Daily Discovery', icon: <RefreshCw size={14} /> },
@@ -268,6 +281,155 @@ export default function SharedSettings({
               </pre>
             </div>
           )}
+
+          {/* Personal Context */}
+          <div className="border-t border-gray-100 pt-5 mt-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-1">Personal context</h2>
+            <p className="text-xs text-gray-400 mb-3">Write specific things about yourself that AI should weave into emails — projects you’re proud of, unique value props, talking points, things that make you stand out beyond your resume.</p>
+            <textarea
+              className="w-full min-h-[120px] px-3 py-2.5 text-xs font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+              value={localPersonalContext}
+              onChange={e => setLocalPersonalContext(e.target.value)}
+              placeholder={"e.g.\n• I built a real-time CDC pipeline at RBC that processed 2M events/day\n• I speak at data engineering meetups in Toronto\n• I’m currently building an open-source dbt testing framework\n• I have a passion for mentoring junior data engineers"}
+            />
+            <button
+              onClick={() => onUpdateProfile({ personalContext: localPersonalContext })}
+              className="mt-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+            >
+              Save context
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Email Style ── */}
+      {tab === 'emailstyle' && (
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <h2 className="text-sm font-bold text-gray-900 mb-1">Email formatting preferences</h2>
+            <p className="text-xs text-gray-400 mb-4">Control how your emails are formatted. These override the AI defaults.</p>
+
+            <div className="space-y-4">
+              {/* Greeting */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Greeting style</label>
+                <select
+                  value={emailPrefs.greeting || ''}
+                  onChange={e => setEmailPrefs(p => ({ ...p, greeting: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="">Default (AI decides)</option>
+                  <option value="Hi {firstName},">Hi {'{firstName}'},</option>
+                  <option value="Hey {firstName},">Hey {'{firstName}'},</option>
+                  <option value="{firstName},">{'{firstName}'},</option>
+                  <option value="Hello {firstName},">Hello {'{firstName}'},</option>
+                  <option value="Dear {firstName},">Dear {'{firstName}'},</option>
+                </select>
+              </div>
+
+              {/* Sign-off */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sign-off style</label>
+                <select
+                  value={emailPrefs.signOff || ''}
+                  onChange={e => setEmailPrefs(p => ({ ...p, signOff: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="">Default (AI decides)</option>
+                  <option value="Best,">Best,</option>
+                  <option value="Cheers,">Cheers,</option>
+                  <option value="Thanks,">Thanks,</option>
+                  <option value="Talk soon,">Talk soon,</option>
+                  <option value="Regards,">Regards,</option>
+                </select>
+                <input
+                  type="text"
+                  value={!['', 'Best,', 'Cheers,', 'Thanks,', 'Talk soon,', 'Regards,'].includes(emailPrefs.signOff || '') ? emailPrefs.signOff : ''}
+                  onChange={e => setEmailPrefs(p => ({ ...p, signOff: e.target.value }))}
+                  placeholder="Or type a custom sign-off…"
+                  className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              {/* Tone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Tone</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: '', label: 'Default', desc: 'Professional & direct' },
+                    { id: 'formal', label: 'Formal', desc: 'More polished' },
+                    { id: 'casual', label: 'Casual', desc: 'Conversational' },
+                  ].map(t => {
+                    const sel = (emailPrefs.tone || '') === t.id
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setEmailPrefs(p => ({ ...p, tone: t.id }))}
+                        className={`text-left p-3 rounded-xl border-2 transition-all ${sel ? 'border-brand-500 bg-brand-50' : 'border-gray-100 hover:border-gray-200'}`}
+                      >
+                        <div className={`font-bold text-xs mb-0.5 ${sel ? 'text-brand-600' : 'text-gray-700'}`}>{t.label}</div>
+                        <div className="text-[10px] text-gray-400">{t.desc}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Max words */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Max word count</label>
+                <input
+                  type="number"
+                  min="80"
+                  max="400"
+                  value={emailPrefs.maxWords || 180}
+                  onChange={e => setEmailPrefs(p => ({ ...p, maxWords: Math.max(80, Number(e.target.value)) }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Default: 180. Shorter emails often get higher reply rates.</p>
+              </div>
+
+              {/* Custom CTA */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Custom CTA (call to action)</label>
+                <input
+                  type="text"
+                  value={emailPrefs.customCTA || ''}
+                  onChange={e => setEmailPrefs(p => ({ ...p, customCTA: e.target.value }))}
+                  placeholder='Default: "Would a quick 15-minute conversation make sense?"'
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              {/* Additional formatting notes */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Additional formatting notes</label>
+                <textarea
+                  value={emailPrefs.formatNotes || ''}
+                  onChange={e => setEmailPrefs(p => ({ ...p, formatNotes: e.target.value }))}
+                  placeholder="Any other instructions for how emails should be formatted…"
+                  className="w-full min-h-[80px] px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                />
+              </div>
+
+              <button
+                onClick={async () => {
+                  setPrefsSaveStatus('saving')
+                  // Clean empty strings to null before saving
+                  const cleaned = { ...emailPrefs }
+                  for (const k of Object.keys(cleaned)) {
+                    if (cleaned[k] === '' || cleaned[k] === 0) cleaned[k] = undefined
+                  }
+                  await onUpdateProfile({ emailPreferences: cleaned })
+                  setPrefsSaveStatus('saved')
+                  setTimeout(() => setPrefsSaveStatus(''), 2000)
+                }}
+                className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-all"
+              >
+                {prefsSaveStatus === 'saving' ? 'Saving…' : prefsSaveStatus === 'saved' ? '✓ Saved!' : 'Save email preferences'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

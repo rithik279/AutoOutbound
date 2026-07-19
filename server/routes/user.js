@@ -85,6 +85,10 @@ router.get('/user/profile', requireAuth, async (req, res) => {
     emailProvider:   user.emailProvider,
     resumeText:      user.resumeText  || null,
     prompt:          user.prompt      || null,
+    personalContext:   user.personalContext || null,
+    emailPreferences:  user.emailPreferences || null,
+    gsheetId:          user.gsheetId || null,
+    gsheetSyncedAt:    user.gsheetSyncedAt || null,
     hasGmailToken:   !!(user.gmailTokens),
     hasOutlookToken: !!(user.outlookTokens),
   })
@@ -93,7 +97,7 @@ router.get('/user/profile', requireAuth, async (req, res) => {
 // ── Profile PUT ───────────────────────────────────────────────────────────────
 
 router.put('/user/profile', requireAuth, async (req, res) => {
-  const allowed = ['name', 'senderName', 'senderEmail', 'linkedinUrl', 'phoneNumber', 'modelId', 'campaignMode', 'emailProvider', 'resumeText', 'prompt']
+  const allowed = ['name', 'senderName', 'senderEmail', 'linkedinUrl', 'phoneNumber', 'modelId', 'campaignMode', 'emailProvider', 'resumeText', 'prompt', 'personalContext', 'emailPreferences']
   const patch   = {}
   for (const key of allowed) {
     if (req.body[key] === undefined) continue
@@ -119,6 +123,10 @@ router.put('/user/profile', requireAuth, async (req, res) => {
       emailProvider:   user.emailProvider,
       resumeText:      user.resumeText || null,
       prompt:          user.prompt || null,
+      personalContext:   user.personalContext || null,
+      emailPreferences:  user.emailPreferences || null,
+      gsheetId:          user.gsheetId || null,
+      gsheetSyncedAt:    user.gsheetSyncedAt || null,
       hasGmailToken:   !!(user.gmailTokens),
       hasOutlookToken: !!(user.outlookTokens),
     }

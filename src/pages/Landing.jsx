@@ -486,7 +486,7 @@ export default function Landing() {
           </div>
           <div className="flex gap-5 text-[11px] text-gray-600">
             <button onClick={() => navigate('/sign-in')} className="hover:text-white transition-colors">Sign in</button>
-            <a href="mailto:Singh.Manmit@gmail.com" className="hover:text-white transition-colors">Contact</a>
+            <a href="https://github.com/rithik279" className="hover:text-white transition-colors">GitHub</a>
           </div>
         </div>
       </footer>

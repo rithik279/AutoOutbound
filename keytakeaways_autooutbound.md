@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Campaign Pipeline v2 is a cold email outreach automation tool built for Manmit Singh, a senior data engineering contractor. It automates the full lifecycle of a cold email campaign: prospect discovery, email drafting with AI personalisation, review/approval, and scheduled sending via Microsoft Outlook.
+Campaign Pipeline v2 is a full-stack cold-email workflow for configurable professional outreach. It automates the full lifecycle of a cold email campaign: prospect discovery, email drafting with AI personalisation, review/approval, and scheduled sending via Microsoft Outlook.
 
 **Stack:** React + Vite (frontend), Express (backend API), Apollo.io (prospecting/enrichment), OpenAI/Anthropic (email drafting), Microsoft Graph (sending).
 
@@ -14,15 +14,12 @@ Campaign Pipeline v2 is a cold email outreach automation tool built for Manmit S
 
 The frontend React bundle contains zero API keys. Every external call — OpenAI, Anthropic, Apollo — is proxied through Express endpoints at `/api/ai/chat` and `/api/apollo/*`. The browser never sees an API key.
 
-```js
-// server.js — keys assembled at runtime from split strings
-// (avoids GitHub secret scanning flags in committed code)
-const OPENAI_KEY = process.env.VITE_OPENAI_KEY || [
-  'sk-proj-...', 'vczbWt...', 'fiHIS...', 'uJD2...'
-].join('')
-```
+\`\`\`js
+// server/lib/config.js — credentials are loaded only by the server
+const OPENAI_KEY = process.env.OPENAI_KEY || ''
+\`\`\`
 
-The `VITE_` prefix is misleading — the keys aren't read from `import.meta.env` at runtime in production; they fall back to the hardcoded strings. In development, they come from `.env`. This dual-path approach keeps the codebase clean for GitHub scanning while allowing local dev to override via env vars.
+Credentials are supplied through server-side environment variables. They are never committed or exposed through Vite's client-side environment namespace.
 
 **Takeaway:** The proxy pattern is the correct approach for any React app that calls third-party APIs. Never put keys in `VITE_` variables if they need to stay private — Vite inlines them into the browser bundle at build time.
 

@@ -446,7 +446,7 @@ export async function draftEmail(contact, aiConfig, options = {}) {
   try {
     const parsed = parseJSON(text)
     const body = parsed.body || ''
-    const subjects = parsed.subjects || [parsed.subject] || ['Senior ETL Contractor']
+    const subjects = parsed.subjects || [parsed.subject] || ['Quick question']
 
     // Score the draft
     const mainSubject = subjects[0] || ''

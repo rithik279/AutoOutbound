@@ -1,6 +1,6 @@
 # FirstShot
 
-> AI-powered outbound email campaigns — find prospects, generate personalised emails, review, schedule, and track replies. Built for students and young professionals leveraging their .edu credibility.
+> Full-stack AI outbound platform combining prospect discovery, live company research, personalized generation, human review, email delivery, and engagement tracking.
 
 [![Deploy](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)](https://auto-outbound.rithiksingh.com)
 [![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render)](https://render.com)
@@ -512,9 +512,9 @@ Copy `.env.example` → `.env` and fill in all required values.
 | `CLERK_PUBLISHABLE_KEY` | ✅ | Clerk publishable key |
 | `VITE_CLERK_PUBLISHABLE_KEY` | ✅ | Same key — Vite prefix required for client bundle |
 | `CLERK_SECRET_KEY` | ✅ | Clerk secret key (server-side JWT verification) |
-| `VITE_OPENAI_KEY` | ✅ | OpenAI API key |
-| `VITE_APOLLO_KEY` | ✅ | Apollo.io master API key |
-| `VITE_ANTHROPIC_KEY` | ☑️ | Anthropic API key (optional fallback) |
+| `OPENAI_KEY` | ✅ | OpenAI API key |
+| `APOLLO_KEY` | ✅ | Apollo.io master API key |
+| `ANTHROPIC_KEY` | ☑️ | Anthropic API key (optional fallback) |
 | `OUTLOOK_CLIENT_ID` | ✅ | Azure app registration client ID |
 | `OUTLOOK_CLIENT_SECRET` | ✅ | Azure app registration secret |
 | `OUTLOOK_USER` | ✅ | Microsoft account email used to send |
@@ -579,7 +579,7 @@ campaign-v2/
 │   │   ├── email-sender.js        # sendViaGraph (Outlook) + re-export sendViaGmail
 │   │   ├── tokens.js              # Outlook MSAL token management
 │   │   ├── email-tracking.js      # buildTrackedHtml — injects pixel, rewrites links
-│   │   └── config.js              # Shared constants (RESUME_PATH, etc.)
+│   │   └── config.js              # Server-side environment configuration
 │   └── routes/
 │       ├── ai.js                  # POST /api/ai/chat
 │       ├── apollo.js              # POST /api/apollo/*

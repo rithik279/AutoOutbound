@@ -94,7 +94,7 @@ Keep q_keywords focused: 2–4 words describing the industry or product type.`
   return parseJSON(text)
 }
 
-// ── Fetch Manmit's resume text from the server (extracted from .docx) ──────
+// ── Fetch the sender's resume text from the server (extracted from .docx) ──────
 let _cachedResume = null
 async function getResume() {
   if (_cachedResume) return _cachedResume
@@ -104,11 +104,9 @@ async function getResume() {
     const data = await res.json()
     _cachedResume = data.text || ''
   } catch {
-    // fallback summary if endpoint unavailable
-    _cachedResume = `Manmit Singh — Senior Data Engineering Contractor, Toronto (remote, USD contracts).
-24 years IT, 18+ years ETL/data pipelines. Tools: Informatica IICS/PowerCenter, Talend, ADF, GCP, Python, SQL.
-Key clients: Parkland/Sunoco, Scotiabank, TD, Rogers, Finastra, Co-operators.
-Available for remote USD senior contract roles. Not a job seeker.`
+    // Résumé content is user-supplied through the app; never embed a person's
+    // private profile in the reusable public client bundle.
+    _cachedResume = ''
   }
   return _cachedResume
 }

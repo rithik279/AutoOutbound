@@ -42,7 +42,7 @@ export async function sendViaGraph({ to, subject, body, trackingId }, userId) {
   if (existsSync(RESUME_PATH)) {
     attachments.push({
       '@odata.type': '#microsoft.graph.fileAttachment',
-      name:          'Manmit_Singh_Resume.docx',
+      name:          'resume.docx',
       contentType:   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       contentBytes:  readFileSync(RESUME_PATH).toString('base64'),
     })

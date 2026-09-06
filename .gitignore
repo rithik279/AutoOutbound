@@ -9,5 +9,12 @@ users.json
 gmail_tokens.json
 # Added by code-review-graph
 .code-review-graph/
-.env
 .env.render
+.env.*
+!.env.example
+*.docx
+*Targets.csv
+*targets.csv
+*Prospects.csv
+*prospects.csv
+NC List*.csv

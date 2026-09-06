@@ -212,7 +212,7 @@ router.post('/apollo/:path(*)', apolloLimiter, async (req, res) => {
   // Per-request key override allows users to supply their own Apollo key
   const apolloKey = req.headers['x-apollo-key'] || APOLLO_KEY
   if (!apolloKey) {
-    return res.status(400).json({ error: 'Missing Apollo key — set VITE_APOLLO_KEY in .env' })
+    return res.status(400).json({ error: 'Missing Apollo key — set APOLLO_KEY in .env' })
   }
 
   // The mixed_people search endpoint lives on a different base URL than the rest

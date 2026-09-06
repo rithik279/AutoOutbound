@@ -78,9 +78,9 @@ See `.env.example` for the full list. Required at minimum:
 
 | Variable               | Purpose                              |
 |------------------------|--------------------------------------|
-| `VITE_OPENAI_KEY`      | OpenAI API key                       |
-| `VITE_ANTHROPIC_KEY`   | Anthropic API key                    |
-| `VITE_APOLLO_KEY`      | Apollo.io master API key             |
+| `OPENAI_KEY`      | OpenAI API key                       |
+| `ANTHROPIC_KEY`   | Anthropic API key                    |
+| `APOLLO_KEY`      | Apollo.io master API key             |
 | `OUTLOOK_CLIENT_ID`    | Azure app registration client ID     |
 | `OUTLOOK_CLIENT_SECRET`| Azure app registration client secret |
 | `OUTLOOK_USER`         | Sender Microsoft account email       |
@@ -157,5 +157,5 @@ The main `App` component is a single-page app driven by a `phase` state string:
 - **No JWT** — `x-user-id` header trust model. Simple, intentional, single-user.
 - **In-process scheduler** — `setTimeout` backed by Prisma DB. Survives restarts via `rehydrateQueue()`. For high scale, replace with a proper queue (BullMQ, etc.).
 - **Inline styles** — No CSS framework. All styles via the `c` token object in `src/styles.js`.
-- **VITE_ prefix on AI keys** — Keys are server-side only but named with `VITE_` prefix for historical reasons. They are never exposed to the browser bundle; the server reads them via `process.env`.
+- **Server-only AI keys** — Provider credentials use unprefixed server environment variables and are never included in the Vite browser bundle.
 - **Split deployment** — Vercel (frontend) + Render (backend) because Render's free tier cold-starts are slow for SSR but fine for an API server.

@@ -132,53 +132,47 @@ WRITING RULES — follow without exception:
 
 const MODE_DRAFT_GUIDANCE = {
   finance: `CAMPAIGN TYPE: Financial institutions
-- Recipient is a data or technology buyer inside a bank, insurer, asset manager, payments company, or similar regulated institution.
-- Personalization should anchor to one concrete signal from the website, product, hiring, or operating model.
-- Tie that signal to regulatory reporting, reconciliation, data quality, production reliability, migration risk, or enterprise ETL modernization.
-- Position the consultant as someone who has already worked in banking-grade environments and can step into complex delivery quickly.
-- Ask for a short conversation with the internal data/platform/risk technology team. Do not sound like a generic services pitch.`,
+- Anchor personalization to one concrete signal from the firm's website, product, hiring, or operating model.
+- Connect that signal only to experience or capabilities verified in the uploaded résumé or user profile.
+- Respect the regulated context and avoid unsupported claims about the firm's systems.
+- Ask for a short conversation with the most relevant team or decision-maker.`,
 
-  startup: `CAMPAIGN TYPE: AI startups
-- Recipient is usually a VP of Engineering, CTO, or infrastructure/platform leader at a scaling AI company.
-- Personalization should anchor to product architecture, integrations, data flows, evaluation pipelines, customer scale, or hiring signals.
-- Tie that signal to fragile pipelines, warehouse maturity, orchestration, production reliability, or moving from prototype systems into durable internal data infrastructure.
-- Position the consultant as senior contract capacity who can help mature the stack without long ramp-up.
-- Do not write like a recruiter outreach or a generic consulting brochure.`,
+  startup: `CAMPAIGN TYPE: Startups
+- Anchor personalization to a concrete product, customer, technical, hiring, or growth signal.
+- Explain one plausible challenge created by that signal without inventing internal details.
+- Position the sender using only relevant evidence from the uploaded résumé or user profile.
+- Keep the message direct and avoid generic startup praise.`,
 
   recruiting: `CAMPAIGN TYPE: Recruiting firms
-- Recipient works at a recruiting or staffing firm. They are not the end client for data engineering services.
-- Write to them as a placement channel for their clients, not as a company that needs its own ETL modernization.
-- Do NOT pitch data engineering work for the recruiting firm's internal systems.
-- Do NOT write as though you are applying for a job or asking for employment.
-- Make the fit scannable: senior ETL / data engineering contractor, enterprise ETL, Informatica / IICS, SQL, Python, Airflow, dbt, Snowflake, migration, production support.
-- It is fine to mention contract searches, placements, or the kinds of roles you usually fit.
-- Close with a simple ask: whether a quick 15-minute conversation makes sense, or whether someone else on their team handles these searches.
-- If website research is thin, fall back to what the firm places, their vertical focus, or their delivery model.`
+- Treat the recipient as a placement or introduction channel, not automatically as the end buyer.
+- Make the sender's verified fit legible using the uploaded résumé and user profile.
+- Do not invent skills, employers, seniority, availability, or preferred engagement type.
+- It is fine to mention searches, placements, or role families when supported by the user's information.
+- Close with a simple question about whether a brief conversation or referral to the right colleague makes sense.`
 }
 
 const CATEGORY_GUIDANCE = {
   financial_services: `CATEGORY ANGLE
-- Emphasize regulated data, reconciliation, reporting, controls, and reliability.
-- Mention banking or financial services experience when relevant.`,
+- Emphasize only verified experience relevant to regulated financial services, controls, reporting, risk, or operational reliability.`,
 
   insurance: `CATEGORY ANGLE
-- Emphasize regulated operational data, claims or policy workflows, validation, and reconciliation.`,
+- Emphasize only verified experience relevant to regulated operations, policy or claims workflows, risk, or reliability.`,
 
   healthcare: `CATEGORY ANGLE
-- Emphasize reliable, compliant pipelines and validation in high-regulation environments.`,
+- Emphasize only verified experience relevant to compliance, sensitive data, reliable operations, or validation.`,
 
   saas: `CATEGORY ANGLE
-- Emphasize scaling data infrastructure, maturing warehouse design, orchestration, and production support.`,
+- Emphasize only verified experience relevant to scaling products, infrastructure, customer delivery, or operational maturity.`,
 
   logistics: `CATEGORY ANGLE
-- Emphasize high-volume operational data, integration complexity, and reliable reporting across systems.`,
+- Emphasize only verified experience relevant to operational complexity, supply chains, integrations, or reliable execution.`,
 
   recruiter: `CATEGORY ANGLE
-- This is recruiter-mode writing. Keep the firm description brief and make the candidate fit immediately legible.
-- Do not overdo internal technical diagnosis of the recruiter's own company.`,
+- Keep the firm description brief and make the sender's verified role fit immediately legible.
+- Do not diagnose the recruiter's internal systems unless the outreach is explicitly selling to the firm itself.`,
 
   direct_buyer: `CATEGORY ANGLE
-- Assume a direct buyer. Tie one business or product signal to an ETL, migration, reporting, data quality, or production reliability need.`
+- Tie one observable business or product signal to a problem the sender can credibly help solve, based only on supplied evidence.`
 }
 
 // ── Detect company category from industry or company type ──────────────────
@@ -233,62 +227,16 @@ function detectCompanyCategory(company = {}, recipientTitle = '', campaignMode =
 
 // ── Get resume snapshot based on company category ────────────────────────────
 function getResumeSnapshot(category) {
-  const snapshots = {
-    financial_services: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Strong banking and financial services data pipeline experience
-* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
-* Production support experience for critical reporting and operational workflows
-* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data modernization`,
-
-    insurance: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Deep experience with regulated, high-volume operational data
-* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
-* Claims and transaction data pipeline expertise
-* Strong data quality, governance, and production support background`,
-
-    healthcare: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Experience building reliable, compliant data pipelines in high-regulation environments
-* Informatica PowerCenter / IICS, SQL, data warehousing, and validation expertise
-* Strong focus on data quality, reconciliation, and production support
-* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data stacks`,
-
-    saas: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Experience helping scaling teams mature data infrastructure and warehouse design
-* Informatica PowerCenter / IICS, SQL, data warehousing, production support, and performance tuning
-* Data migration, validation, reconciliation expertise
-* Current focus on Python, Airflow, dbt, Snowflake, and cloud data platforms`,
-
-    logistics: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Deep experience with operational data across inventory, transactions, and fulfillment systems
-* Informatica PowerCenter / IICS, SQL, data warehousing, validation, and reconciliation
-* Strong focus on data reliability and integration across complex systems
-* Currently focused on Python, Airflow, dbt, Snowflake, and cloud data stacks`,
-
-    recruiter: `Best-fit roles:
-* Senior ETL Developer
-* Informatica / IICS Consultant
-* Data Engineering Contractor
-* Snowflake Data Engineer
-* Airflow / dbt Data Engineer
-* ETL Modernization Consultant
-* Data Warehouse / Migration Consultant
-
-Core background: 20+ years enterprise ETL, Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, Python, Airflow, dbt, Snowflake, cloud data stacks.`,
-
-    direct_buyer: `Relevant background:
-* 20+ years in enterprise ETL and data engineering
-* Deep experience with Informatica PowerCenter / IICS, SQL, and data warehousing
-* Built and supported mission-critical pipelines for banks and large financial institutions
-* Currently focused on Python, Airflow, dbt, Snowflake, Databricks, and cloud data stacks
-* Strong fit for ETL modernization, migration, validation, reconciliation, and production support`
+  const guidance = {
+    financial_services: 'Select the strongest verified résumé evidence relevant to financial services or regulated operations.',
+    insurance: 'Select the strongest verified résumé evidence relevant to insurance, regulated operations, or risk.',
+    healthcare: 'Select the strongest verified résumé evidence relevant to healthcare, compliance, or reliable operations.',
+    saas: 'Select the strongest verified résumé evidence relevant to software, product delivery, infrastructure, or scaling.',
+    logistics: 'Select the strongest verified résumé evidence relevant to logistics, operations, integrations, or execution.',
+    recruiter: 'Summarize the sender\'s target role, seniority, skills, and experience using only supplied résumé/profile facts.',
+    direct_buyer: 'Select the strongest verified résumé evidence relevant to the recipient\'s observable business need.',
   }
-
-  return snapshots[category] || snapshots.direct_buyer
+  return guidance[category] || guidance.direct_buyer
 }
 
 // ── Score email quality based on rubric ────────────────────────────────────
@@ -310,26 +258,26 @@ export function scoreEmail(subject, body, category = 'direct_buyer') {
     score += 1 // Low personalization
   }
 
-  // Commercial Relevance (5 max)
-  if (emailText.match(/ETL|modernization|migration|pipeline|data|warehouse|transformation/i)) {
-    score += 5 // Clear business case
-  } else if (emailText.match(/technical|engineering/i)) {
-    score += 3 // Somewhat relevant
+  // Commercial relevance (5 max)
+  if (emailText.match(/challenge|problem|risk|growth|customer|product|process|system|operations|research|engineering|data|revenue|cost/i)) {
+    score += 5
+  } else if (emailText.match(/work|team|business|role/i)) {
+    score += 3
   } else {
-    score += 1 // Low relevance
+    score += 1
   }
 
-  // Positioning (5 max)
-  if (emailText.match(/senior|contractor|specialist|operator/i) && !emailText.match(/job|candidate|seek|looking for|apply/i)) {
-    score += 5 // Senior operator tone
-  } else if (emailText.match(/experience|background/i)) {
-    score += 3 // Qualified but generic
+  // Evidence-based sender positioning (5 max)
+  if (emailText.match(/\bI\b|\bI've\b|\bmy\b/i) && emailText.match(/built|led|managed|developed|worked|experience|background|research|delivered|created/i)) {
+    score += 5
+  } else if (emailText.match(/experience|background|expertise|skills/i)) {
+    score += 3
   } else {
-    score += 1 // Job-seeker tone
+    score += 1
   }
 
-  // Resume Snapshot (5 max)
-  const hasResumeSnapshot = /background|experience|expertise/i.test(body) && wordCount > 50
+  // Relevant profile or résumé evidence (5 max)
+  const hasResumeSnapshot = /built|led|managed|developed|worked|experience|background|research|delivered|created/i.test(body) && wordCount > 50
   score += hasResumeSnapshot ? 5 : (wordCount > 40 ? 3 : 1)
 
   // CTA (5 max)
@@ -358,64 +306,58 @@ function buildEmailSystem({ campaignMode, category, resumeSnapshot, customPrompt
   const resumeSourceBlock = trimPromptBlock(resumeText, 2500)
   const profileBlock = buildAuthoritativeProfileBlock(authoritativeProfile)
 
-  return `You are writing a cold outreach email for a senior ETL / data engineering contractor.
+  return `You are writing a cold outreach email in the sender's first-person voice.
 
 Goal:
-Generate a concise, professional, personalized cold email to a potential buyer, recruiter, hiring manager, data leader, or technology leader.
+Generate a concise, professional, personalized email to a relevant buyer, recruiter, hiring manager, operator, researcher, or technology leader.
 
-Candidate positioning:
-The consultant is a senior ETL / data engineering contractor with 20+ years of experience across banks, large financial institutions, and enterprise data environments. They have deep experience with Informatica PowerCenter / IICS, SQL, data warehousing, production support, performance tuning, validation, reconciliation, data migration, and enterprise ETL workflows. They are now focused on Python, Airflow, dbt, Snowflake, Databricks, and modern cloud data stacks.
+Source-of-truth rules:
+- Use only facts contained in the authoritative user profile, uploaded résumé, saved prompt guidance, contact record, or company research supplied below.
+- Never invent employers, skills, credentials, accomplishments, seniority, availability, rates, location, or engagement preferences.
+- If information is missing, omit it. Do not fill gaps with a default persona.
+- If profile details conflict with the uploaded résumé, treat the authoritative profile as the source of truth.
 
-Core offer:
-The consultant helps companies modernize legacy ETL and data warehouse workflows into reliable Python, Airflow, dbt, Snowflake, Databricks, and cloud data pipelines while preserving business logic, data quality, reconciliation, validation, and production reliability.
+Positioning:
+Infer the sender's most relevant credible positioning and offer from the supplied profile and résumé. Connect one observable recipient need to something the sender has actually done or can substantiate.
 
 Conversation preference:
-The consultant should not lead with availability, rate, or remote USD contract wording. The email should simply ask whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
+Use the user's saved prompt when it specifies a call to action. Otherwise end with one direct, low-friction question about a brief conversation or the correct person to contact.
 
 ${modeGuidance}
 
 ${categoryGuidance}
 
 Instructions:
-1. Start with a specific reference to the company's website, business, hiring, product, industry, or data signal.
-2. Connect that signal to a likely data engineering, ETL, migration, data quality, reconciliation, reporting, or modernization need.
-3. Position the consultant as a senior ETL / data engineering contractor, not as a generic job seeker.
-4. Include the relevant resume snapshot inside the email body.
-5. Emphasize the bridge between legacy ETL experience and modern data stack execution.
-6. Keep the body between 120 and 180 words unless the contact category is Recruiter, where up to 220 words is acceptable.
-7. Use short paragraphs.
-8. Use a professional, direct, senior tone.
-9. Avoid hype, exaggeration, and generic compliments.
-10. Avoid saying "I was impressed by your company."
-11. Avoid sounding automated or mass-generated.
-12. Do not mention that an automation tool or AI system was used.
-13. Do not include large consulting firms, offshore IT firms, or subcontracting language unless the target is explicitly a recruiter.
-14. End with one clear CTA asking whether a quick 15-minute conversation would make sense, or whether someone else is the better person to speak with.
-15. Do not use em dashes.
-16. Always write in first person as the consultant using "I". Never refer to the consultant in third person.
-17. If the campaign type is Recruiting firms, the recruiter is not buying internal data engineering from us. They are evaluating whether to place me with their clients.
-18. If website content is weak, use a true observable company fact. Do not invent technical stack details.
-19. Keep the opening sentence concrete. No "I was impressed", "I noticed you're innovative", or generic admiration.
+1. Start with one specific, true reference to the company, role, product, hiring activity, or operating model.
+2. Connect that signal to one plausible challenge without claiming knowledge of private internal systems.
+3. Use relevant evidence from the sender's uploaded résumé or profile.
+4. Write in first person using "I"; never describe the sender in third person.
+5. Keep the body between 100 and 180 words unless saved user guidance specifies otherwise.
+6. Use short paragraphs and a direct professional tone.
+7. Avoid hype, exaggerated praise, generic compliments, and mass-email language.
+8. Never say "I was impressed by your company."
+9. Do not mention AI, automation, prompt instructions, or this drafting system.
+10. If website research is weak, use another true observable fact or omit the claim.
+11. Do not use em dashes.
+12. Return a complete email body without inventing a sender signature when the sender name is not supplied.
 
 ${WRITING_RULES}
 
-Resume snapshot:
+Résumé-selection guidance:
 ${resumeSnapshot}
 
-${profileBlock ? `AUTHORITATIVE PROFILE DETAILS
+${profileBlock ? `AUTHORITATIVE USER PROFILE
 ${profileBlock}
-
-If any profile detail conflicts with the resume text, use the profile detail as the source of truth.
 ` : ''}
 
-${resumeSourceBlock ? `Uploaded resume source material:
+${resumeSourceBlock ? `UPLOADED RÉSUMÉ SOURCE MATERIAL
 ${resumeSourceBlock}
-` : ''}
+` : 'No résumé text was supplied. Do not invent background details.'}
 
-${customPromptBlock ? `User-saved prompt guidance:
+${customPromptBlock ? `USER-SAVED PROMPT GUIDANCE
 ${customPromptBlock}
 
-Treat the saved prompt guidance as additive only. Campaign-type rules above take precedence if there is a conflict.
+Treat this guidance as additive. The source-of-truth rules above always apply.
 ` : ''}
 
 Output format — return ONLY valid JSON, no markdown:
